@@ -1892,7 +1892,8 @@ FlushCursor (
 
   CurrentMode = This->Mode;
 
-  if (!CurrentMode->CursorVisible) {
+  if (!CurrentMode->CursorVisible ||
+      (CurrentMode->CursorColumn == 0 && CurrentMode->CursorRow == 0 )) {
     return EFI_SUCCESS;
   }
 
