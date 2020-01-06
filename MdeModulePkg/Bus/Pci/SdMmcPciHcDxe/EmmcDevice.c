@@ -522,15 +522,27 @@ EmmcTuningClkForHs200 (
     return Status;
   }
 
+  if (BhtHostPciSupport (PciIo)) {
+    Status = BayhubEmmcTuningStart (PciIo, PassThru, Slot);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "EmmcTuningClkForHs200: Bayhub tuning start fails with %r\n", Status));
+      return Status;
+    }
+  }
+
   //
   // Ask the device to send a sequence of tuning blocks till the tuning procedure is done.
   //
   Retry = 0;
   do {
-    Status = EmmcSendTuningBlk (PassThru, Slot, BusWidth);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "EmmcTuningClkForHs200: Send tuning block fails with %r\n", Status));
-      return Status;
+    if (!BhtHostPciSupport (PciIo)) {
+      Status = EmmcSendTuningBlk (PassThru, Slot, BusWidth);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "EmmcTuningClkForHs200: Send tuning block fails with %r\n", Status));
+        return Status;
+      }
+    } else {
+      gBS->Stall (5000);
     }
 
     Status = SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL2, TRUE, sizeof (HostCtrl2), &HostCtrl2);
@@ -543,6 +555,12 @@ EmmcTuningClkForHs200 (
     }
 
     if ((HostCtrl2 & (BIT6 | BIT7)) == BIT7) {
+      if (BhtHostPciSupport (PciIo)) {
+        Status = BayhubEmmcTuningRestoreBusWidth (PciIo, Slot, BusWidth);
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+      }
       return EFI_SUCCESS;
     }
   } while (++Retry < 40);
@@ -879,9 +897,23 @@ EmmcSwitchToHS200 (
     return Status;
   }
 
-  Status = EmmcSwitchBusTiming (PciIo, PassThru, Slot, Rca, BusMode->DriverStrength, BusMode->BusTiming, BusMode->ClockFreq);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (BhtHostPciSupport (PciIo)) {
+    BusMode->BusTiming = SdMmcMmcHs200;
+    Status = EmmcSwitchBusTiming (PciIo, PassThru, Slot, Rca, BusMode->DriverStrength,
+                                  BusMode->BusTiming, BusMode->ClockFreq);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    Status = BayhubEmmcSwitchToHS200Post (PciIo, Slot);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  } else {
+    Status = EmmcSwitchBusTiming (PciIo, PassThru, Slot, Rca, BusMode->DriverStrength, BusMode->BusTiming, BusMode->ClockFreq);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   Status = EmmcTuningClkForHs200 (PciIo, PassThru, Slot, BusMode->BusWidth);
@@ -1283,10 +1315,40 @@ EmmcSetBusMode (
     BusMode.DriverStrength.Emmc
     ));
 
+  if (BhtHostPciSupport (PciIo)) {
+    BayhubEmmcSetBusModeFromVariable (&BusMode);
+  }
+
   if (BusMode.BusTiming == SdMmcMmcHs400) {
+    //
+    // Execute HS400 timing switch procedure
+    //
     Status = EmmcSwitchToHS400 (PciIo, PassThru, Slot, Rca, &BusMode);
   } else if (BusMode.BusTiming == SdMmcMmcHs200) {
+    //
+    // Execute HS200 timing switch procedure
+    //
     Status = EmmcSwitchToHS200 (PciIo, PassThru, Slot, Rca, &BusMode);
+
+    if (EFI_ERROR (Status)) {
+      if (BhtHostPciSupport (PciIo)) {
+        Status = BayhubEmmcApplyHs100Phase (PciIo, Slot, &BusMode);
+        if (!EFI_ERROR (Status)) {
+          Status = EmmcSwitchToHS200 (PciIo, PassThru, Slot, Rca, &BusMode);
+          if (EFI_ERROR (Status)) {
+            if (((ExtCsd.DeviceType & BIT1) != 0) && (Private->Capability[Slot].HighSpeed != 0)) {
+              BusMode.BusTiming  = SdMmcMmcHsSdr;
+              BusMode.ClockFreq  = 52;
+              Status = EmmcSwitchToHighSpeed (PciIo, PassThru, Slot, Rca, &BusMode);
+            } else if (((ExtCsd.DeviceType & BIT0) != 0) && (Private->Capability[Slot].HighSpeed != 0)) {
+              BusMode.BusTiming  = SdMmcMmcHsSdr;
+              BusMode.ClockFreq  = 26;
+              Status = EmmcSwitchToHighSpeed (PciIo, PassThru, Slot, Rca, &BusMode);
+            }
+          }
+        }
+      }
+    }
   } else {
     //
     // Note that EmmcSwitchToHighSpeed is also called for SdMmcMmcLegacy
@@ -1329,6 +1391,10 @@ EmmcIdentification (
 
   PciIo    = Private->PciIo;
   PassThru = &Private->PassThru;
+
+  if (BhtHostPciSupport (PciIo)) {
+    BayhubEmmcIdentificationPre (PciIo);
+  }
 
   Status = EmmcReset (PassThru, Slot);
   if (EFI_ERROR (Status)) {

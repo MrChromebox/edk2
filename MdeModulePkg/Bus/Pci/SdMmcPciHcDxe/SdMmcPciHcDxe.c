@@ -313,6 +313,13 @@ SdMmcPciHcEnumerateDevice (
           continue;
         }
 
+        if (BhtHostPciSupport (Private->PciIo)) {
+          Status = SdMmcHcGetCapability (Private->PciIo, Slot, &Private->Capability[Slot]);
+          if (EFI_ERROR (Status)) {
+            continue;
+          }
+        }
+
         Private->Slot[Slot].MediaPresent = TRUE;
         Private->Slot[Slot].Initialized  = TRUE;
         RoutineNum                       = sizeof (mCardTypeDetectRoutineTable) / sizeof (CARD_TYPE_DETECT_ROUTINE);
@@ -330,6 +337,7 @@ SdMmcPciHcEnumerateDevice (
         // This card doesn't get initialized correctly.
         //
         if (Index == RoutineNum) {
+          DEBUG ((DEBUG_INFO, "Load driver failure\n"));
           Private->Slot[Slot].Initialized = FALSE;
         }
 
@@ -759,6 +767,13 @@ SdMmcPciHcDriverBindingStart (
       continue;
     }
 
+    if (BhtHostPciSupport (PciIo)) {
+      Status = SdMmcHcGetCapability (PciIo, Slot, &Private->Capability[Slot]);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+    }
+
     Private->Slot[Slot].MediaPresent = TRUE;
     Private->Slot[Slot].Initialized  = TRUE;
     RoutineNum                       = sizeof (mCardTypeDetectRoutineTable) / sizeof (CARD_TYPE_DETECT_ROUTINE);
@@ -776,8 +791,12 @@ SdMmcPciHcDriverBindingStart (
     // This card doesn't get initialized correctly.
     //
     if (Index == RoutineNum) {
+      DEBUG ((DEBUG_INFO, "Load driver failure\n"));
       Private->Slot[Slot].Initialized = FALSE;
     }
+  }
+  if (BhtHostPciSupport (Private->PciIo)) {
+    BayhubPostInitReads (Private->PciIo);
   }
 
   //
