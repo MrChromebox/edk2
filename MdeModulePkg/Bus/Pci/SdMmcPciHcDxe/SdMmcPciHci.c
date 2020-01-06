@@ -14,6 +14,9 @@
 
 #include "SdMmcPciHcDxe.h"
 
+int g_deviceId = 0;
+
+
 /**
   Dump the content of SD/MMC host controller's Capability Register.
 
@@ -1167,6 +1170,15 @@ SdMmcHcInitPowerVoltage (
   // Set SD Bus Voltage Select and SD Bus Power fields in Power Control Register
   //
   Status = SdMmcHcPowerControl (PciIo, Slot, MaxVoltage);
+  if (BhtHostPciSupport(PciIo)){
+    // 1.8V signaling enable
+    HostCtrl2  = BIT3;
+    Status = SdMmcHcOrMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+    gBS->Stall (5000);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }	  
+  }
 
   return Status;
 }
@@ -1218,8 +1230,8 @@ SdMmcHcInitHost (
   EFI_STATUS           Status;
   EFI_PCI_IO_PROTOCOL  *PciIo;
   SD_MMC_HC_SLOT_CAP   Capability;
+  UINT32               value32;
 
-  //
   // Notify the SD/MMC override protocol that we are about to initialize
   // the SD/MMC host controller.
   //
@@ -1244,9 +1256,191 @@ SdMmcHcInitHost (
   PciIo      = Private->PciIo;
   Capability = Private->Capability[Slot];
 
-  Status = SdMmcHcInitV4Enhancements (PciIo, Slot, Capability, Private->ControllerVersion[Slot]);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (BhtHostPciSupport(PciIo)){
+    UINT8   CardMode;
+    UINT16	EmmcVar;
+    UINTN 	EmmcVarSize;
+    UINT64  Cap;
+
+    //unlock PCR write protect
+#ifdef DISABLE_L1_2
+    PciBhtAnd32(PciIo, 0xd0, ~(BIT31));
+    PciBhtAnd32(PciIo, 0x90, ~(BIT1 | BIT0));
+		
+    value32 = PciBhtRead32(PciIo, 0xe0);
+    value32 &= ~(BIT31 | BIT30 | BIT29 | BIT28);
+    value32 |= (BIT29 | BIT28);
+    PciBhtWrite32(PciIo, 0xe0, value32);
+
+    value32 = PciBhtRead32(PciIo, 0xfc);
+    value32 &= ~(BIT19 | BIT18 | BIT17 | BIT16);
+    value32 |= (BIT19);
+    PciBhtWrite32(PciIo, 0xfc, value32);
+		
+    value32 = PciBhtRead32(PciIo, 0x3f4);
+    value32 &= ~(BIT3 | BIT2 | BIT1 | BIT0);
+    value32 |= (BIT3 | BIT1);
+    PciBhtWrite32(PciIo, 0x3f4, value32);
+
+    value32 = PciBhtRead32(PciIo, 0x248);
+    value32 &= ~(BIT3 | BIT2 | BIT1 | BIT0);
+    value32 |= (BIT3 | BIT1);
+    PciBhtWrite32(PciIo, 0x248, value32);
+
+    value32 = PciBhtRead32(PciIo, 0x90);
+    value32 &= ~(BIT1 | BIT0);
+    value32 |= (BIT1);
+    PciBhtWrite32(PciIo, 0x90, value32);
+#endif
+
+    /* FET on */
+    PciBhtOr32(PciIo, 0xEC, 0x3);
+    /* Led on */
+    //PciBhtAnd32(PciIo, 0x334, (UINT32)~BIT13);
+    PciBhtOr32(PciIo, 0xD4, BIT6);
+    /* Set 1.8v emmc signaling flag */
+    PciBhtOr32(PciIo, 0x308, BIT4);
+    /* Set 200MBaseClock */
+    value32 = PciBhtRead32(PciIo, 0x304);
+    value32 &= 0x0000FFFF;
+    value32 |= 0x25100000;
+#if !defined(HOST_CLK_DRIVE_STRENGTH) || HOST_CLK_DRIVE_STRENGTH > 7 || HOST_CLK_DRIVE_STRENGTH < 0
+#error "HOST_CMD_DRIVE_STRENGTH is undefined or value is invalid"
+#else
+    EmmcVarSize = sizeof(EmmcVar);
+    Status = gRT->GetVariable (
+          L"EMMC_CLK_DRIVER_STRENGTH",
+          &gEfiGenericVariableGuid,
+          NULL,
+          &EmmcVarSize,
+          &EmmcVar
+        );
+    if (EFI_ERROR(Status)) {
+      EmmcVar = HOST_CLK_DRIVE_STRENGTH;
+    }
+    value32 &= 0xFFFFFF8F;
+    value32 |= ((EmmcVar & 0x7) << 4);
+#endif
+#if !defined(HOST_DAT_DRIVE_STRENGTH) || HOST_DAT_DRIVE_STRENGTH > 7 || HOST_DAT_DRIVE_STRENGTH < 0
+#error "HOST_DATA_DRIVE_STRENGTH is undefined or value is invalid"
+#else
+    EmmcVarSize = sizeof(EmmcVar);
+    Status = gRT->GetVariable (
+          L"EMMC_DATA_DRIVER_STRENGTH",
+          &gEfiGenericVariableGuid,
+          NULL,
+          &EmmcVarSize,
+          &EmmcVar
+        );
+    if (EFI_ERROR(Status)) {
+      EmmcVar = HOST_DAT_DRIVE_STRENGTH;
+    }
+    value32 &= 0xFFFFFFF1;
+    value32 |= ((EmmcVar & 0x7) << 1);
+#endif
+    PciBhtWrite32(PciIo, 0x304, value32);
+    PciBhtOr32(PciIo, 0x3E4, BIT22);
+
+    EmmcVarSize = sizeof(CardMode);
+    Status = gRT->GetVariable (
+                 L"EMMC_FORCE_CARD_MODE",
+                 &gEfiGenericVariableGuid,
+                 NULL,
+                 &EmmcVarSize,
+                 &CardMode
+               );
+    if (EFI_ERROR(Status) || CardMode > 2) {
+      CardMode = 0;
+    }
+
+    if (CardMode == 1) {
+#if !defined(HS100_ALLPASS_PHASE) || HS100_ALLPASS_PHASE > 10 || HS100_ALLPASS_PHASE < 0
+#error "HS200_ALLPASS_PHASE is undefined or value is invalid"
+#else
+      EmmcVarSize = sizeof(EmmcVar);
+      Status = gRT->GetVariable (
+            L"EMMC_HS100_ALLPASS_PHASE",
+            &gEfiGenericVariableGuid,
+            NULL,
+            &EmmcVarSize,
+            &EmmcVar
+          );
+    if (EFI_ERROR(Status) || EmmcVar > 10) {
+      EmmcVar = HS100_ALLPASS_PHASE;
+    }
+#endif		
+    } else if (CardMode == 2) {
+#if !defined(HS200_ALLPASS_PHASE) || HS200_ALLPASS_PHASE > 10 || HS200_ALLPASS_PHASE < 0
+#error "HS200_ALLPASS_PHASE is undefined or value is invalid"
+#else
+      EmmcVarSize = sizeof(EmmcVar);
+      Status = gRT->GetVariable (
+            L"EMMC_HS200_ALLPASS_PHASE",
+            &gEfiGenericVariableGuid,
+            NULL,
+            &EmmcVarSize,
+            &EmmcVar
+          );
+      if (EFI_ERROR(Status) || EmmcVar > 10) {
+        EmmcVar = HS200_ALLPASS_PHASE;
+      }
+#endif
+    }
+
+    value32 = 0x21000033 | (EmmcVar << 20);
+    PciBhtWrite32(PciIo, 0x300, value32);
+
+    //enable internal clk
+    value32 = BIT0;
+    Status = SdMmcHcOrMmio (PciIo, Slot, SD_MMC_HC_CLOCK_CTRL,sizeof(value32), &value32);
+
+    //reset pll start	
+    Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, TRUE, sizeof(value32), &value32);
+    value32 |= BIT12;	  
+    Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, FALSE, sizeof(value32), &value32);		  
+    gBS->Stall(1);
+
+    //reset pll end
+    Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, TRUE,sizeof(value32), &value32);
+    value32 &= ~BIT12;
+    value32 |= BIT18;
+    Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, FALSE, sizeof(value32), &value32);
+		
+    //wait BaseClk stable 0x1CC bit14	
+    Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, TRUE, sizeof(value32), &value32);
+    while(!(value32&BIT14)){
+      gBS->Stall(100);
+      Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, TRUE, sizeof(value32), &value32);
+    }
+
+    if (value32 & BIT18) {
+      //Wait 2nd Card Detect debounce Finished by wait twice of debounce max time
+      while (1) {
+        Status = SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_PRESENT_STATE, TRUE, sizeof(value32), &value32);
+        if (((value32 >> 16) & 0x01) == ((value32 >> 18) & 0x01))
+          break;
+      }
+      //force pll active end
+      Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, TRUE, sizeof(value32), &value32);		
+      value32 &= ~BIT18;
+      Status = SdMmcHcRwMmio (PciIo, Slot, 0x1CC, FALSE, sizeof(value32), &value32);				
+    }
+
+    Status = SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_CAP, TRUE, sizeof (Cap), &Cap);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+    CopyMem (&Capability, &Cap, sizeof (Cap));
+	
+    Status = SdMmcHcInitPowerVoltage (PciIo, Slot, Capability);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  } else {
+      Status = SdMmcHcInitV4Enhancements (PciIo, Slot, Capability, Private->ControllerVersion[Slot]);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
   }
 
   //
@@ -1261,9 +1455,11 @@ SdMmcHcInitHost (
     return Status;
   }
 
-  Status = SdMmcHcInitPowerVoltage (PciIo, Slot, Capability);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!BhtHostPciSupport(PciIo)){
+      Status = SdMmcHcInitPowerVoltage (PciIo, Slot, Capability);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
   }
 
   Status = SdMmcHcInitTimeoutCtrl (PciIo, Slot);
@@ -2924,4 +3120,281 @@ SdMmcWaitTrbResult (
   }
 
   return EFI_TIMEOUT;
+}
+
+BOOLEAN BhtHostPciSupport(EFI_PCI_IO_PROTOCOL *PciIo)
+{
+  PCI_TYPE00		Pci;
+
+  PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32,		
+          0, sizeof Pci / sizeof (UINT32), &Pci);
+
+  DEBUG ((DEBUG_INFO, "check device %04x:%04x\n", Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
+
+  if (Pci.Hdr.VendorId != 0x1217)
+    goto end;
+
+  switch (Pci.Hdr.DeviceId)
+  {
+    case 0x8420:	//PCI_DEV_ID_SDS0
+    case 0x8421:	//PCI_DEV_ID_SDS1
+    case 0x8520:	//PCI_DEV_ID_FJ2
+    case 0x8620:	//PCI_DEV_ID_SB0
+    case 0x8621:	//PCI_DEV_ID_SB1
+      g_deviceId = Pci.Hdr.DeviceId;
+      return 1;
+    default:
+      break;
+  }
+
+  end:
+  return 0;
+}
+
+void DbgNull(IN CONST CHAR16 * fmt, ...)
+{
+}
+
+UINT32 bht_readl(EFI_PCI_IO_PROTOCOL *PciIo, UINT32 offset)
+{
+  UINT32 arg;
+  PciIo->Mem.Read(PciIo,EfiPciIoWidthUint32,1,offset,1,&arg);
+  return arg;
+}
+
+void bht_writel(EFI_PCI_IO_PROTOCOL *PciIo, UINT32 offset, UINT32 value)
+{
+  PciIo->Mem.Write(PciIo,EfiPciIoWidthUint32,1,offset,1,&value);
+}
+
+
+UINT32 PciBhtRead32(EFI_PCI_IO_PROTOCOL *PciIo, UINT32 offset)
+{
+  UINT32 i = 0;
+  UINT32 tmp[3] = {0};
+
+  if((g_deviceId == PCI_DEV_ID_SDS0) ||
+      (g_deviceId == PCI_DEV_ID_SDS1) ||
+      (g_deviceId == PCI_DEV_ID_FJ2) ||
+      (g_deviceId == PCI_DEV_ID_SB0) ||
+      (g_deviceId == PCI_DEV_ID_SB1))
+  {
+    // For Sandstorm, HW implement a mapping method by memory space reg to access PCI reg.
+    // Enable mapping
+  
+    // Check function conflict
+    if((g_deviceId == PCI_DEV_ID_SDS0) ||
+        (g_deviceId == PCI_DEV_ID_FJ2) ||
+        (g_deviceId == PCI_DEV_ID_SB0) ||
+        (g_deviceId == PCI_DEV_ID_SB1))
+    {
+      i = 0;
+      bht_writel(PciIo, BHT_PCIRMappingEn, 0x40000000);
+      while((bht_readl(PciIo, BHT_PCIRMappingEn) & 0x40000000) == 0)
+      {
+        if(i == 5)
+        {
+          goto RD_DIS_MAPPING;
+        }
+            gBS->Stall(1000);
+        i++;
+          bht_writel(PciIo, BHT_PCIRMappingEn, 0x40000000);
+  
+      }
+    }
+    else if(g_deviceId == PCI_DEV_ID_SDS1)
+    {
+      i = 0;
+      bht_writel(PciIo, BHT_PCIRMappingEn, 0x20000000);
+      while((bht_readl(PciIo, BHT_PCIRMappingEn) & 0x20000000) == 0)
+      {
+        if(i == 5)
+        {
+          //DbgErr((DRIVERNAME " - %s() function 1 can't lock!\n", __FUNCTION__));
+          goto RD_DIS_MAPPING;
+        }
+        gBS->Stall(1000);
+        i++;
+        bht_writel(PciIo, BHT_PCIRMappingEn, 0x20000000);
+      }
+    }
+  
+    // Check last operation is complete
+    i = 0;
+    while(bht_readl(PciIo, BHT_PCIRMappingCtl) & 0xc0000000)
+    {
+      if(i == 5)
+      {
+        //DbgErr((DRIVERNAME " - [204] = 0x%x\n", RegisterRead32(ELN_dPCIRMappingCtl)));
+        //DbgErr((DRIVERNAME " - [208] = 0x%x\n", RegisterRead32(ELN_dPCIRMappingEn)));
+        //DbgErr((DRIVERNAME " - %s() check last operation complete timeout!!!\n", __FUNCTION__));
+        goto RD_DIS_MAPPING;
+      }
+      gBS->Stall(1000);
+      i += 1;
+    }
+  
+    // Set register address
+    tmp[0] |= 0x40000000;
+    tmp[0] |= offset;
+    bht_writel(PciIo, BHT_PCIRMappingCtl, tmp[0]);
+  
+    // Check read is complete
+    i = 0;
+    while(bht_readl(PciIo, BHT_PCIRMappingCtl) & 0x40000000)
+    {
+      if(i == 5)
+      {
+        //DbgErr((DRIVERNAME " - %s() check read operation complete timeout!!!\n", __FUNCTION__));
+        goto RD_DIS_MAPPING;
+      }
+      gBS->Stall(1000);
+      i += 1;
+    }
+  
+    // Get PCIR value
+    tmp[1] = bht_readl(PciIo, BHT_PCIRMappingVal);
+  
+RD_DIS_MAPPING:
+    // Disable mapping
+    bht_writel(PciIo, BHT_PCIRMappingEn, 0x80000000);
+  
+    //DbgDebug(L"%s offset=%x Value:%x\n", __FUNCTION__, offset, tmp[1]);
+    return tmp[1];
+  }
+  
+  //DbgDebug(L"%s offset=%x Value:%x\n", __FUNCTION__, offset, tmp[0]);
+  return tmp[0];	
+}
+
+void PciBhtWrite32(EFI_PCI_IO_PROTOCOL *PciIo, UINT32 offset, UINT32 value)
+{
+  UINT32 tmp = 0;
+    UINT32 i = 0;
+
+  if((g_deviceId == PCI_DEV_ID_SDS0) ||
+      (g_deviceId == PCI_DEV_ID_SDS1) ||
+      (g_deviceId == PCI_DEV_ID_FJ2) ||
+      (g_deviceId == PCI_DEV_ID_SB0) ||
+      (g_deviceId == PCI_DEV_ID_SB1))
+    {
+        // For Sandstorm, HW implement a mapping method by memory space reg to access PCI reg.
+        // Upper caller doesn't need to set 0xD0.
+
+        // Enable mapping
+
+        // Check function conflict
+    if((g_deviceId == PCI_DEV_ID_SDS0) ||
+        (g_deviceId == PCI_DEV_ID_FJ2) ||
+        (g_deviceId == PCI_DEV_ID_SB0) ||
+        (g_deviceId == PCI_DEV_ID_SB1))
+        {
+            i = 0;
+            bht_writel(PciIo, BHT_PCIRMappingEn, 0x40000000);
+            while((bht_readl(PciIo, BHT_PCIRMappingEn) & 0x40000000) == 0)
+            {
+                if(i == 5)
+                {
+                    //DbgErr((DRIVERNAME " - %s() function 0 can't lock!\n", __FUNCTION__));
+                    goto WR_DIS_MAPPING;
+                }
+
+                gBS->Stall(1000);
+                i++;
+                bht_writel(PciIo, BHT_PCIRMappingEn, 0x40000000);
+            }
+        }
+        else if(g_deviceId == PCI_DEV_ID_SDS1)
+        {
+            i = 0;
+            bht_writel(PciIo, BHT_PCIRMappingEn, 0x20000000);
+
+            while((bht_readl(PciIo, BHT_PCIRMappingEn) & 0x20000000) == 0)
+            {
+                if(i == 5)
+                {
+                    //DbgErr((DRIVERNAME " - %s() function 0 can't lock!\n", __FUNCTION__));
+                    goto WR_DIS_MAPPING;
+                }
+
+                gBS->Stall(1000);
+                i++;
+                bht_writel(PciIo, BHT_PCIRMappingEn, 0x20000000);
+            }
+        }
+
+        // Enable MEM access
+        bht_writel(PciIo, BHT_PCIRMappingVal, 0x80000000);
+        bht_writel(PciIo, BHT_PCIRMappingCtl, 0x800000D0);
+
+        // Check last operation is complete
+        i = 0;
+        while(bht_readl(PciIo, BHT_PCIRMappingCtl) & 0xc0000000)
+        {
+            if(i == 5)
+            {
+                //DbgErr((DRIVERNAME " - %s() check last operation complete timeout!!!\n", __FUNCTION__));
+                goto WR_DIS_MAPPING;
+            }
+            gBS->Stall(1000);
+            i += 1;
+        }
+
+        // Set write value
+        bht_writel(PciIo, BHT_PCIRMappingVal, value);
+        // Set register address
+        tmp |= 0x80000000;
+        tmp |= offset;
+        bht_writel(PciIo, BHT_PCIRMappingCtl, tmp);
+
+        // Check write is complete
+        i = 0;
+        while(bht_readl(PciIo, BHT_PCIRMappingCtl) & 0x80000000)
+        {
+            if(i == 5)
+            {
+                //DbgErr((DRIVERNAME " - %s() check write operation complete timeout!!!\n", __FUNCTION__));
+                goto WR_DIS_MAPPING;
+            }
+            gBS->Stall(1000);
+            i += 1;
+        }
+
+WR_DIS_MAPPING:
+        // Disable MEM access
+        bht_writel(PciIo, BHT_PCIRMappingVal, 0x80000001);
+        bht_writel(PciIo, BHT_PCIRMappingCtl, 0x800000D0);
+
+        // Check last operation is complete
+        i = 0;
+        while(bht_readl(PciIo, BHT_PCIRMappingCtl) & 0xc0000000)
+        {
+            if(i == 5)
+            {
+                //DbgErr((DRIVERNAME " - %s() check last operation complete timeout!!!\n", __FUNCTION__));
+                break;
+            }
+            gBS->Stall(1000);
+            i += 1;
+        }
+
+        // Disable function conflict
+
+        // Disable mapping
+        bht_writel(PciIo, BHT_PCIRMappingEn, 0x80000000);
+    }
+}
+
+void PciBhtOr32(EFI_PCI_IO_PROTOCOL *PciIo, UINT32 offset, UINT32 value)
+{
+  UINT32 arg;
+  arg = PciBhtRead32(PciIo, offset);
+  PciBhtWrite32(PciIo, offset, value | arg);
+}
+
+void PciBhtAnd32(EFI_PCI_IO_PROTOCOL *PciIo, UINT32 offset, UINT32 value)
+{
+  UINT32 arg;
+  arg = PciBhtRead32(PciIo, offset);
+  PciBhtWrite32(PciIo, offset, value & arg);
 }

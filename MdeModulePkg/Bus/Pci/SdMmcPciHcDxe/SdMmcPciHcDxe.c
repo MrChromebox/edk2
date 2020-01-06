@@ -313,6 +313,13 @@ SdMmcPciHcEnumerateDevice (
           continue;
         }
 
+        if (BhtHostPciSupport(Private->PciIo)) {
+          Status = SdMmcHcGetCapability (Private->PciIo, Slot, &Private->Capability[Slot]);
+          if (EFI_ERROR (Status)) {
+            continue;
+          }
+        }
+
         Private->Slot[Slot].MediaPresent = TRUE;
         Private->Slot[Slot].Initialized  = TRUE;
         RoutineNum                       = sizeof (mCardTypeDetectRoutineTable) / sizeof (CARD_TYPE_DETECT_ROUTINE);
@@ -330,6 +337,7 @@ SdMmcPciHcEnumerateDevice (
         // This card doesn't get initialized correctly.
         //
         if (Index == RoutineNum) {
+          DEBUG ((DEBUG_INFO, "Load driver failure\n"));
           Private->Slot[Slot].Initialized = FALSE;
         }
 
@@ -553,6 +561,8 @@ SdMmcPciHcDriverBindingStart (
   UINT32                    RoutineNum;
   BOOLEAN                   MediaPresent;
   BOOLEAN                   Support64BitDma;
+  UINT16                    IntStatus;
+  UINT32                    value;
 
   DEBUG ((DEBUG_INFO, "SdMmcPciHcDriverBindingStart: Start\n"));
 
@@ -759,6 +769,13 @@ SdMmcPciHcDriverBindingStart (
       continue;
     }
 
+    if (BhtHostPciSupport(PciIo)) {
+      Status = SdMmcHcGetCapability (PciIo, Slot, &Private->Capability[Slot]);
+        if (EFI_ERROR (Status)) {
+          continue;
+        }
+    }
+
     Private->Slot[Slot].MediaPresent = TRUE;
     Private->Slot[Slot].Initialized  = TRUE;
     RoutineNum                       = sizeof (mCardTypeDetectRoutineTable) / sizeof (CARD_TYPE_DETECT_ROUTINE);
@@ -776,8 +793,24 @@ SdMmcPciHcDriverBindingStart (
     // This card doesn't get initialized correctly.
     //
     if (Index == RoutineNum) {
+      DEBUG ((DEBUG_INFO, "Load driver failure\n"));
       Private->Slot[Slot].Initialized = FALSE;
     }
+  }
+  if (BhtHostPciSupport(Private->PciIo)) {
+    SdMmcHcRwMmio (Private->PciIo,0,0x110,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,0x114,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,0x1a8,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,0x1ac,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,0x1B0,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,0x1CC,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,0x040,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,SD_MMC_HC_PRESENT_STATE,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,SD_MMC_HC_HOST_CTRL1,TRUE,sizeof (IntStatus),&IntStatus);
+    SdMmcHcRwMmio (Private->PciIo,0,SD_MMC_HC_CLOCK_CTRL,TRUE,sizeof (IntStatus),&IntStatus);
+    SdMmcHcRwMmio (Private->PciIo,0,SD_MMC_HC_TIMEOUT_CTRL,TRUE,sizeof (IntStatus),&IntStatus);
+    SdMmcHcRwMmio (Private->PciIo,0,SD_MMC_HC_NOR_INT_STS,TRUE,sizeof (value),&value);
+    SdMmcHcRwMmio (Private->PciIo,0,SD_MMC_HC_HOST_CTRL2,TRUE,sizeof (IntStatus),&IntStatus);
   }
 
   //
