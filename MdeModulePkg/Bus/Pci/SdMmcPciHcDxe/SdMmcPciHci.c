@@ -1171,6 +1171,16 @@ SdMmcHcInitPowerVoltage (
   // Set SD Bus Voltage Select and SD Bus Power fields in Power Control Register
   //
   Status = SdMmcHcPowerControl (PciIo, Slot, MaxVoltage);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (BhtHostPciSupport (PciIo)) {
+    Status = BayhubInitPowerVoltageExtra (PciIo, Slot);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
 
   return Status;
 }
@@ -1248,9 +1258,16 @@ SdMmcHcInitHost (
   PciIo      = Private->PciIo;
   Capability = Private->Capability[Slot];
 
-  Status = SdMmcHcInitV4Enhancements (PciIo, Slot, Capability, Private->ControllerVersion[Slot]);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (BhtHostPciSupport (PciIo)) {
+    Status = BayhubInitHost (Private, Slot);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  } else {
+    Status = SdMmcHcInitV4Enhancements (PciIo, Slot, Capability, Private->ControllerVersion[Slot]);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   //
@@ -1265,9 +1282,11 @@ SdMmcHcInitHost (
     return Status;
   }
 
-  Status = SdMmcHcInitPowerVoltage (PciIo, Slot, Capability);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!BhtHostPciSupport (PciIo)) {
+    Status = SdMmcHcInitPowerVoltage (PciIo, Slot, Capability);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   Status = SdMmcHcInitTimeoutCtrl (PciIo, Slot);
