@@ -313,6 +313,13 @@ SdMmcPciHcEnumerateDevice (
           continue;
         }
 
+        if (BhtHostPciSupport (Private->PciIo)) {
+          Status = SdMmcHcGetCapability (Private->PciIo, Slot, &Private->Capability[Slot]);
+          if (EFI_ERROR (Status)) {
+            continue;
+          }
+        }
+
         Private->Slot[Slot].MediaPresent = TRUE;
         Private->Slot[Slot].Initialized  = TRUE;
         RoutineNum                       = sizeof (mCardTypeDetectRoutineTable) / sizeof (CARD_TYPE_DETECT_ROUTINE);
@@ -330,6 +337,7 @@ SdMmcPciHcEnumerateDevice (
         // This card doesn't get initialized correctly.
         //
         if (Index == RoutineNum) {
+          DEBUG ((DEBUG_INFO, "Load driver failure\n"));
           Private->Slot[Slot].Initialized = FALSE;
         }
 
@@ -723,6 +731,15 @@ SdMmcPciHcDriverBindingStart (
       continue;
     }
 
+    //
+    // Bayhub/O2 Micro eMMC controllers may report a removable slot type in the
+    // SDHCI capability register even when the attached device is soldered-down
+    // eMMC. Treat Bayhub as EmbeddedSlot so we don't skip eMMC probing.
+    //
+    if (BhtHostPciSupport (PciIo)) {
+      Private->Capability[Slot].SlotType = EmbeddedSlot;
+    }
+
     Private->Slot[Slot].SlotType = Private->Capability[Slot].SlotType;
     if ((Private->Slot[Slot].SlotType != RemovableSlot) && (Private->Slot[Slot].SlotType != EmbeddedSlot)) {
       DEBUG ((DEBUG_INFO, "SdMmcPciHcDxe doesn't support the slot type [%d]!!!\n", Private->Slot[Slot].SlotType));
@@ -759,6 +776,13 @@ SdMmcPciHcDriverBindingStart (
       continue;
     }
 
+    if (BhtHostPciSupport (PciIo)) {
+      Status = SdMmcHcGetCapability (PciIo, Slot, &Private->Capability[Slot]);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+    }
+
     Private->Slot[Slot].MediaPresent = TRUE;
     Private->Slot[Slot].Initialized  = TRUE;
     RoutineNum                       = sizeof (mCardTypeDetectRoutineTable) / sizeof (CARD_TYPE_DETECT_ROUTINE);
@@ -776,8 +800,12 @@ SdMmcPciHcDriverBindingStart (
     // This card doesn't get initialized correctly.
     //
     if (Index == RoutineNum) {
+      DEBUG ((DEBUG_INFO, "Load driver failure\n"));
       Private->Slot[Slot].Initialized = FALSE;
     }
+  }
+  if (BhtHostPciSupport (Private->PciIo)) {
+    BayhubPostInitReads (Private->PciIo);
   }
 
   //
