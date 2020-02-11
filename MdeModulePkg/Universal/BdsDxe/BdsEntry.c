@@ -326,7 +326,8 @@ BdsWait (
                     //         Can be removed after all keyboard drivers invoke callback in timer callback.
 
     if (HotkeyTriggered != NULL) {
-      Status = BdsWaitForSingleEvent (HotkeyTriggered, EFI_TIMER_PERIOD_SECONDS (1));
+      //Status = BdsWaitForSingleEvent (HotkeyTriggered, EFI_TIMER_PERIOD_SECONDS (1));
+      Status = BdsWaitForSingleEvent (gST->ConIn->WaitForKey, EFI_TIMER_PERIOD_SECONDS (1));
       if (!EFI_ERROR (Status)) {
         break;
       }
@@ -1024,7 +1025,7 @@ BdsEntry (
     //
     // BdsReadKeys() can be removed after all keyboard drivers invoke callback in timer callback.
     //
-    BdsReadKeys ();
+    //BdsReadKeys ();
 
     EfiBootManagerHotkeyBoot ();
 
