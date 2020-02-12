@@ -2297,12 +2297,14 @@ BmEnumerateBootOptions (
   EFI_BLOCK_IO_PROTOCOL         *BlkIo;
   UINTN                         Removable;
   UINTN                         Index;
+  UINTN                         EmmcCount;
   CHAR16                        *Description;
 
   ASSERT (BootOptionCount != NULL);
 
   *BootOptionCount = 0;
   BootOptions      = NULL;
+  EmmcCount        = 0;
 
   //
   // Parse removable block io followed by fixed block io
@@ -2352,6 +2354,17 @@ BmEnumerateBootOptions (
       Description = BmGetBootDescription (Handles[Index]);
       if (Description == NULL) {
         continue;
+      }
+
+      //
+      // Skip secondary entries for internal eMMC devices
+      //
+      if (StrCmp (Description, L"Internal eMMC") == 0) {
+        EmmcCount++;
+        if (EmmcCount > 1) {
+          FreePool (Description);
+          continue;
+        }
       }
 
       BootOptions = ReallocatePool (
