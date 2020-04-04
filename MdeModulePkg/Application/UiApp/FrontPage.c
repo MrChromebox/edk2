@@ -581,9 +581,19 @@ UpdateFrontPageBannerStrings (
       GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type1Record + Type1Record->Hdr.Length), ProductIdx, &ProductName);
       GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type1Record + Type1Record->Hdr.Length), ManIdx, &Manufacturer);
 
-      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), Manufacturer);
-      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" ");
-      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), ProductName);
+      //see if we have a device name to show
+      GetDeviceNameFromProduct(ProductName, &DeviceName);
+
+      if (DeviceName[0] != 0) {
+        StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), DeviceName);
+        StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" (");
+        StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), ProductName);
+        StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L")");
+      } else {
+        StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), Manufacturer);
+        StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" ");
+        StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), ProductName);
+      }
 
       HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL), TmpBuffer, NULL);
 
