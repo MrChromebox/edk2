@@ -442,7 +442,7 @@ ConvertMemorySizeToString (
   StringBuffer = AllocateZeroPool (0x24);
   ASSERT (StringBuffer != NULL);
   UnicodeValueToStringS (StringBuffer, 0x24, LEFT_JUSTIFY, MemorySize, 10);
-  StrCatS (StringBuffer, 0x24 / sizeof (CHAR16), L" MB RAM");
+  StrCatS (StringBuffer, 0x24 / sizeof (CHAR16), L" MB");
 
   *String = (CHAR16 *)StringBuffer;
 
@@ -508,7 +508,6 @@ UpdateFrontPageBannerStrings (
 {
   UINT8                    StrIndex;
   CHAR16                   *NewString;
-  CHAR16                   *FirmwareVersionString;
   EFI_STATUS               Status;
   EFI_SMBIOS_HANDLE        SmbiosHandle;
   EFI_SMBIOS_PROTOCOL      *Smbios;
@@ -524,61 +523,13 @@ UpdateFrontPageBannerStrings (
   FoundCpu        = 0;
 
   //
-  // Update default banner string.
-  //
-  NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE4_LEFT), NULL);
-  UiCustomizeFrontPageBanner (4, TRUE, &NewString);
-  HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE4_LEFT), NewString, NULL);
-  FreePool (NewString);
-
-  NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE4_RIGHT), NULL);
-  UiCustomizeFrontPageBanner (4, FALSE, &NewString);
-  HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE4_RIGHT), NewString, NULL);
-  FreePool (NewString);
-
-  NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE5_LEFT), NULL);
-  UiCustomizeFrontPageBanner (5, TRUE, &NewString);
-  HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE5_LEFT), NewString, NULL);
-  FreePool (NewString);
-
-  NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE5_RIGHT), NULL);
-  UiCustomizeFrontPageBanner (5, FALSE, &NewString);
-  HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_CUSTOMIZE_BANNER_LINE5_RIGHT), NewString, NULL);
-  FreePool (NewString);
-
-  //
   // Update Front Page banner strings base on SmBios Table.
   //
   Status = gBS->LocateProtocol (&gEfiSmbiosProtocolGuid, NULL, (VOID **)&Smbios);
   if (EFI_ERROR (Status)) {
     //
-    // Smbios protocol not found, get the default value.
+    // Smbios protocol not found
     //
-    NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL), NULL);
-    UiCustomizeFrontPageBanner (1, TRUE, &NewString);
-    HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL), NewString, NULL);
-    FreePool (NewString);
-
-    NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL), NULL);
-    UiCustomizeFrontPageBanner (2, TRUE, &NewString);
-    HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL), NewString, NULL);
-    FreePool (NewString);
-
-    NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_SPEED), NULL);
-    UiCustomizeFrontPageBanner (2, FALSE, &NewString);
-    HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_SPEED), NewString, NULL);
-    FreePool (NewString);
-
-    NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BIOS_VERSION), NULL);
-    UiCustomizeFrontPageBanner (3, TRUE, &NewString);
-    HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BIOS_VERSION), NewString, NULL);
-    FreePool (NewString);
-
-    NewString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_MEMORY_SIZE), NULL);
-    UiCustomizeFrontPageBanner (3, FALSE, &NewString);
-    HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_MEMORY_SIZE), NewString, NULL);
-    FreePool (NewString);
-
     return;
   }
 
@@ -586,33 +537,64 @@ UpdateFrontPageBannerStrings (
   Status       = Smbios->GetNext (Smbios, &SmbiosHandle, NULL, &Record, NULL);
   while (!EFI_ERROR (Status)) {
     if (Record->Type == SMBIOS_TYPE_BIOS_INFORMATION) {
-      Type0Record = (SMBIOS_TABLE_TYPE0 *)Record;
-      StrIndex    = Type0Record->BiosVersion;
-      GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type0Record + Type0Record->Hdr.Length), StrIndex, &NewString);
+      CHAR16  *FwVersion;
+      CHAR16  *FwDate;
+      CHAR16  *TmpBuffer;
+      UINT8   VersionIdx;
+      UINT8   DateIdx;
 
-      FirmwareVersionString = (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString);
-      if (*FirmwareVersionString != 0x0000 ) {
-        FreePool (NewString);
-        NewString = (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString);
-        UiCustomizeFrontPageBanner (3, TRUE, &NewString);
-        HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BIOS_VERSION), NewString, NULL);
-      } else {
-        UiCustomizeFrontPageBanner (3, TRUE, &NewString);
-        HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BIOS_VERSION), NewString, NULL);
-        FreePool (NewString);
-      }
+      Type0Record = (SMBIOS_TABLE_TYPE0 *)Record;
+      VersionIdx  = Type0Record->BiosVersion;
+      DateIdx     = Type0Record->BiosReleaseDate;
+
+      TmpBuffer = AllocateZeroPool (0x60);
+      GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type0Record + Type0Record->Hdr.Length), VersionIdx, &FwVersion);
+      GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type0Record + Type0Record->Hdr.Length), DateIdx, &FwDate);
+
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" FW: ");
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), FwVersion);
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" ");
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), FwDate);
+
+      HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BIOS_VERSION), TmpBuffer, NULL);
+
+      FreePool (FwVersion);
+      FreePool (FwDate);
+      FreePool (TmpBuffer);
     }
 
     if (Record->Type == SMBIOS_TYPE_SYSTEM_INFORMATION) {
+      CHAR16  *ProductName;
+      CHAR16  *Manufacturer;
+      CHAR16  *DeviceName;
+      CHAR16  *TmpBuffer;
+      UINT8   ProductIdx;
+      UINT8   ManIdx;
+
       Type1Record = (SMBIOS_TABLE_TYPE1 *)Record;
-      StrIndex    = Type1Record->ProductName;
-      GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type1Record + Type1Record->Hdr.Length), StrIndex, &NewString);
-      UiCustomizeFrontPageBanner (1, TRUE, &NewString);
-      HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL), NewString, NULL);
-      FreePool (NewString);
+      ProductIdx  = Type1Record->ProductName;
+      ManIdx      = Type1Record->Manufacturer;
+
+      TmpBuffer  = AllocateZeroPool (0x60);
+      DeviceName = AllocateZeroPool (0x60);
+
+      GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type1Record + Type1Record->Hdr.Length), ProductIdx, &ProductName);
+      GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type1Record + Type1Record->Hdr.Length), ManIdx, &Manufacturer);
+
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), Manufacturer);
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" ");
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), ProductName);
+
+      HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL), TmpBuffer, NULL);
+
+      FreePool (ProductName);
+      FreePool (Manufacturer);
+      FreePool (DeviceName);
+      FreePool (TmpBuffer);
     }
 
     if ((Record->Type == SMBIOS_TYPE_PROCESSOR_INFORMATION) && !FoundCpu) {
+      CHAR16  *TmpBuffer;
       Type4Record = (SMBIOS_TABLE_TYPE4 *)Record;
       //
       // The information in the record should be only valid when the CPU Socket is populated.
@@ -620,14 +602,21 @@ UpdateFrontPageBannerStrings (
       if ((Type4Record->Status & SMBIOS_TYPE4_CPU_SOCKET_POPULATED) == SMBIOS_TYPE4_CPU_SOCKET_POPULATED) {
         StrIndex = Type4Record->ProcessorVersion;
         GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type4Record + Type4Record->Hdr.Length), StrIndex, &NewString);
-        UiCustomizeFrontPageBanner (2, TRUE, &NewString);
-        HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL), NewString, NULL);
+        // Trim leading spaces
+        while (NewString[0] == 0x20) {
+          NewString = &NewString[1];
+        }
+        // Drop 'CPU @ <speed>' if present in string
+        CHAR16 *Truncate = StrStr(NewString, L"CPU");
+        if (Truncate != NULL) {
+          *Truncate = L'\0';
+        }
+        // Add 'CPU: ' prefix
+        TmpBuffer = AllocateZeroPool (0x60);
+        UnicodeSPrint (TmpBuffer, 0x60 * sizeof (CHAR16), L"%s%s", L"CPU: ", NewString);
+        HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL), TmpBuffer, NULL);
         FreePool (NewString);
-
-        ConvertProcessorToString (Type4Record->CurrentSpeed, 6, &NewString);
-        UiCustomizeFrontPageBanner (2, FALSE, &NewString);
-        HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_SPEED), NewString, NULL);
-        FreePool (NewString);
+        FreePool (TmpBuffer);
 
         FoundCpu = TRUE;
       }
@@ -657,9 +646,11 @@ UpdateFrontPageBannerStrings (
   // Now update the total installed RAM size
   //
   ConvertMemorySizeToString ((UINT32)InstalledMemory, &NewString);
-  UiCustomizeFrontPageBanner (3, FALSE, &NewString);
-  HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_MEMORY_SIZE), NewString, NULL);
+  CHAR16 *TmpBuffer = AllocateZeroPool (0x60);
+  UnicodeSPrint (TmpBuffer, 0x60 * sizeof (CHAR16), L"%s%s", L"RAM: ", NewString);
+  HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_MEMORY_SIZE), TmpBuffer, NULL);
   FreePool (NewString);
+  FreePool (TmpBuffer);
 }
 
 /**
