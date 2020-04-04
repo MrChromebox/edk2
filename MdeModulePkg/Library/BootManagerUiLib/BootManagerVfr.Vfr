@@ -8,7 +8,7 @@
 //**/
 #define FORMSET_GUID  { 0x847bc3fe, 0xb974, 0x446d, 0x94, 0x49, 0x5a, 0xd5, 0x41, 0x2e, 0x99, 0x3b }
 
-#define BOOT_MANAGER_FORM_ID     0x1000
+#define BOOT_MANAGER_FORM_ID     0x1030
 
 #define LABEL_BOOT_OPTION        0x00
 #define LABEL_BOOT_OPTION_END    0x01
@@ -27,7 +27,7 @@ formset
     subtitle text = STRING_TOKEN(STR_LAST_STRING);
 
     //
-    //Add this invisable text in order to indicate enter Boot Manager form.
+    //Add this invisible text in order to indicate enter Boot Manager form.
     //
     suppressif TRUE;
           text
@@ -42,9 +42,6 @@ formset
     //
     label LABEL_BOOT_OPTION;
     label LABEL_BOOT_OPTION_END;
-
-    subtitle text = STRING_TOKEN(STR_LAST_STRING);
-    subtitle text = STRING_TOKEN(STR_HELP_FOOTER);
 
   endform;
 
