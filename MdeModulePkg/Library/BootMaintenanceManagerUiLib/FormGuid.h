@@ -99,6 +99,7 @@ typedef struct {
   //
   UINT16     BootTimeOut;
   UINT32     BootNext;
+  UINT8      BootDevicePriority;  // 0 = External, 1 = Internal
 
   //
   // This is the COM1 Attributes value storage
