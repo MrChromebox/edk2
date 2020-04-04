@@ -33,6 +33,7 @@
   FrontPageCustomizedUiSupport.c
   FrontPageCustomizedUi.h
   FrontPageCustomizedUiSupport.h
+  DeviceNameFromProduct.c
 
 [Packages]
   MdePkg/MdePkg.dec

@@ -205,3 +205,17 @@ CHAR16 *
 ExtractDevicePathFromHiiHandle (
   IN      EFI_HII_HANDLE  Handle
   );
+
+/**
+  Get Device Name string from SMBIOS product name
+
+  @param Product          SMBIOS product name string
+  @param DeviceName       returned Device name string
+
+**/
+VOID
+GetDeviceNameFromProduct (
+  IN      CHAR16                  *Product,
+  IN      UINTN                   BufferSize,
+  OUT     CHAR16                  **DeviceName
+  );
