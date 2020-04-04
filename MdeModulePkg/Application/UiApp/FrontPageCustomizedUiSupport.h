@@ -36,19 +36,6 @@ UiCreateEmptyLine (
   );
 
 /**
-  Create Select language menu in the front page with oneof opcode.
-
-  @param[in]    HiiHandle           The hii handle for the Uiapp driver.
-  @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
-
-**/
-VOID
-UiCreateLanguageMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
-  );
-
-/**
   Create Reset menu.
 
   @param[in]    HiiHandle           The hii handle for the Uiapp driver.
