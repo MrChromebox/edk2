@@ -22,191 +22,76 @@ typedef struct {
 STATIC UI_HII_DRIVER_INSTANCE  *gHiiDriverList;
 
 /**
-  Create the dynamic item to allow user to set the "BootNext" vaule.
+  Create Add Boot Option menu in the page.
 
   @param[in]    HiiHandle           The hii handle for the Uiapp driver.
   @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
 
 **/
 VOID
-BmmCreateBootNextMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+BmmCreateAddBootOptionMenu (
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
-  BM_MENU_ENTRY    *NewMenuEntry;
-  BM_LOAD_CONTEXT  *NewLoadContext;
-  UINT16           Index;
-  VOID             *OptionsOpCodeHandle;
-  UINT32           BootNextIndex;
-
-  if (BootOptionMenu.MenuNumber == 0) {
-    return;
-  }
-
-  BootNextIndex = NONE_BOOTNEXT_VALUE;
-
-  OptionsOpCodeHandle = HiiAllocateOpCodeHandle ();
-  ASSERT (OptionsOpCodeHandle != NULL);
-
-  for (Index = 0; Index < BootOptionMenu.MenuNumber; Index++) {
-    NewMenuEntry   = BOpt_GetMenuEntry (&BootOptionMenu, Index);
-    NewLoadContext = (BM_LOAD_CONTEXT *)NewMenuEntry->VariableContext;
-
-    if (NewLoadContext->IsBootNext) {
-      HiiCreateOneOfOptionOpCode (
-        OptionsOpCodeHandle,
-        NewMenuEntry->DisplayStringToken,
-        EFI_IFR_OPTION_DEFAULT,
-        EFI_IFR_TYPE_NUM_SIZE_32,
-        Index
-        );
-      BootNextIndex = Index;
-    } else {
-      HiiCreateOneOfOptionOpCode (
-        OptionsOpCodeHandle,
-        NewMenuEntry->DisplayStringToken,
-        0,
-        EFI_IFR_TYPE_NUM_SIZE_32,
-        Index
-        );
-    }
-  }
-
-  if (BootNextIndex == NONE_BOOTNEXT_VALUE) {
-    HiiCreateOneOfOptionOpCode (
-      OptionsOpCodeHandle,
-      STRING_TOKEN (STR_NONE),
-      EFI_IFR_OPTION_DEFAULT,
-      EFI_IFR_TYPE_NUM_SIZE_32,
-      NONE_BOOTNEXT_VALUE
-      );
-  } else {
-    HiiCreateOneOfOptionOpCode (
-      OptionsOpCodeHandle,
-      STRING_TOKEN (STR_NONE),
-      0,
-      EFI_IFR_TYPE_NUM_SIZE_32,
-      NONE_BOOTNEXT_VALUE
-      );
-  }
-
-  HiiCreateOneOfOpCode (
+  HiiCreateGotoOpCode (
     StartOpCodeHandle,
-    (EFI_QUESTION_ID)BOOT_NEXT_QUESTION_ID,
-    VARSTORE_ID_BOOT_MAINT,
-    BOOT_NEXT_VAR_OFFSET,
-    STRING_TOKEN (STR_BOOT_NEXT),
-    STRING_TOKEN (STR_BOOT_NEXT_HELP),
-    0,
-    EFI_IFR_NUMERIC_SIZE_4,
-    OptionsOpCodeHandle,
-    NULL
-    );
-
-  HiiFreeOpCodeHandle (OptionsOpCodeHandle);
-}
-
-/**
-  Create Time Out Menu in the page.
-
-  @param[in]    HiiHandle           The hii handle for the Uiapp driver.
-  @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
-
-**/
-VOID
-BmmCreateTimeOutMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
-  )
-{
-  HiiCreateNumericOpCode (
-    StartOpCodeHandle,
-    (EFI_QUESTION_ID)FORM_TIME_OUT_ID,
-    VARSTORE_ID_BOOT_MAINT,
-    BOOT_TIME_OUT_VAR_OFFSET,
-    STRING_TOKEN (STR_NUM_AUTO_BOOT),
-    STRING_TOKEN (STR_HLP_AUTO_BOOT),
+    FORM_MAIN_ID,
+    STRING_TOKEN (STR_FORM_BOOT_ADD_TITLE),
+    STRING_TOKEN (STR_FORM_BOOT_IMMEDIATE_HELP),
     EFI_IFR_FLAG_CALLBACK,
-    EFI_IFR_NUMERIC_SIZE_2 | EFI_IFR_DISPLAY_UINT_DEC,
-    0,
-    65535,
-    0,
-    NULL
+    FORM_BOOT_ADD_ID
     );
 }
 
 /**
-  Create Boot Option menu in the page.
+  Create Delete Boot Option menu in the page.
 
   @param[in]    HiiHandle           The hii handle for the Uiapp driver.
   @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
 
 **/
 VOID
-BmmCreateBootOptionMenu (
+BmmCreateDeleteBootOptionMenu (
   IN EFI_HII_HANDLE  HiiHandle,
   IN VOID            *StartOpCodeHandle
   )
 {
   HiiCreateGotoOpCode (
     StartOpCodeHandle,
-    FORM_BOOT_SETUP_ID,
-    STRING_TOKEN (STR_FORM_BOOT_SETUP_TITLE),
-    STRING_TOKEN (STR_FORM_BOOT_SETUP_HELP),
+    FORM_BOOT_DEL_ID,
+    STRING_TOKEN (STR_FORM_BOOT_DEL_TITLE),
+    STRING_TOKEN (STR_FORM_BOOT_IMMEDIATE_HELP),
     EFI_IFR_FLAG_CALLBACK,
-    FORM_BOOT_SETUP_ID
+    FORM_BOOT_DEL_ID
     );
 }
 
 /**
-  Create Driver Option menu in the page.
+  Create Change Boot Option menu in the page.
 
   @param[in]    HiiHandle           The hii handle for the Uiapp driver.
   @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
 
 **/
 VOID
-BmmCreateDriverOptionMenu (
+BmmCreateChangeBootOptionMenu (
   IN EFI_HII_HANDLE  HiiHandle,
   IN VOID            *StartOpCodeHandle
   )
 {
   HiiCreateGotoOpCode (
     StartOpCodeHandle,
-    FORM_DRIVER_SETUP_ID,
-    STRING_TOKEN (STR_FORM_DRIVER_SETUP_TITLE),
-    STRING_TOKEN (STR_FORM_DRIVER_SETUP_HELP),
+    FORM_BOOT_CHG_ID,
+    STRING_TOKEN (STR_FORM_BOOT_CHG_TITLE),
+    STRING_TOKEN (STR_FORM_BOOT_IMMEDIATE_HELP),
     EFI_IFR_FLAG_CALLBACK,
-    FORM_DRIVER_SETUP_ID
+    FORM_BOOT_CHG_ID
     );
 }
 
 /**
-  Create Com Option menu in the page.
-
-  @param[in]    HiiHandle           The hii handle for the Uiapp driver.
-  @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
-
-**/
-VOID
-BmmCreateComOptionMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
-  )
-{
-  HiiCreateGotoOpCode (
-    StartOpCodeHandle,
-    FORM_CON_MAIN_ID,
-    STRING_TOKEN (STR_FORM_CON_MAIN_TITLE),
-    STRING_TOKEN (STR_FORM_CON_MAIN_HELP),
-    EFI_IFR_FLAG_CALLBACK,
-    FORM_CON_MAIN_ID
-    );
-}
-
-/**
-  Create Com Option menu in the page.
+  Create Boot From File Option menu in the page.
 
   @param[in]    HiiHandle           The hii handle for the Uiapp driver.
   @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
