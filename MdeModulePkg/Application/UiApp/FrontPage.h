@@ -208,3 +208,16 @@ ExtractDevicePathFromHiiHandle (
   );
 
 #endif // _FRONT_PAGE_H_
+
+/**
+  Get Device Name string from SMBIOS product name
+
+  @param Product          SMBIOS product name string
+  @param DeviceName       returned Device name string
+
+**/
+VOID
+GetDeviceNameFromProduct (
+  IN      CHAR16                  *Product,
+  OUT     CHAR16                  **DeviceName
+  );
