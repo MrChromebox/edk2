@@ -56,6 +56,7 @@
   PeCoffLib
   PlatformSupportLib
   UefiCpuLib
+  PcdLib
 
 [Guids]
   gEfiMemoryTypeInformationGuid
@@ -66,6 +67,7 @@
   gUefiAcpiBoardInfoGuid
   gUniversalPayloadSmbiosTableGuid
   gUniversalPayloadAcpiTableGuid
+  gEfiSMMSTOREInfoHobGuid
 
 [FeaturePcd.IA32]
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeIplSwitchToLongMode      ## CONSUMES
@@ -92,4 +94,3 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetNxForStack               ## SOMETIMES_CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeNxMemoryProtectionPolicy ## SOMETIMES_CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdImageProtectionPolicy       ## SOMETIMES_CONSUMES
-
