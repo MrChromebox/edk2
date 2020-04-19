@@ -163,6 +163,11 @@ INF UefiPayloadPkg/BlSupportDxe/BlSupportDxe.inf
 
 INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
 INF MdeModulePkg/Logo/LogoDxe.inf
+
+FILE FREEFORM = PCD(gEfiMdeModulePkgTokenSpaceGuid.PcdLogoFile) {
+  SECTION RAW = MdeModulePkg/Logo/Logo.bmp
+}
+
 #
 # PCI Support
 #
