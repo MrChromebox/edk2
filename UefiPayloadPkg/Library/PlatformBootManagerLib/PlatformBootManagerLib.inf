@@ -47,6 +47,7 @@
   HiiLib
   PrintLib
   PlatformHookLib
+  IoLib
 
 [Guids]
   gEfiEndOfDxeEventGroupGuid
