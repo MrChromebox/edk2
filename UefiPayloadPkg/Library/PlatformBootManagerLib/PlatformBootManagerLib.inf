@@ -49,6 +49,7 @@
   PlatformHookLib
   CapsuleLib
   HobLib
+  IoLib
 
 [Guids]
   gEfiEndOfDxeEventGroupGuid
