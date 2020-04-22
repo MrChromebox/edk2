@@ -553,14 +553,6 @@ UefiMain (
     }
 
     //
-    // Display the mapping
-    //
-    if ((PcdGet8 (PcdShellSupportLevel) >= 2) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoMap) {
-      Status = RunCommand (L"map");
-      ASSERT_EFI_ERROR (Status);
-    }
-
-    //
     // init all the built in alias'
     //
     Status = SetBuiltInAlias ();
@@ -623,12 +615,10 @@ UefiMain (
         ConInHandle = NULL;
       }
 
-      if (!EFI_ERROR (Status) && (PcdGet8 (PcdShellSupportLevel) >= 1)) {
-        //
-        // process the startup script or launch the called app.
-        //
-        Status = DoStartupScript (ShellInfoObject.ImageDevPath, ShellInfoObject.FileDevPath);
-      }
+      //
+      // show welcome notice
+      //
+      ShellPrintHiiEx(-1, -1, NULL, STRING_TOKEN (STR_SHELL_WELCOME), ShellInfoObject.HiiHandle);
 
       if (!ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit && !ShellCommandGetExit () && ((PcdGet8 (PcdShellSupportLevel) >= 3) || PcdGetBool (PcdShellForceConsole)) && !EFI_ERROR (Status) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleIn) {
         //
