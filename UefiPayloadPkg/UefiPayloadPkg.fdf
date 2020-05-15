@@ -333,6 +333,10 @@ FILE FREEFORM = 878AC2CC-5343-46F2-B563-51F89DAF56BA {
 INF UefiPayloadPkg/GraphicsOutputDxe/GraphicsOutputDxe.inf
 !endif
 
+!if $(LOAD_OPTION_ROMS) == TRUE
+INF UefiPayloadPkg/PciPlatformDxe/PciPlatformDxe.inf
+!endif
+
 #
 # SCSI/ATA/IDE/DISK Support
 #
