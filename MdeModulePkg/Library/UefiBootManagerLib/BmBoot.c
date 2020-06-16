@@ -1833,6 +1833,7 @@ EfiBootManagerBoot (
   EFI_EVENT                  LegacyBootEvent;
   EFI_INPUT_KEY              Key;
   UINTN                      Index;
+  UINT8                     *SecureBoot;
 
   if (BootOption == NULL) {
     return;
@@ -1977,11 +1978,25 @@ EfiBootManagerBoot (
       if (gST->ConOut != NULL) {
         gST->ConOut->ClearScreen (gST->ConOut);
 
+        //
+        // When UEFI Secure Boot is enabled, unsigned modules won't load.
+        //
+        SecureBoot = NULL;
+        GetEfiGlobalVariable2 (EFI_SECURE_BOOT_MODE_NAME, (VOID**)&SecureBoot, NULL);
+        if ((SecureBoot != NULL) && (*SecureBoot == SECURE_BOOT_MODE_ENABLE)) {
+          AsciiPrint ("SecureBoot is enabled.\n");
+        } else {
+          AsciiPrint ("SecureBoot is disabled.\n");
+        }
+
+        if (SecureBoot != NULL) {
+          FreePool (SecureBoot);
+        }
+
         AsciiPrint (
             "Booting from '%s' failed; verify it contains a 64-bit UEFI OS.\n"
             "\nPress any key to continue booting...\n",
             BootOption->Description);
-
       }
       if (gST->ConIn != NULL) {
         Status = gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &Index);
