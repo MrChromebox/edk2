@@ -1861,6 +1861,7 @@ EfiBootManagerBoot (
   EFI_EVENT                  LegacyBootEvent;
   EFI_INPUT_KEY              Key;
   UINTN                      Index;
+  UINT8                     *SecureBoot;
 
   if (BootOption == NULL) {
     return;
@@ -2014,6 +2015,15 @@ EfiBootManagerBoot (
             "\nPress any key to continue\n",
             BootOption->Description, Status);
 
+        //
+        // When UEFI Secure Boot is enabled, unsigned modules won't load.
+        //
+        SecureBoot = NULL;
+        GetEfiGlobalVariable2 (EFI_SECURE_BOOT_MODE_NAME, (VOID**)&SecureBoot, NULL);
+        if ((SecureBoot != NULL) && (*SecureBoot == SECURE_BOOT_MODE_ENABLE)) {
+          AsciiPrint ("SecureBoot is enabled; ensure selected boot entry is compatible.\n\n");
+          FreePool (SecureBoot);
+        }
       }
       if (gST->ConIn != NULL) {
         Status = gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &Index);
