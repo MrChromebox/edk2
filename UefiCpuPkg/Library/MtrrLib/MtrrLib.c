@@ -161,6 +161,10 @@ MtrrLibIsMtrrSupported (
   CPUID_VERSION_INFO_EDX     Edx;
   MSR_IA32_MTRRCAP_REGISTER  MtrrCap;
 
+  if (PcdGetBool(PcdCpuDisableMtrrProgramming)) {
+    return FALSE;
+  }
+
   //
   // MTRR is not supported in TD-Guest.
   //
