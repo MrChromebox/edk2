@@ -344,6 +344,8 @@ BuildHobFromBl (
   SMMSTORE_INFO                     *NewSmmStoreInfo;
   FIRMWARE_INFO                     FirmwareInfo;
   FIRMWARE_INFO                     *NewFirmwareInfo;
+  TCG_PHYSICAL_PRESENCE_INFO        PhysicalPresenceInfo;
+  TCG_PHYSICAL_PRESENCE_INFO        *NewPhysicalPresenceInfo;
   EFI_PEI_GRAPHICS_INFO_HOB         GfxInfo;
   EFI_PEI_GRAPHICS_INFO_HOB         *NewGfxInfo;
   EFI_PEI_GRAPHICS_DEVICE_INFO_HOB  GfxDeviceInfo;
@@ -410,6 +412,17 @@ BuildHobFromBl (
     ASSERT (NewFirmwareInfo != NULL);
     CopyMem (NewFirmwareInfo, &FirmwareInfo, sizeof (FirmwareInfo));
     DEBUG ((DEBUG_INFO, "Created firmware info hob\n"));
+  }
+
+  //
+  // Create guid hob for Tcg Physical Presence Interface
+  //
+  Status = ParseTPMPPIInfo (&PhysicalPresenceInfo);
+  if (!EFI_ERROR (Status)) {
+    NewPhysicalPresenceInfo = BuildGuidHob (&gEfiTcgPhysicalPresenceInfoHobGuid, sizeof (TCG_PHYSICAL_PRESENCE_INFO));
+    ASSERT (NewPhysicalPresenceInfo != NULL);
+    CopyMem (NewPhysicalPresenceInfo, &PhysicalPresenceInfo, sizeof (TCG_PHYSICAL_PRESENCE_INFO));
+    DEBUG ((DEBUG_INFO, "Created Tcg Physical Presence info hob\n"));
   }
 
   //
