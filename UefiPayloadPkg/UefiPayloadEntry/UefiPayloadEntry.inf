@@ -67,6 +67,7 @@
   gUniversalPayloadAcpiTableGuid
   gUniversalPayloadSerialPortInfoGuid
   gEfiSmmStoreInfoHobGuid
+  gEfiTcgPhysicalPresenceInfoHobGuid
 
 [FeaturePcd.IA32]
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeIplSwitchToLongMode      ## CONSUMES
