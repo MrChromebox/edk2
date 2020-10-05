@@ -32,6 +32,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   UefiPayloadPkg/UefiPayloadPkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -49,6 +50,7 @@
   PlatformHookLib
   HobLib
   IoLib
+  Tcg2PhysicalPresenceLib
 
 [Guids]
   gEfiEndOfDxeEventGroupGuid
