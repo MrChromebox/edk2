@@ -2108,10 +2108,10 @@ BmMatchPartitionDevicePathNode (
 
 /**
   Emuerate all possible bootable medias in the following order:
-  1. Removable BlockIo            - The boot option only points to the removable media
-                                    device, like USB key, DVD, Floppy etc.
-  2. Fixed BlockIo                - The boot option only points to a Fixed blockIo device,
+  1. Fixed BlockIo                - The boot option only points to a Fixed blockIo device,
                                     like HardDisk.
+  2. Removable BlockIo            - The boot option only points to the removable media
+                                    device, like USB key, DVD, Floppy etc.
   3. Non-BlockIo SimpleFileSystem - The boot option points to a device supporting
                                     SimpleFileSystem Protocol, but not supporting BlockIo
                                     protocol.
@@ -2145,7 +2145,7 @@ BmEnumerateBootOptions (
   EmmcCount        = 0;
 
   //
-  // Parse removable block io followed by fixed block io
+  // Parse fixed block io followed by removable block io
   //
   gBS->LocateHandleBuffer (
          ByProtocol,
@@ -2174,9 +2174,9 @@ BmEnumerateBootOptions (
       }
 
       //
-      // Skip the fixed block io then the removable block io
+      // Skip the removable block io then the fixed block io
       //
-      if (BlkIo->Media->RemovableMedia == ((Removable == 0) ? FALSE : TRUE)) {
+      if (BlkIo->Media->RemovableMedia == (Removable == 0)) {
         continue;
       }
 
