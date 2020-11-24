@@ -97,3 +97,4 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetupConOutRow             ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetupVideoHorizontalResolution    ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetupVideoVerticalResolution      ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdPrioritizeInternal         ## CONSUMES
