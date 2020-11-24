@@ -26,6 +26,12 @@ EFI_GUID  mBmAutoCreateBootOptionGuid = {
   0x8108ac4e, 0x9f11, 0x4d59, { 0x85, 0x0e, 0xe2, 0x1a, 0x52, 0x2c, 0x59, 0xb2 }
 };
 
+// Boot Maintenance Manager Formset GUID (from FormGuid.h)
+// Used for PrioritizeInternal variable namespace
+STATIC EFI_GUID  mBootMaintGuid = {
+  0x642237c7, 0x35d4, 0x472d, { 0x83, 0x65, 0x12, 0xe0, 0xcc, 0xf2, 0x7a, 0x22 }
+};
+
 /**
 
   End Perf entry of BDS
@@ -2335,9 +2341,52 @@ BmEnumerateBootOptions (
 
       //
       // Skip the fixed block io then the removable block io
+      // Check runtime variable first, then fallback to PCD
+      // 0 = External (prioritize external), 1 = Internal (prioritize internal)
       //
-      if (BlkIo->Media->RemovableMedia == ((Removable == 0) ? FALSE : TRUE)) {
-        continue;
+      UINT8   BootDevicePriority;
+      UINT8   *BootDevicePriorityVar;
+      UINTN   BootDevicePriorityVarSize;
+
+      // Default to External (0) unless PCD says otherwise
+      BootDevicePriority = FixedPcdGetBool (PcdPrioritizeInternal) ? 1 : 0;
+      BootDevicePriorityVarSize = sizeof (UINT8);
+      // Read from Boot Maintenance Manager GUID namespace (not global variable GUID)
+      BootDevicePriorityVar = AllocatePool (BootDevicePriorityVarSize);
+      if (BootDevicePriorityVar != NULL) {
+        EFI_STATUS  Status;
+        UINTN       TempSize;
+
+        TempSize = BootDevicePriorityVarSize;
+        Status   = gRT->GetVariable (L"PrioritizeInternal", &mBootMaintGuid, NULL, &TempSize, BootDevicePriorityVar);
+        if (Status == EFI_BUFFER_TOO_SMALL) {
+          FreePool (BootDevicePriorityVar);
+          BootDevicePriorityVar = AllocatePool (TempSize);
+          if (BootDevicePriorityVar != NULL) {
+            Status = gRT->GetVariable (L"PrioritizeInternal", &mBootMaintGuid, NULL, &TempSize, BootDevicePriorityVar);
+          }
+        }
+
+        if (!EFI_ERROR (Status) && (TempSize == sizeof (UINT8))) {
+          // Legacy variable: 0 = External, non-zero = Internal
+          BootDevicePriority = (*BootDevicePriorityVar != 0) ? 1 : 0;
+        }
+
+        if (BootDevicePriorityVar != NULL) {
+          FreePool (BootDevicePriorityVar);
+        }
+      }
+
+      if (BootDevicePriority == 1) {
+        // Prioritize Internal: skip external devices (removable when looking for fixed, or fixed when looking for removable)
+        if (BlkIo->Media->RemovableMedia == (Removable == 0)) {
+          continue;
+        }
+      } else {
+        // Prioritize External: skip internal devices (fixed when looking for removable, or removable when looking for fixed)
+        if (BlkIo->Media->RemovableMedia == ((Removable == 0) ? FALSE : TRUE)) {
+          continue;
+        }
       }
 
       //
@@ -2593,11 +2642,107 @@ EfiBootManagerRefreshAllBootOption (
   }
 
   //
+  // Get boot device priority setting
+  //
+  UINT8   BootDevicePriority;
+  UINT8   *BootDevicePriorityVar;
+  UINTN   BootDevicePriorityVarSize;
+
+  // Default to External (0) unless PCD says otherwise
+  BootDevicePriority = FixedPcdGetBool (PcdPrioritizeInternal) ? 1 : 0;
+  BootDevicePriorityVarSize = sizeof (UINT8);
+  // Read from Boot Maintenance Manager GUID namespace (not global variable GUID)
+  BootDevicePriorityVar = AllocatePool (BootDevicePriorityVarSize);
+  if (BootDevicePriorityVar != NULL) {
+    EFI_STATUS  Status;
+    UINTN       TempSize;
+
+    TempSize = BootDevicePriorityVarSize;
+    Status   = gRT->GetVariable (L"PrioritizeInternal", &mBootMaintGuid, NULL, &TempSize, BootDevicePriorityVar);
+    if (Status == EFI_BUFFER_TOO_SMALL) {
+      FreePool (BootDevicePriorityVar);
+      BootDevicePriorityVar = AllocatePool (TempSize);
+      if (BootDevicePriorityVar != NULL) {
+        Status = gRT->GetVariable (L"PrioritizeInternal", &mBootMaintGuid, NULL, &TempSize, BootDevicePriorityVar);
+      }
+    }
+
+    if (!EFI_ERROR (Status) && (TempSize == sizeof (UINT8))) {
+      // Legacy variable: 0 = External, non-zero = Internal
+      BootDevicePriority = (*BootDevicePriorityVar != 0) ? 1 : 0;
+    }
+
+    if (BootDevicePriorityVar != NULL) {
+      FreePool (BootDevicePriorityVar);
+    }
+  }
+
+  //
   // Add new EFI boot options to NV
+  // Insert at beginning if device type matches priority, at end otherwise
   //
   for (Index = 0; Index < BootOptionCount; Index++) {
     if (EfiBootManagerFindLoadOption (&BootOptions[Index], NvBootOptions, NvBootOptionCount) == -1) {
-      EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], (UINTN)-1);
+      UINTN   InsertPosition;
+      BOOLEAN IsRemovable;
+      EFI_HANDLE  Handle;
+      EFI_BLOCK_IO_PROTOCOL  *BlkIo;
+      EFI_DEVICE_PATH_PROTOCOL  *TempDevicePath;
+
+      //
+      // Determine if this device is removable (external) or fixed (internal)
+      // Check device path for USB nodes first (USB devices are always external),
+      // then check BlockIo RemovableMedia flag
+      //
+      IsRemovable = FALSE;
+
+      //
+      // Check device path for USB nodes - USB devices are always external
+      // regardless of RemovableMedia flag (some USB SSDs report as non-removable)
+      //
+      EFI_DEVICE_PATH_PROTOCOL  *Node;
+      for (Node = BootOptions[Index].FilePath; !IsDevicePathEnd (Node); Node = NextDevicePathNode (Node)) {
+        if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) &&
+            (DevicePathSubType (Node) == MSG_USB_DP))
+        {
+          IsRemovable = TRUE;
+          break;
+        }
+      }
+
+      //
+      // If not USB, check BlockIo RemovableMedia flag
+      //
+      if (!IsRemovable) {
+        TempDevicePath = DuplicateDevicePath (BootOptions[Index].FilePath);
+        if (TempDevicePath != NULL) {
+          EFI_DEVICE_PATH_PROTOCOL  *TempPathForLocate;
+
+          TempPathForLocate = TempDevicePath;
+          if (gBS->LocateDevicePath (&gEfiBlockIoProtocolGuid, &TempPathForLocate, &Handle) == EFI_SUCCESS) {
+            if (gBS->HandleProtocol (Handle, &gEfiBlockIoProtocolGuid, (VOID **)&BlkIo) == EFI_SUCCESS) {
+              IsRemovable = BlkIo->Media->RemovableMedia;
+            }
+          }
+
+          FreePool (TempDevicePath);
+        }
+      }
+
+      //
+      // Determine insertion position based on priority
+      // External priority (0): removable devices at front (0), fixed at end (-1)
+      // Internal priority (1): fixed devices at front (0), removable at end (-1)
+      //
+      if (BootDevicePriority == 0) {
+        // External priority: external devices at front, internal at end
+        InsertPosition = IsRemovable ? 0 : (UINTN)-1;
+      } else {
+        // Internal priority: internal devices at front, external at end
+        InsertPosition = IsRemovable ? (UINTN)-1 : 0;
+      }
+
+      EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], InsertPosition);
       //
       // Try best to add the boot options so continue upon failure.
       //
