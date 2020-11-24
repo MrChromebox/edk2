@@ -2286,8 +2286,14 @@ BmEnumerateBootOptions (
       //
       // Skip the fixed block io then the removable block io
       //
-      if (BlkIo->Media->RemovableMedia == ((Removable == 0) ? FALSE : TRUE)) {
-        continue;
+      if (FixedPcdGetBool (PcdPrioritizeInternal)) {
+        if (BlkIo->Media->RemovableMedia == (Removable == 0)) {
+          continue;
+        }
+      } else {
+        if (BlkIo->Media->RemovableMedia == ((Removable == 0) ? FALSE : TRUE)) {
+          continue;
+        }
       }
 
       //
