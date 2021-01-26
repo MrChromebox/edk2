@@ -44,6 +44,9 @@ ParseAcpiInfo (
   DEBUG ((DEBUG_INFO, "Rsdp at 0x%p\n", Rsdp));
   DEBUG ((DEBUG_INFO, "Rsdt at 0x%x, Xsdt at 0x%lx\n", Rsdp->RsdtAddress, Rsdp->XsdtAddress));
 
+  TPM2TablePresent = 0;
+  TCPATablePresent = 0;
+
   //
   // Search Rsdt First
   //
@@ -71,6 +74,10 @@ ParseAcpiInfo (
 
       if (*Signature == EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_ALLIANCE_CAPABILITIES_TABLE_SIGNATURE) {
         TCPATablePresent = 1;
+      }
+
+     if ((Fadt != NULL) && (MmCfgHdr != NULL) && (TPM2TablePresent || TCPATablePresent ))   {
+        goto TpmDectectDone;
       }
     }
   }
@@ -101,12 +108,18 @@ ParseAcpiInfo (
       if (*Signature == EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_ALLIANCE_CAPABILITIES_TABLE_SIGNATURE) {
         TCPATablePresent = 1;
       }
+
+      if ((Fadt != NULL) && (MmCfgHdr != NULL) && (TPM2TablePresent || TCPATablePresent)) {
+        goto TpmDectectDone;
+      }
     }
   }
 
   if (Fadt == NULL) {
     return RETURN_NOT_FOUND;
   }
+
+TpmDectectDone:
 
   AcpiBoardInfo->TPM20Present = TPM2TablePresent;
   AcpiBoardInfo->TPM12Present = TCPATablePresent;

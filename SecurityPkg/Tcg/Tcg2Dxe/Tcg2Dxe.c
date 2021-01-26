@@ -2776,6 +2776,7 @@ DriverEntry (
   EFI_TCG2_EVENT_ALGORITHM_BITMAP  TpmHashAlgorithmBitmap;
   UINT32                           ActivePCRBanks;
   UINT32                           NumberOfPCRBanks;
+  UINT32                           Tpm2PcrMask;
 
   mImageHandle = ImageHandle;
 
@@ -2882,6 +2883,21 @@ DriverEntry (
   DEBUG ((DEBUG_INFO, "Tcg2.HashAlgorithmBitmap - 0x%08x\n", mTcgDxeData.BsCap.HashAlgorithmBitmap));
   DEBUG ((DEBUG_INFO, "Tcg2.NumberOfPCRBanks      - 0x%08x\n", mTcgDxeData.BsCap.NumberOfPCRBanks));
   DEBUG ((DEBUG_INFO, "Tcg2.ActivePcrBanks        - 0x%08x\n", mTcgDxeData.BsCap.ActivePcrBanks));
+
+  //
+  // On platforms without a PEI phase (e.g. the UEFI payload), Tcg2Pei never
+  // runs, so its SyncPcrAllocationsAndPcrMask() never reconciles the desired
+  // PCR mask (PcdTpm2HashMask) against the banks the TPM actually supports.
+  // Constrain the mask to the supported bitmap here so later measurements do
+  // not target unsupported banks. On platforms where Tcg2Pei already ran the
+  // values match and this is a no-op.
+  //
+  Tpm2PcrMask = PcdGet32 (PcdTpm2HashMask);
+  if (Tpm2PcrMask != mTcgDxeData.BsCap.HashAlgorithmBitmap) {
+    Tpm2PcrMask &= mTcgDxeData.BsCap.HashAlgorithmBitmap;
+    Status       = PcdSet32S (PcdTpm2HashMask, Tpm2PcrMask);
+    ASSERT_EFI_ERROR (Status);
+  }
 
   if (mTcgDxeData.BsCap.TPMPresentFlag) {
     //
