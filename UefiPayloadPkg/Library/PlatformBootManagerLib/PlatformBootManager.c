@@ -369,6 +369,15 @@ PlatformBootManagerAfterConsole (
   }
 
   //
+  // Process TPM PPI request
+  //
+  //
+  // Process TPM PPI requests. Each lib no-ops when its TPM protocol is absent.
+  //
+  TcgPhysicalPresenceLibProcessRequest ();
+  Tcg2PhysicalPresenceLibProcessRequest (NULL);
+
+  //
   // Register UEFI Shell
   //
   PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
