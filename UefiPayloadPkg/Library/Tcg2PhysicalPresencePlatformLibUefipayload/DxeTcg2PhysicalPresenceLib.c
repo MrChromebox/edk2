@@ -47,6 +47,48 @@ EFI_HII_HANDLE  mTcg2PpStringPackHandle;
 
 STATIC volatile QEMU_TPM_PPI  *mPpi;
 
+#define CACHELINE_SIZE	64
+
+/**
+ Add Function to flush cached PPI data to memory
+ Need to Flush cache to RAM otherwise mPpi are not stored ...
+
+ @param[in] FLUSH_ALL_CACHE    Flush whole Cache.
+ 
+ @retval EFI_SUCCESS           Operation completed successfully. 
+ @retval EFI_PROTOCOL_ERROR    PPI address is invalid or Len is invalid.
+**/ 
+EFI_STATUS
+Flush_PPI_Cache (
+   BOOLEAN FLUSH_ALL_CACHE
+   )
+{   
+  EFI_PHYSICAL_ADDRESS Ppi_address = (UINTN)mPpi;
+  UINTN Param_Len    = (sizeof(QEMU_TPM_PPI) -1) | (CACHELINE_SIZE-1); 
+  
+  if (( Ppi_address == (UINTN)NULL) || (Param_Len <=0)) return EFI_PROTOCOL_ERROR;
+  
+  DEBUG ((DEBUG_INFO, "[TPM2PP] Address=%p Len=%X\n", Ppi_address, Param_Len));
+  
+  switch (FLUSH_ALL_CACHE)
+  {
+  	case 0: 	//Flush Only mPPI struct
+  		for (EFI_PHYSICAL_ADDRESS Flush=Ppi_address; Flush <= Ppi_address+Param_Len; Flush+=CACHELINE_SIZE) {
+			  AsmFlushCacheLine((char*)Flush);	  	  
+			  //DEBUG ((DEBUG_INFO, "[TPM2PP] Flush cache addr=%p\n", Flush));
+  		}
+  		break;
+  	case 1:  		 		
+  	default:
+  		AsmWbinvd (); //Flush All cache
+  		//DEBUG ((DEBUG_INFO, "[TPM2PP] Flush whole cache\n"));
+  		break; 		
+  }
+  
+  return EFI_SUCCESS;
+}  
+
+
 /**
   Initializes QEMU PPI memory region.
 
@@ -804,6 +846,9 @@ Tcg2ExecutePendingTpmRequest (
   }
 
   Print (L"Rebooting system to make TPM2 settings in effect\n");
+  
+  Flush_PPI_Cache(TRUE);  //Need to Flush cache to RAM otherwise mPpi are not stored in RAM.
+  
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   ASSERT (FALSE);
 }
@@ -913,6 +958,8 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
 
   mPpi->Request          = OperationRequest;
   mPpi->RequestParameter = RequestParameter;
+
+  Flush_PPI_Cache(FALSE); //Need to flush mPpi to RAM.
 
   return TCG_PP_SUBMIT_REQUEST_TO_PREOS_SUCCESS;
 }

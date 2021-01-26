@@ -48,6 +48,7 @@
   PcdLib
   PrintLib
   Tpm12DeviceLib
+  TcgPhysicalPresenceLib
 
 [Guids]
   ## SOMETIMES_PRODUCES ## Variable:L"PhysicalPresence"

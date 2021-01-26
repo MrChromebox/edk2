@@ -351,6 +351,14 @@ PlatformBootManagerAfterConsole (
   }
 
   //
+  // Process TPM PPI request
+  //
+  Status=TcgPhysicalPresenceLibProcessRequest (); // Check for TPM1.2 First
+  if (EFI_ERROR (Status)) {
+	  Tcg2PhysicalPresenceLibProcessRequest (NULL); //Check for TPM2.0
+  }
+
+  //
   // Register UEFI Shell
   //
   PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
