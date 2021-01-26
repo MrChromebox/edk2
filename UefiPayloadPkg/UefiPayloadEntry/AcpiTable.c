@@ -37,6 +37,8 @@ ParseAcpiInfo (
   UINT32                                                                                 *Signature;
   EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_BASE_ADDRESS_TABLE_HEADER                         *MmCfgHdr;
   EFI_ACPI_MEMORY_MAPPED_ENHANCED_CONFIGURATION_SPACE_BASE_ADDRESS_ALLOCATION_STRUCTURE  *MmCfgBase;
+  UINTN                                                                                  TPM2TablePresent;
+  UINTN                                                                                  TCPATablePresent;
 
   Rsdp = (EFI_ACPI_3_0_ROOT_SYSTEM_DESCRIPTION_POINTER *)(UINTN)AcpiTableBase;
   DEBUG ((DEBUG_INFO, "Rsdp at 0x%p\n", Rsdp));
@@ -63,8 +65,12 @@ ParseAcpiInfo (
         DEBUG ((DEBUG_INFO, "Found MM config address in Rsdt\n"));
       }
 
-      if ((Fadt != NULL) && (MmCfgHdr != NULL)) {
-        goto Done;
+      if (*Signature == EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_2_TABLE_SIGNATURE) {
+        TPM2TablePresent = 1;
+      }
+
+      if (*Signature == EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_ALLIANCE_CAPABILITIES_TABLE_SIGNATURE) {
+        TCPATablePresent = 1;
       }
     }
   }
@@ -88,8 +94,12 @@ ParseAcpiInfo (
         DEBUG ((DEBUG_INFO, "Found MM config address in Xsdt\n"));
       }
 
-      if ((Fadt != NULL) && (MmCfgHdr != NULL)) {
-        goto Done;
+      if (*Signature == EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_2_TABLE_SIGNATURE) {
+        TPM2TablePresent = 1;
+      }
+
+      if (*Signature == EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_ALLIANCE_CAPABILITIES_TABLE_SIGNATURE) {
+        TCPATablePresent = 1;
       }
     }
   }
@@ -98,7 +108,8 @@ ParseAcpiInfo (
     return RETURN_NOT_FOUND;
   }
 
-Done:
+  AcpiBoardInfo->TPM20Present = TPM2TablePresent;
+  AcpiBoardInfo->TPM12Present = TCPATablePresent;
 
   AcpiBoardInfo->PmCtrlRegBase   = Fadt->Pm1aCntBlk;
   AcpiBoardInfo->PmTimerRegBase  = Fadt->PmTmrBlk;
@@ -124,6 +135,8 @@ Done:
   DEBUG ((DEBUG_INFO, "PmGpeEn Reg 0x%lx\n", AcpiBoardInfo->PmGpeEnBase));
   DEBUG ((DEBUG_INFO, "PcieBaseAddr 0x%lx\n", AcpiBoardInfo->PcieBaseAddress));
   DEBUG ((DEBUG_INFO, "PcieBaseSize 0x%lx\n", AcpiBoardInfo->PcieBaseSize));
+  DEBUG ((DEBUG_INFO, "TPM 2.0 present %x\n", AcpiBoardInfo->TPM20Present));
+  DEBUG ((DEBUG_INFO, "TPM 1.2 present %x\n", AcpiBoardInfo->TPM12Present));
 
   return RETURN_SUCCESS;
 }
