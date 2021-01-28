@@ -108,7 +108,8 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLaml                        ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLasa                        ## PRODUCES
   gEfiMdeModulePkgTokenSpaceGuid.PcdTcgPfpMeasurementRevision               ## CONSUMES
-  gEfiMdeModulePkgTokenSpaceGuid.PcdEnableSpdmDeviceAuthentication           ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEnableSpdmDeviceAuthentication          ## CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask                             ## PRODUCES
 
 [Depex]
   # According to PcdTpm2AcpiTableRev definition in SecurityPkg.dec
