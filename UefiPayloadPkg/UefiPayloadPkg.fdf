@@ -84,6 +84,13 @@ APRIORI DXE {
   INF  MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
   INF  MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
   INF  UefiPayloadPkg/BlSupportDxe/BlSupportDxe.inf
+  INF  UefiPayloadPkg/SmbusDxe/SMBusi801Dxe.inf # After BlSupportDxe
+  INF  MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
+  INF  MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
+  INF  UefiPayloadPkg/BlSMMStoreDxe/BlSMMStoreDxe.inf # After DevicePathDxe
+  INF  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf # After BlSMMStoreDxe, RuntimeDxe
+  INF  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf # After FaultTolerantWriteDxe
+  INF  UefiPayloadPkg/SmbusConfigLoaderDxe/SMBusConfigLoader.inf
 }
 
 #
