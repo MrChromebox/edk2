@@ -152,11 +152,11 @@ class CompressedImage(Image):
         try:
             TmpData = DeCompress('Efi', self[self._HEADER_SIZE_:])
             DecData = array('B')
-            DecData.fromstring(TmpData)
+            DecData.frombytes(TmpData)
         except:
             TmpData = DeCompress('Framework', self[self._HEADER_SIZE_:])
             DecData = array('B')
-            DecData.fromstring(TmpData)
+            DecData.frombytes(TmpData)
 
         SectionList = []
         Offset = 0
@@ -196,7 +196,7 @@ class Ui(Image):
         return len(self)
 
     def _GetUiString(self):
-        return codecs.utf_16_decode(self[0:-2].tostring())[0]
+        return codecs.utf_16_decode(self[0:-2].tobytes())[0]
 
     String = property(_GetUiString)
 
@@ -738,7 +738,7 @@ class GuidDefinedImage(Image):
                 Offset = self.DataOffset - 4
                 TmpData = DeCompress('Framework', self[self.Offset:])
                 DecData = array('B')
-                DecData.fromstring(TmpData)
+                DecData.frombytes(TmpData)
                 Offset = 0
                 while Offset < len(DecData):
                     Sec = Section()
@@ -759,7 +759,7 @@ class GuidDefinedImage(Image):
 
                 TmpData = DeCompress('Lzma', self[self.Offset:])
                 DecData = array('B')
-                DecData.fromstring(TmpData)
+                DecData.frombytes(TmpData)
                 Offset = 0
                 while Offset < len(DecData):
                     Sec = Section()
