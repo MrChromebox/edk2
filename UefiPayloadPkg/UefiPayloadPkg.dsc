@@ -91,10 +91,11 @@
 
 [BuildOptions]
   *_*_*_CC_FLAGS                 = -D DISABLE_NEW_DEPRECATED_INTERFACES
-  GCC:*_UNIXGCC_*_CC_FLAGS       = -DMDEPKG_NDEBUG
+!if $(USE_CBMEM_FOR_CONSOLE) == FALSE
   GCC:RELEASE_*_*_CC_FLAGS       = -DMDEPKG_NDEBUG
   INTEL:RELEASE_*_*_CC_FLAGS     = /D MDEPKG_NDEBUG
   MSFT:RELEASE_*_*_CC_FLAGS      = /D MDEPKG_NDEBUG
+!endif
 
 [BuildOptions.common.EDKII.DXE_RUNTIME_DRIVER]
   GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
@@ -193,10 +194,11 @@
   ResetSystemLib|UefiPayloadPkg/Library/ResetSystemLib/ResetSystemLib.inf
 !if $(USE_CBMEM_FOR_CONSOLE) == TRUE
   SerialPortLib|UefiPayloadPkg/Library/CbSerialPortLib/CbSerialPortLib.inf
+  PlatformHookLib|MdeModulePkg/Library/BasePlatformHookLibNull/BasePlatformHookLibNull.inf
 !else
   SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
-!endif
   PlatformHookLib|UefiPayloadPkg/Library/PlatformHookLib/PlatformHookLib.inf
+!endif
   PlatformBootManagerLib|UefiPayloadPkg/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
   IoApicLib|PcAtChipsetPkg/Library/BaseIoApicLib/BaseIoApicLib.inf
 
@@ -294,7 +296,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxHardwareErrorVariableSize|0x8000
   gEfiMdeModulePkgTokenSpaceGuid.PcdVariableStoreSize|0x10000
   gEfiMdeModulePkgTokenSpaceGuid.PcdVpdBaseAddress|0x0
-!if $(TARGET) == DEBUG
+!if ($(TARGET) == DEBUG || $(USE_CBMEM_FOR_CONSOLE) == TRUE)
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
 !else
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|FALSE
@@ -314,12 +316,14 @@
 [PcdsPatchableInModule.common]
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x7
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000004F
-!if $(TARGET) == DEBUG
-  !if $(SOURCE_DEBUG_ENABLE)
-    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x17
-  !else
-    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2B
-  !endif
+!if $(USE_CBMEM_FOR_CONSOLE) == FALSE
+   !if $(SOURCE_DEBUG_ENABLE)
+     gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x17
+   !else
+     gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2B
+   !endif
+!else
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x03
 !endif
 
   #
