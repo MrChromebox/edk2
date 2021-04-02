@@ -1831,6 +1831,8 @@ EfiBootManagerBoot (
   UINTN                      FileSize;
   EFI_BOOT_LOGO_PROTOCOL     *BootLogo;
   EFI_EVENT                  LegacyBootEvent;
+  EFI_INPUT_KEY              Key;
+  UINTN                      Index;
 
   if (BootOption == NULL) {
     return;
@@ -1971,6 +1973,27 @@ EfiBootManagerBoot (
       //
       BmReportLoadFailure (EFI_SW_DXE_BS_EC_BOOT_OPTION_LOAD_ERROR, Status);
       BootOption->Status = Status;
+
+      if (gST->ConOut != NULL) {
+        gST->ConOut->ClearScreen (gST->ConOut);
+
+        AsciiPrint (
+            "Booting from '%s' failed; verify it contains a 64-bit UEFI OS.\n"
+            "\nPress any key to continue booting...\n",
+            BootOption->Description);
+
+      }
+      if (gST->ConIn != NULL) {
+        Status = gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &Index);
+        ASSERT_EFI_ERROR (Status);
+        ASSERT (Index == 0);
+        while (!EFI_ERROR (gST->ConIn->ReadKeyStroke (gST->ConIn, &Key))) {}
+      }
+
+      if (gST->ConOut != NULL) {
+        gST->ConOut->ClearScreen (gST->ConOut);
+      }
+
       return;
     }
   }
