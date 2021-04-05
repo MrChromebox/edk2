@@ -57,7 +57,7 @@ extern EDKII_SD_MMC_OVERRIDE        *mOverride;
 //
 // Generic time out value, 1 microsecond as unit.
 //
-#define SD_MMC_HC_GENERIC_TIMEOUT     1 * 1000 * 1000
+#define SD_MMC_HC_GENERIC_TIMEOUT     1 * 1000 * 100
 #define SD_MMC_CLOCK_STABLE_TIMEOUT   3 * 1000
 
 //
