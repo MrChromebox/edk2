@@ -309,10 +309,12 @@
 [PcdsPatchableInModule.common]
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x7
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000004F
-!if $(SOURCE_DEBUG_ENABLE)
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x17
-!else
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2F
+!if $(TARGET) == DEBUG
+  !if $(SOURCE_DEBUG_ENABLE)
+    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x17
+  !else
+    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2B
+  !endif
 !endif
 
   #
