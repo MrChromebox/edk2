@@ -218,6 +218,8 @@ GetDeviceNameFromProduct (
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Pro c640 Chromebook");
   } else if (!StrCmp(Product, L"Duffy")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"ASUS Chromebox 4");
+  } else if (!StrCmp(Product, L"Faffy")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"ASUS Fanless Chromebox");
   } else if (!StrCmp(Product, L"Helios")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Asus Chromebook Flip C436FA");
   } else if (!StrCmp(Product, L"Jinlon")) {
@@ -230,9 +232,15 @@ GetDeviceNameFromProduct (
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Acer Chromebook Spin 713 [CP713-2W]");
   } else if (!StrCmp(Product, L"Kohaku")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Samsung Galaxy Chromebook");
+  } else if (!StrCmp(Product, L"Nightfury")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Samsung Galaxy Chromebook 2");
   } else if (!StrCmp(Product, L"Noibat")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Chromebox G3");
   } else if (!StrCmp(Product, L"Wyvern")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"CTL Chromebox CBx2");
   } 
+  //Picasso/Dali
+    else if (!StrCmp(Product, L"Morphius")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Lenovo ThinkPad C13 Yoga Chromebook");
+  }
 }
