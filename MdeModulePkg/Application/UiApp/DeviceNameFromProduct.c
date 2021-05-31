@@ -243,4 +243,12 @@ GetDeviceNameFromProduct (
     else if (!StrCmp(Product, L"Morphius")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Lenovo ThinkPad C13 Yoga Chromebook");
   }
+  //Jasperlake
+    else if (!StrCmp(Product, L"Drawlat")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Chromebook 11 G9 EE");
+  } else if (!StrCmp(Product, L"Drawman")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Chromebook 14 G7");
+  } else if (!StrCmp(Product, L"Drawcia")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Chromebook x360 11 G4 EE");
+  }
 }
