@@ -525,11 +525,7 @@ UpdateFrontPageBannerStrings (
   VOID
   )
 {
-  UINT8                             StrIndex;
-  UINT8                             Str2Index;
-  CHAR16                            *NewString;
-  CHAR16                            *NewString2;
-  CHAR16                            *NewString3;
+  CHAR16                            *MemoryStr;
   EFI_STATUS                        Status;
   EFI_STRING_ID                     TokenToUpdate;
   EFI_PHYSICAL_ADDRESS              *Table;
@@ -548,59 +544,101 @@ UpdateFrontPageBannerStrings (
     EntryPoint = (SMBIOS_TABLE_ENTRY_POINT*)Table;
 
     SmbiosTable = GetSmbiosTableFromType (EntryPoint, EFI_SMBIOS_TYPE_BIOS_INFORMATION , 0);
-    if (SmbiosTable.Raw != NULL) {
-      NewString3 = AllocateZeroPool (0x60);
 
-      StrIndex = SmbiosTable.Type0->BiosVersion;
-      Str2Index = SmbiosTable.Type0->BiosReleaseDate;
-      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), StrIndex, &NewString);
-      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), Str2Index, &NewString2);
-      StrCatS (NewString3, 0x60 / sizeof (CHAR16), L"FW: ");
-      StrCatS (NewString3, 0x60 / sizeof (CHAR16), NewString);
-      StrCatS (NewString3, 0x60 / sizeof (CHAR16), L" ");
-      StrCatS (NewString3, 0x60 / sizeof (CHAR16), NewString2);
-      TokenToUpdate = STRING_TOKEN (STR_FRONT_PAGE_BIOS_VERSION);
-      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, NewString3, NULL);
-      FreePool (NewString);
+	if (SmbiosTable.Raw != NULL) {
+	  CHAR16 *FwVersion;
+	  CHAR16 *FwDate;
+	  CHAR16 *TmpBuffer;
+	  UINT8 VersionIdx;
+	  UINT8 DateIdx;
+
+      TmpBuffer = AllocateZeroPool (0x60);
+
+      VersionIdx = SmbiosTable.Type0->BiosVersion;
+      DateIdx = SmbiosTable.Type0->BiosReleaseDate;
+
+      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), VersionIdx, &FwVersion);
+      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), DateIdx, &FwDate);
+      
+	  StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L"FW: ");
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), FwVersion);
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" ");
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), FwDate);
+      
+	  TokenToUpdate = STRING_TOKEN (STR_FRONT_PAGE_BIOS_VERSION);
+      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, TmpBuffer, NULL);
+
+	  FreePool (FwVersion);
+	  FreePool (FwDate);
+	  FreePool (TmpBuffer);
     }
 
     SmbiosTable = GetSmbiosTableFromType (EntryPoint, SMBIOS_TYPE_SYSTEM_INFORMATION , 0);
-    if (SmbiosTable.Raw != NULL) {
-      NewString3 = AllocateZeroPool (0x60);
+    
+	if (SmbiosTable.Raw != NULL) {
+      CHAR16 *ProductName;
+	  CHAR16 *Manufacturer;
+	  CHAR16 *DeviceName;
+	  CHAR16 *TmpBuffer;
+	  UINT8 ProductIdx;
+	  UINT8 ManIdx;
 
-      StrIndex = SmbiosTable.Type1->ProductName;
-      Str2Index = SmbiosTable.Type1->Manufacturer;
-      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), StrIndex, &NewString);
-      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), Str2Index, &NewString2);
-       if (!StrCmp(NewString2, L"GOOGLE") || !StrCmp(NewString2, L"Google")) {
-          NewString2 = AllocateZeroPool (0x60);
-          GetDeviceNameFromProduct(NewString, &NewString2);
-          StrCatS (NewString3, 0x60 / sizeof (CHAR16), NewString2);
-          StrCatS (NewString3, 0x60 / sizeof (CHAR16), L" (");
-          StrCatS (NewString3, 0x60 / sizeof (CHAR16), NewString);
-          StrCatS (NewString3, 0x60 / sizeof (CHAR16), L")");
-       } else {
-          StrCatS (NewString3, 0x60 / sizeof (CHAR16), NewString2);
-          StrCatS (NewString3, 0x60 / sizeof (CHAR16), L" ");
-          StrCatS (NewString3, 0x60 / sizeof (CHAR16), NewString);
-       }
-      TokenToUpdate = STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL);
-      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, NewString3, NULL);
-      FreePool (NewString);
+	  TmpBuffer = AllocateZeroPool (0x60);
+	  DeviceName = AllocateZeroPool (0x60);
+
+      ProductIdx = SmbiosTable.Type1->ProductName;
+      ManIdx = SmbiosTable.Type1->Manufacturer;
+      
+	  GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), ProductIdx, &ProductName);
+      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), ManIdx, &Manufacturer);
+
+	  //see if we have a device name to show
+	  GetDeviceNameFromProduct(ProductName, &DeviceName);
+      
+	  if (DeviceName[0] != 0) {
+          StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), DeviceName);
+          StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" (");
+          StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), ProductName);
+          StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L")");
+      } else {
+          StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), Manufacturer);
+          StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), L" ");
+          StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), ProductName);
+      }
+      
+	  TokenToUpdate = STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL);
+      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, TmpBuffer, NULL);
+      
+	  FreePool (ProductName);
+	  FreePool (Manufacturer);
+	  FreePool (DeviceName);
+	  FreePool (TmpBuffer);
+	  
     }
 
     SmbiosTable = GetSmbiosTableFromType (EntryPoint, SMBIOS_TYPE_PROCESSOR_INFORMATION , 0);
     if (SmbiosTable.Raw != NULL) {
-      NewString3 = AllocateZeroPool (0x60);
-      StrIndex = SmbiosTable.Type4->ProcessorVersion;
-      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), StrIndex, &NewString);
-      StrCatS (NewString3, 0x60 / sizeof (CHAR16), NewString);
-      while (NewString3[0] == 0x20) {
-        NewString3 = &NewString3[1];
+	  CHAR16 *ProcessorVersion;
+	  CHAR16 *TmpBuffer;
+	  UINT8 CpuIdx;
+
+      TmpBuffer = AllocateZeroPool (0x60);
+
+	  CpuIdx = SmbiosTable.Type4->ProcessorVersion;
+
+      GetOptionalStringByIndex ((CHAR8*)((UINT8*)SmbiosTable.Raw + SmbiosTable.Hdr->Length), CpuIdx, &ProcessorVersion);
+      StrCatS (TmpBuffer, 0x60 / sizeof (CHAR16), ProcessorVersion);
+      
+	  // Trim leading spaces
+	  while (TmpBuffer[0] == 0x20) {
+        TmpBuffer = &TmpBuffer[1];
       }
-      TokenToUpdate = STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL);
-      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, NewString3, NULL);
-      FreePool (NewString);
+      
+	  TokenToUpdate = STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL);
+      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, TmpBuffer, NULL);
+      
+	  FreePool (ProcessorVersion);
+	  FreePool (TmpBuffer);
     }
 
     SmbiosTable = GetSmbiosTableFromType (EntryPoint, SMBIOS_TYPE_MEMORY_ARRAY_MAPPED_ADDRESS , 0);
@@ -614,10 +652,11 @@ UpdateFrontPageBannerStrings (
       }
 
       // now update the total installed RAM size
-      ConvertMemorySizeToString ((UINT32)InstalledMemory, &NewString );
+      ConvertMemorySizeToString ((UINT32)InstalledMemory, &MemoryStr );
       TokenToUpdate = STRING_TOKEN (STR_FRONT_PAGE_MEMORY_SIZE);
-      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, NewString, NULL);
-      FreePool (NewString);
+      HiiSetString (gFrontPagePrivate.HiiHandle, TokenToUpdate, MemoryStr, NULL);
+      
+	  FreePool (MemoryStr);
     }
   }
 }
