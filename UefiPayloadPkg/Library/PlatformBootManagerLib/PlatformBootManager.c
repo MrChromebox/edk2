@@ -240,9 +240,6 @@ PlatformBootManagerAfterConsole (
       0
       );
 
-  // Inject boot logo into BGRT table
-  AddBGRT();
-
   // invoke SMM handler to put BYT eMMC/SD devices into ACPI mode for OS
   IoWrite8(0xb2, 0xcd);
 }

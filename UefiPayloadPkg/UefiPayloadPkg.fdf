@@ -130,10 +130,6 @@ INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
 INF MdeModulePkg/Logo/LogoDxe.inf
 INF UefiPayloadPkg/BlSMMStoreDxe/BlSMMStoreDxe.inf
 
-FILE FREEFORM = PCD(gEfiMdeModulePkgTokenSpaceGuid.PcdLogoFile) {
-  SECTION RAW = MdeModulePkg/Logo/Logo.bmp
-}
-
 #
 # SMBUS Support
 #
