@@ -87,3 +87,8 @@ gUefiPayloadPkgTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode|0x80|UINT32|0x
 
 # Size of the region used by UEFI in permanent memory
 gUefiPayloadPkgTokenSpaceGuid.PcdSystemMemoryUefiRegionSize|0x02000000|UINT32|0x00000017
+
+# Above 4G Decode
+gUefiPayloadPkgTokenSpaceGuid.PcdEnableAbove4GDecode|1|UINT32|0x00000018
+
+

@@ -30,6 +30,7 @@
 
   DEFINE PLATFORM_BOOT_TIMEOUT        = 2
   DEFINE USE_CBMEM_FOR_CONSOLE        = FALSE
+  DEFINE ABOVE_4G_DECODE              = TRUE
 
   #
   # SBL:      UEFI payload for Slim Bootloader
@@ -312,6 +313,13 @@
 !endif
   # Disable MTRR programming
   gUefiCpuPkgTokenSpaceGuid.PcdCpuDisableMtrrProgramming|TRUE
+  
+  # Above 4G Decode
+!if $(ENABLE_ABOVE_4G_DECODE) == TRUE
+  gUefiPayloadPkgTokenSpaceGuid.PcdEnableAbove4GDecode|TRUE
+!else
+  gUefiPayloadPkgTokenSpaceGuid.PcdEnableAbove4GDecode|FALSE
+!endif
 
 [PcdsPatchableInModule.common]
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x7
