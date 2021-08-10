@@ -315,10 +315,10 @@
   gUefiCpuPkgTokenSpaceGuid.PcdCpuDisableMtrrProgramming|TRUE
   
   # Above 4G Decode
-!if $(ENABLE_ABOVE_4G_DECODE) == TRUE
-  gUefiPayloadPkgTokenSpaceGuid.PcdEnableAbove4GDecode|TRUE
+!if $(ABOVE_4G_DECODE) == TRUE
+  gUefiPayloadPkgTokenSpaceGuid.PcdAbove4GDecode|TRUE
 !else
-  gUefiPayloadPkgTokenSpaceGuid.PcdEnableAbove4GDecode|FALSE
+  gUefiPayloadPkgTokenSpaceGuid.PcdAbove4GDecode|FALSE
 !endif
 
 [PcdsPatchableInModule.common]

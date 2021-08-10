@@ -17,9 +17,9 @@ STATIC UINT32 mTopOfLowerUsableDram = 0;
 
    e.g. Xen hypervisor used in Qubes
 **/
-VOID Above4GDecode(VOID)
+VOID ForceModulesBelow4G(VOID)
 {
-  DEBUG ((DEBUG_INFO, "Building hob to restrict memory resorces to below 4GB.\n"));
+  DEBUG ((DEBUG_INFO, "Building hob to restrict memory resorces to below 4G.\n"));
   EFI_MEMORY_TYPE_INFORMATION mDefaultMemoryTypeInformation[] = {
     { EfiACPIReclaimMemory,   FixedPcdGet32 (PcdMemoryTypeEfiACPIReclaimMemory) },
     { EfiACPIMemoryNVS,       FixedPcdGet32 (PcdMemoryTypeEfiACPIMemoryNVS) },
@@ -635,9 +635,9 @@ PayloadEntry (
   // Build other HOBs required by DXE
   BuildGenericHob ();
 
-  // Create a HOB to make resources for EDKII modules below 4GB
-  if (FixedPcdGetBool (PcdEnableAbove4GDecode) == FALSE) {
-    Above4GDecode ();
+  // Create a HOB to make resources for EDKII modules below 4G
+  if (FixedPcdGetBool (PcdAbove4GDecode) == FALSE) {
+    ForceModulesBelow4G ();
   }
 
   // Load the DXE Core

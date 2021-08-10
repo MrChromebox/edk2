@@ -100,4 +100,4 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeNxMemoryProtectionPolicy ## SOMETIMES_CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdImageProtectionPolicy       ## SOMETIMES_CONSUMES
 
-  gUefiPayloadPkgTokenSpaceGuid.PcdEnableAbove4GDecode
+  gUefiPayloadPkgTokenSpaceGuid.PcdAbove4GDecode
