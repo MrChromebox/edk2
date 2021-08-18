@@ -636,7 +636,7 @@ PayloadEntry (
   BuildGenericHob ();
 
   // Create a HOB to make resources for EDKII modules below 4G
-  if (FixedPcdGetBool (PcdAbove4GDecode) == FALSE) {
+  if (FixedPcdGetBool (PcdAbove4GMemory) == FALSE) {
     ForceModulesBelow4G ();
   }
 

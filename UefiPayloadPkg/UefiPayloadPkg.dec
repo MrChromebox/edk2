@@ -89,6 +89,6 @@ gUefiPayloadPkgTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode|0x80|UINT32|0x
 gUefiPayloadPkgTokenSpaceGuid.PcdSystemMemoryUefiRegionSize|0x02000000|UINT32|0x00000017
 
 # Above 4G Decode
-gUefiPayloadPkgTokenSpaceGuid.PcdAbove4GDecode|1|UINT32|0x00000018
+gUefiPayloadPkgTokenSpaceGuid.PcdAbove4GMemory|1|UINT32|0x00000018
 
 
