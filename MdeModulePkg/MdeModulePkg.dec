@@ -2095,6 +2095,9 @@
   # @Prompt The shared bit mask when Intel Tdx is enabled.
   gEfiMdeModulePkgTokenSpaceGuid.PcdTdxSharedBitMask|0x0|UINT64|0x10000025
 
+  # Follow BGRT Specifcation
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpec|FALSE|BOOLEAN|0x00000025
+
 [PcdsPatchableInModule]
   ## Specify memory size with page number for PEI code when
   #  Loading Module at Fixed Address feature is enabled.
