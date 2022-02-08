@@ -817,8 +817,9 @@ XhcTransfer (
       ASSERT (Urb->Result == EFI_USB_NOERROR);
       Status = EFI_SUCCESS;
       DEBUG ((DEBUG_ERROR, "XhcTransfer[Type=%d]: pending URB is finished, Length = %d.\n", Type, Urb->Completed));
-    } else if (EFI_ERROR (RecoveryStatus)) {
-      DEBUG ((DEBUG_ERROR, "XhcTransfer[Type=%d]: XhcDequeueTrbFromEndpoint failed!\n", Type));
+    } else if (EFI_ERROR(RecoveryStatus)) {
+      DEBUG((DEBUG_ERROR, "XhcTransfer[Type=%d]: XhcDequeueTrbFromEndpoint failed!\n", Type));
+      Status = RecoveryStatus;
     }
   }
 
