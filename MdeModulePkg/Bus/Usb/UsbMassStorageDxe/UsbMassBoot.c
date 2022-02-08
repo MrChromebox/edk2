@@ -294,6 +294,18 @@ UsbBootExecCmdWithRetry (
     }
 
     //
+    // DEVICE_ERROR often means a wedged/faulting device (e.g. xHCI stall). Allow a
+    // single retry, then stop - do not burn the full USB_BOOT_COMMAND_RETRY budget.
+    //
+    if (Status == EFI_DEVICE_ERROR) {
+      if (Retry++ >= 1) {
+        break;
+      }
+
+      continue;
+    }
+
+    //
     // If the status is other error, then just retry 5 times.
     //
     if (Retry++ >= USB_BOOT_COMMAND_RETRY) {
