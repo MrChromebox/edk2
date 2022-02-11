@@ -1138,10 +1138,13 @@ FindFvbForFtw (
           FtwDevice->NumberOfWorkSpaceBlock = FTW_BLOCKS (FtwDevice->FtwWorkSpaceBase + FtwDevice->FtwWorkSpaceSize, FtwDevice->WorkBlockSize);
           if (FtwDevice->FtwWorkSpaceSize >= FtwDevice->WorkBlockSize) {
             //
-            // Check the alignment of work space address and length, they should be block size aligned when work space size is larger than one block size.
+            // Block-backed FVBs require work space address/length block alignment when
+            // work space spans more than one block. Memory-mapped FVBs (e.g. SmmStore)
+            // often use a logical block size that does not match MMIO layout.
             //
-            if (((FtwDevice->WorkSpaceAddress & (FtwDevice->WorkBlockSize - 1)) != 0) ||
-                ((FtwDevice->WorkSpaceLength & (FtwDevice->WorkBlockSize - 1)) != 0))
+            if (((Attributes & EFI_FVB2_MEMORY_MAPPED) == 0) &&
+                (((FtwDevice->WorkSpaceAddress & (FtwDevice->WorkBlockSize - 1)) != 0) ||
+                 ((FtwDevice->WorkSpaceLength & (FtwDevice->WorkBlockSize - 1)) != 0)))
             {
               DEBUG ((DEBUG_ERROR, "Ftw: Work space address or length is not block size aligned when work space size is larger than one block size\n"));
               FreePool (HandleBuffer);
@@ -1188,10 +1191,12 @@ FindFvbForFtw (
           }
 
           //
-          // Check the alignment of spare area address and length, they should be block size aligned
+          // Spare area must be block-aligned for block-backed FVBs. Skip for
+          // memory-mapped FVBs where the reported block size is logical.
           //
-          if (((FtwDevice->SpareAreaAddress & (FtwDevice->SpareBlockSize - 1)) != 0) ||
-              ((FtwDevice->SpareAreaLength & (FtwDevice->SpareBlockSize - 1)) != 0))
+          if (((Attributes & EFI_FVB2_MEMORY_MAPPED) == 0) &&
+              (((FtwDevice->SpareAreaAddress & (FtwDevice->SpareBlockSize - 1)) != 0) ||
+               ((FtwDevice->SpareAreaLength & (FtwDevice->SpareBlockSize - 1)) != 0)))
           {
             DEBUG ((DEBUG_ERROR, "Ftw: Spare area address or length is not block size aligned\n"));
             FreePool (HandleBuffer);
