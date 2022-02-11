@@ -1136,19 +1136,7 @@ FindFvbForFtw (
           FtwDevice->WorkBlockSize          = BlockSize;
           FtwDevice->FtwWorkSpaceBase       = (UINTN)(FtwDevice->WorkSpaceAddress - (FvbBaseAddress + FtwDevice->WorkBlockSize * (LbaIndex - 1)));
           FtwDevice->NumberOfWorkSpaceBlock = FTW_BLOCKS (FtwDevice->FtwWorkSpaceBase + FtwDevice->FtwWorkSpaceSize, FtwDevice->WorkBlockSize);
-          if (FtwDevice->FtwWorkSpaceSize >= FtwDevice->WorkBlockSize) {
-            //
-            // Check the alignment of work space address and length, they should be block size aligned when work space size is larger than one block size.
-            //
-            if (((FtwDevice->WorkSpaceAddress & (FtwDevice->WorkBlockSize - 1)) != 0) ||
-                ((FtwDevice->WorkSpaceLength & (FtwDevice->WorkBlockSize - 1)) != 0))
-            {
-              DEBUG ((DEBUG_ERROR, "Ftw: Work space address or length is not block size aligned when work space size is larger than one block size\n"));
-              FreePool (HandleBuffer);
-              ASSERT (FALSE);
-              return EFI_ABORTED;
-            }
-          } else if ((FtwDevice->FtwWorkSpaceBase + FtwDevice->FtwWorkSpaceSize) > FtwDevice->WorkBlockSize) {
+          if ((FtwDevice->FtwWorkSpaceBase + FtwDevice->FtwWorkSpaceSize) > FtwDevice->WorkBlockSize) {
             DEBUG ((DEBUG_ERROR, "Ftw: The work space range should not span blocks when work space size is less than one block size\n"));
             FreePool (HandleBuffer);
             ASSERT (FALSE);
@@ -1186,23 +1174,6 @@ FindFvbForFtw (
             ASSERT (FALSE);
             return EFI_ABORTED;
           }
-
-          //
-          // Check the alignment of spare area address and length, they should be block size aligned
-          //
-          if (((FtwDevice->SpareAreaAddress & (FtwDevice->SpareBlockSize - 1)) != 0) ||
-              ((FtwDevice->SpareAreaLength & (FtwDevice->SpareBlockSize - 1)) != 0))
-          {
-            DEBUG ((DEBUG_ERROR, "Ftw: Spare area address or length is not block size aligned\n"));
-            FreePool (HandleBuffer);
-            //
-            // Report Status Code EFI_SW_EC_ABORTED.
-            //
-            REPORT_STATUS_CODE ((EFI_ERROR_CODE | EFI_ERROR_UNRECOVERED), (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_EC_ABORTED));
-            ASSERT (FALSE);
-            CpuDeadLoop ();
-          }
-
           break;
         }
       }
