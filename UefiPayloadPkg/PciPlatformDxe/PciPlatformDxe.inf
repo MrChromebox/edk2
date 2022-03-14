@@ -29,6 +29,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
 
 [LibraryClasses]
   UefiDriverEntryPoint
@@ -40,7 +41,11 @@
   DevicePathLib
   UefiLib
   HobLib
+  PcdLib
 
 [Protocols]
   gEfiPciPlatformProtocolGuid                   ## PRODUCES
   gEfiPciIoProtocolGuid                         ## COMSUMES
+
+[Pcd]
+  gUefiPayloadPkgTokenSpaceGuid.PcdLoadOptionRoms

@@ -81,6 +81,10 @@ PciGetPciRom (
   *RomImage = NULL;
   *RomSize = 0;
 
+  if (!PcdGetBool(PcdLoadOptionRoms)) {
+    return EFI_NOT_FOUND;
+  }
+
   Status = gBS->HandleProtocol (
                   PciHandle,
                   &gEfiPciIoProtocolGuid,
