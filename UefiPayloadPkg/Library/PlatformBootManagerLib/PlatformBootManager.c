@@ -267,7 +267,7 @@ PlatformBootManagerAfterConsole (
     Print (
       L"\n"
       L"    Esc or Down      to enter Boot Manager Menu.\n"
-      L"    ENTER           to boot directly.\n"
+      L"    ENTER            to boot directly.\n"
       L"\n"
       );
   } else {
