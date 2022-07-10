@@ -1367,3 +1367,8 @@
 #string STR_gEfiMdeModulePkgTokenSpaceGuid_PcdLogoFileGuid_HELP   #language en-US "Specifies the GUID of the logo file to be loaded from firmware volume.<BR><BR>\n"
                                                                                    "If set to zero GUID (default), the embedded HII logo is used.<BR>\n"
                                                                                    "If set to a non-zero GUID, the logo is loaded from the firmware volume file with the specified GUID.<BR>"
+
+#string STR_gEfiMdeModulePkgTokenSpaceGuid_PcdFollowBGRTSpecification_PROMPT #language en-US "The position of the Boot Logo"
+
+#string STR_gEfiMdeModulePkgTokenSpaceGuid_PcdFollowBGRTSpecification_HELP   #language en-US "Sets the position of the Logo. When set to true, the Logo is positioned according to the"
+                                                                                             " BGRT specification, 38.2% from the top of the screen."

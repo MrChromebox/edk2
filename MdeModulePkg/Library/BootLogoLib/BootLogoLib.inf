@@ -46,3 +46,6 @@
   gEdkiiBootLogo2ProtocolGuid                   ## SOMETIMES_CONSUMES
   gEfiUserManagerProtocolGuid                   ## CONSUMES
   gEdkiiPlatformLogoProtocolGuid                ## CONSUMES
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification ## CONSUMES

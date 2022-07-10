@@ -52,14 +52,15 @@
   UefiBootServicesTableLib
   UefiDriverEntryPoint
 
-[Pcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdLogoFileGuid ## CONSUMES
-
 [Protocols]
   gEfiHiiDatabaseProtocolGuid        ## CONSUMES
   gEfiHiiImageExProtocolGuid         ## CONSUMES
   gEfiHiiPackageListProtocolGuid     ## CONSUMES
   gEdkiiPlatformLogoProtocolGuid     ## PRODUCES
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdLogoFileGuid ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification ## CONSUMES
 
 [Depex]
   gEfiHiiDatabaseProtocolGuid AND

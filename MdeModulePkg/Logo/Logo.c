@@ -153,6 +153,10 @@ GetImage (
     return EFI_NOT_FOUND;
   }
 
+  if (FixedPcdGetBool (PcdFollowBGRTSpecification)) {
+    mLogos[Current].Attribute = EdkiiPlatformLogoDisplayAttributeBGRTSpecification;
+  }
+
   (*Instance)++;
   *Attribute = mLogos[Current].Attribute;
   *OffsetX   = mLogos[Current].OffsetX;
