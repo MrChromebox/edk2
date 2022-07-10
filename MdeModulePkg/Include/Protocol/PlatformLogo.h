@@ -29,7 +29,8 @@ typedef enum {
   EdkiiPlatformLogoDisplayAttributeCenterBottom,
   EdkiiPlatformLogoDisplayAttributeLeftBottom,
   EdkiiPlatformLogoDisplayAttributeCenterLeft,
-  EdkiiPlatformLogoDisplayAttributeCenter
+  EdkiiPlatformLogoDisplayAttributeCenter,
+  EdkiiPlatformLogoDisplayAttributeBGRTSpecification
 } EDKII_PLATFORM_LOGO_DISPLAY_ATTRIBUTE;
 
 /**
