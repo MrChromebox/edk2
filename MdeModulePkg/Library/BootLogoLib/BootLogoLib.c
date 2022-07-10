@@ -145,7 +145,6 @@ BootLogoEnableLogo (
         DestX = SizeOfX - Image.Width;
         DestY = 0;
         break;
-
       case EdkiiPlatformLogoDisplayAttributeCenterLeft:
         DestX = 0;
         DestY = (SizeOfY - Image.Height) / 2;
@@ -158,7 +157,6 @@ BootLogoEnableLogo (
         DestX = SizeOfX - Image.Width;
         DestY = (SizeOfY - Image.Height) / 2;
         break;
-
       case EdkiiPlatformLogoDisplayAttributeLeftBottom:
         DestX = 0;
         DestY = SizeOfY - Image.Height;
@@ -171,7 +169,10 @@ BootLogoEnableLogo (
         DestX = SizeOfX - Image.Width;
         DestY = SizeOfY - Image.Height;
         break;
-
+      case EdkiiPlatformLogoDisplayAttributeBGRTSpecification:
+        DestX = (SizeOfX - Image.Width) / 2;
+        DestY = (SizeOfY * 382) / 1000 - Image.Height / 2;
+        break;
       default:
         ASSERT (FALSE);
         continue;
