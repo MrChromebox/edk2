@@ -46,6 +46,7 @@
   DEFINE NVME_ENABLE                  = TRUE
   DEFINE LOCKBOX_SUPPORT              = FALSE
   DEFINE LOAD_OPTION_ROMS             = FALSE
+  DEFINE FOLLOW_BGRT_SPEC             = FALSE
 
   #
   # Capsule updates
@@ -627,6 +628,8 @@
 
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape|$(BOOT_MANAGER_ESCAPE)
   gUefiPayloadPkgTokenSpaceGuid.PcdSerialTerminalPrintEnabled|!$(DISABLE_SERIAL_TERMINAL)
+
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification|$(FOLLOW_BGRT_SPEC)
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumUnicodeStringLength|1800000
 
