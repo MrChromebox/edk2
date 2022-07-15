@@ -2282,6 +2282,12 @@
   # @Prompt The value is use for Usb Network rate limiting supported.
   gEfiMdeModulePkgTokenSpaceGuid.PcdUsbNetworkRateLimitingFactor|100|UINT32|0x10000028
 
+  ## This PCD sets the position of the Boot Logo.
+  #   TRUE  - The Logo is positioned according to the BGRT specification.
+  #   FALSE - The logo is positioned in the center of the screen.
+  # @ Prompt This position of the boot logo
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification|FALSE|BOOLEAN|0x10000036
+
 [PcdsPatchableInModule]
   ## Specify memory size with page number for PEI code when
   #  Loading Module at Fixed Address feature is enabled.
