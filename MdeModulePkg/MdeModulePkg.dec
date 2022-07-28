@@ -1742,12 +1742,12 @@
   ## This PCD defines the Console output row. The default value is 25 according to UEFI spec.
   #  This PCD could be set to 0 then console output would be at max column and max row.
   # @Prompt Console output row.
-  gEfiMdeModulePkgTokenSpaceGuid.PcdConOutRow|25|UINT32|0x40000006
+  gEfiMdeModulePkgTokenSpaceGuid.PcdConOutRow|40|UINT32|0x40000006
 
   ## This PCD defines the Console output column. The default value is 80 according to UEFI spec.
   #  This PCD could be set to 0 then console output would be at max column and max row.
   # @Prompt Console output column.
-  gEfiMdeModulePkgTokenSpaceGuid.PcdConOutColumn|80|UINT32|0x40000007
+  gEfiMdeModulePkgTokenSpaceGuid.PcdConOutColumn|128|UINT32|0x40000007
 
   ## This PCD defines the video horizontal resolution.
   #  If this PCD is set to 0 then video resolution would be at highest resolution.
@@ -1776,11 +1776,11 @@
 
   ## Specify the console output column of text setup.
   # @Prompt Console Output Column of Text Setup
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSetupConOutColumn|80|UINT32|0x4000000d
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSetupConOutColumn|128|UINT32|0x4000000d
 
   ## Specify the console output row of text setup.
   # @Prompt Console Output Row of Text Setup
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSetupConOutRow|25|UINT32|0x4000000e
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSetupConOutRow|40|UINT32|0x4000000e
 
   ## Specify the Boot Discovery Policy settings
   # To support configuring from setup page, this PCD should be overridden in DynamicHii type in its platform .dsc:
