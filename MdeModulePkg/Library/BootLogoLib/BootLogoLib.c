@@ -435,3 +435,56 @@ BootLogoUpdateProgress (
 
   return EFI_SUCCESS;
 }
+
+/**
+
+  Clear progress bar and title above it. It only works in Graphics mode.
+
+  @retval  EFI_STATUS    Successly clear the progress bar
+
+**/
+EFI_STATUS
+EFIAPI
+BootLogoClearProgress (
+  VOID
+  )
+{
+  EFI_STATUS                     Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
+  UINT32                         SizeOfX;
+  UINT32                         SizeOfY;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Color;
+  UINTN                          PosY;
+
+  Status  = gBS->HandleProtocol (gST->ConsoleOutHandle, &gEfiGraphicsOutputProtocolGuid, (VOID **)&GraphicsOutput);
+
+  if (EFI_ERROR (Status)) {
+    return EFI_UNSUPPORTED;
+  }
+
+  SizeOfX = GraphicsOutput->Mode->Info->HorizontalResolution;
+  SizeOfY = GraphicsOutput->Mode->Info->VerticalResolution;
+
+  PosY = SizeOfY * 48 / 50;
+
+  //
+  // Clear progress area
+  //
+  SetMem (&Color, sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL), 0x0);
+
+  Status = GraphicsOutput->Blt (
+                              GraphicsOutput,
+                              &Color,
+                              EfiBltVideoFill,
+                              0,
+                              0,
+                              0,
+                              PosY - EFI_GLYPH_HEIGHT - 1,
+                              SizeOfX,
+                              SizeOfY - (PosY - EFI_GLYPH_HEIGHT - 1),
+                              SizeOfX * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL)
+                              );
+
+
+  return EFI_SUCCESS;
+}
