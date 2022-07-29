@@ -554,3 +554,103 @@ BootLogoUpdateProgress (
 
   return EFI_SUCCESS;
 }
+
+/**
+
+  Clear progress bar and title above it. It only works in Graphics mode.
+
+  @retval  EFI_STATUS    Successly clear the progress bar
+
+**/
+EFI_STATUS
+EFIAPI
+BootLogoClearProgress (
+  VOID
+  )
+{
+  EFI_STATUS                     Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
+  EFI_UGA_DRAW_PROTOCOL          *UgaDraw;
+  UINT32                         SizeOfX;
+  UINT32                         SizeOfY;
+  UINT32                         ColorDepth;
+  UINT32                         RefreshRate;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Color;
+  UINTN                          PosY;
+
+  UgaDraw = NULL;
+  Status  = gBS->HandleProtocol (gST->ConsoleOutHandle, &gEfiGraphicsOutputProtocolGuid, (VOID **)&GraphicsOutput);
+  if (EFI_ERROR (Status) && FeaturePcdGet (PcdUgaConsumeSupport)) {
+    GraphicsOutput = NULL;
+
+    Status = gBS->HandleProtocol (gST->ConsoleOutHandle, &gEfiUgaDrawProtocolGuid, (VOID **)&UgaDraw);
+    if (EFI_ERROR (Status)) {
+      UgaDraw = NULL;
+    }
+  }
+
+  if (EFI_ERROR (Status)) {
+    return EFI_UNSUPPORTED;
+  }
+
+  SizeOfX = 0;
+  SizeOfY = 0;
+
+  if (GraphicsOutput != NULL) {
+    SizeOfX = GraphicsOutput->Mode->Info->HorizontalResolution;
+    SizeOfY = GraphicsOutput->Mode->Info->VerticalResolution;
+  } else if (UgaDraw != NULL) {
+    Status = UgaDraw->GetMode (
+                        UgaDraw,
+                        &SizeOfX,
+                        &SizeOfY,
+                        &ColorDepth,
+                        &RefreshRate
+                        );
+    if (EFI_ERROR (Status)) {
+      return EFI_UNSUPPORTED;
+    }
+  } else {
+    return EFI_UNSUPPORTED;
+  }
+
+  PosY = SizeOfY * 48 / 50;
+
+
+  //
+  // Clear progress area
+  //
+  SetMem (&Color, sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL), 0x0);
+
+  if (GraphicsOutput != NULL) {
+    Status = GraphicsOutput->Blt (
+                               GraphicsOutput,
+                               &Color,
+                               EfiBltVideoFill,
+                               0,
+                               0,
+                               0,
+                               PosY - EFI_GLYPH_HEIGHT - 1,
+                               SizeOfX,
+                               SizeOfY - (PosY - EFI_GLYPH_HEIGHT - 1),
+                               SizeOfX * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL)
+                               );
+  } else if (FeaturePcdGet (PcdUgaConsumeSupport)) {
+    Status = UgaDraw->Blt (
+                        UgaDraw,
+                        (EFI_UGA_PIXEL *)&Color,
+                        EfiUgaVideoFill,
+                        0,
+                        0,
+                        0,
+                        PosY - EFI_GLYPH_HEIGHT - 1,
+                        SizeOfX,
+                        SizeOfY - (PosY - EFI_GLYPH_HEIGHT - 1),
+                        SizeOfX * sizeof (EFI_UGA_PIXEL)
+                        );
+  } else {
+    return EFI_UNSUPPORTED;
+  }
+
+  return EFI_SUCCESS;
+}
