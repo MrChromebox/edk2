@@ -630,6 +630,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdPrioritizeInternal|$(PRIORITIZE_INTERNAL)
 
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape|$(BOOT_MANAGER_ESCAPE)
+  gUefiPayloadPkgTokenSpaceGuid.PcdSerialTerminalPrintEnabled|!$(DISABLE_SERIAL_TERMINAL)
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumUnicodeStringLength|1800000
 
