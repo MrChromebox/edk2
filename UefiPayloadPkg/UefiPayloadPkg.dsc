@@ -490,7 +490,7 @@
 
 [PcdsFixedAtBuild]
   gEfiMdePkgTokenSpaceGuid.PcdHardwareErrorRecordLevel|1
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x10000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x8000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxHardwareErrorVariableSize|0x8000
   gEfiMdeModulePkgTokenSpaceGuid.PcdVariableStoreSize|0x10000
 !if $(VARIABLE_SUPPORT) == "EMU"
