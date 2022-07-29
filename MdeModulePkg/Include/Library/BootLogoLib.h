@@ -60,4 +60,17 @@ BootLogoUpdateProgress (
   IN UINTN                          PreviousValue
   );
 
+/**
+
+  Clear progress bar and title above it. It only works in Graphics mode.
+
+  @retval  EFI_STATUS    Successly clear the progress bar
+
+**/
+EFI_STATUS
+EFIAPI
+BootLogoClearProgress (
+  VOID
+  );
+
 #endif
