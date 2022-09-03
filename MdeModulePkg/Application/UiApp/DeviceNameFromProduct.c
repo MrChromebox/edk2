@@ -273,6 +273,8 @@ GetDeviceNameFromProduct (
   } else if (!StrCmp(Product, L"Laser14")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Lenovo Chromebook S340");
   } else if (!StrCmp(Product, L"Lick")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Lenovo Ideapad 3 Chromebook");
+  } else if (!StrCmp(Product, L"Meep")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Chromebook x360 11 G2 EE");
   } else if (!StrCmp(Product, L"Mimrock")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Chromebook 11 G7 EE");
