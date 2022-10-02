@@ -122,15 +122,6 @@ InitializeFvAndVariableStoreHeaders (
     return EFI_INVALID_PARAMETER;
   }
 
-  // Ensure the Variable area Base Addresses are aligned on a block size boundaries
-  if ((NvStorageVariableBase % Instance->BlockSize != 0) ||
-      (NvStorageFtwWorkingBase % Instance->BlockSize != 0) ||
-      (NvStorageFtwSpareBase % Instance->BlockSize != 0))
-  {
-    DEBUG ((DEBUG_ERROR, "%a: NvStorage Base addresses must be aligned to block size boundaries", __FUNCTION__));
-    return EFI_INVALID_PARAMETER;
-  }
-
   //
   // EFI_FIRMWARE_VOLUME_HEADER
   //
