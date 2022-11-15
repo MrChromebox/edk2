@@ -215,7 +215,6 @@ PciGetPciRom (
     goto CloseAndReturn;
   }
 
-  // FIXME: Use gEfiPciRootBridgeIoProtocolGuid
   RomBar = (UINT32) Buffer &~1;
 
   RomBarOffset  = RomBar;
@@ -224,13 +223,17 @@ PciGetPciRom (
   RomImageSize = 0;
 
   do {
-    // FIXME: Use gEfiPciRootBridgeIoProtocolGuid
-    CopyMem(RomHeader, (VOID *)(UINTN)RomBarOffset, sizeof (PCI_EXPANSION_ROM_HEADER));
+    PciIoDevice->PciRootBridgeIo->Mem.Read (
+                                        PciIoDevice->PciRootBridgeIo,
+                                        EfiPciWidthUint8,
+                                        RomBarOffset,
+                                        sizeof (PCI_EXPANSION_ROM_HEADER),
+                                        (UINT8 *) RomHeader
+                                        );
 
     DEBUG ((EFI_D_INFO, "%a: RomHeader->Signature %x\n", __FUNCTION__, RomHeader->Signature));
 
     if (RomHeader->Signature != PCI_EXPANSION_ROM_HEADER_SIGNATURE) {
-
       RomBarOffset = RomBarOffset + 512;
       if (FirstCheck) {
         break;
@@ -251,9 +254,14 @@ PciGetPciRom (
         RomImageSize + OffsetPcir + sizeof (PCI_DATA_STRUCTURE) > *RomSize) {
       break;
     }
-    // FIXME: Use gEfiPciRootBridgeIoProtocolGuid
-    CopyMem(RomPcir, (VOID *)(UINTN)RomBarOffset + OffsetPcir, sizeof (PCI_DATA_STRUCTURE));
 
+    PciIoDevice->PciRootBridgeIo->Mem.Read (
+                                        PciIoDevice->PciRootBridgeIo,
+                                        EfiPciWidthUint8,
+                                        RomBarOffset + OffsetPcir,
+                                        sizeof (PCI_DATA_STRUCTURE),
+                                        (UINT8 *) RomPcir
+                                        );
     DEBUG ((EFI_D_INFO, "%a: RomPcir->Signature %x\n", __FUNCTION__, RomPcir->Signature));
 
     //
@@ -283,9 +291,51 @@ PciGetPciRom (
   }
 
   if (RomImageSize > 0) {
-    // FIXME: Use gEfiPciRootBridgeIoProtocolGuid
-    RomInMemory = (VOID *)(UINTN)RomBar;
+    Status = EFI_SUCCESS;
+    RomInMemory = (UINT8 *) AllocatePool ((UINT32) RomImageSize);
+    if (RomInMemory == NULL) {
+      PciIo->Pci.Write (
+                    PciIo,
+                    EfiPciWidthUint32,
+                    RomBarIndex,
+                    1,
+                    &RomBar
+                    );
+      FreePool (RomHeader);
+      FreePool (RomPcir);
+      Status = EFI_OUT_OF_RESOURCES;
+      goto CloseAndReturn;
+    }
+    //
+    DEBUG ((EFI_D_INFO, "%a: Found Option ROM at %p, length 0x%x\n", __FUNCTION__,
+        RomBar, RomImageSize));
+    // Copy Rom image into memory
+    //
+    PciIoDevice->PciRootBridgeIo->Mem.Read (
+                                        PciIoDevice->PciRootBridgeIo,
+                                        EfiPciWidthUint8,
+                                        RomBar,
+                                        (UINT32) RomImageSize,
+                                        RomInMemory
+                                        );
+  } else {
+    FreePool (RomHeader);
+    FreePool (RomPcir);
+    Status = EFI_NOT_FOUND;
+    goto CloseAndReturn;
   }
+
+  PciIo->Pci.Write (
+                PciIo,
+                EfiPciWidthUint32,
+                RomBarIndex,
+                1,
+                &RomBar
+                );
+
+  PciIoDevice->EmbeddedRom    = TRUE;
+  PciIoDevice->PciIo.RomSize  = RomImageSize;
+  PciIoDevice->PciIo.RomImage = RomInMemory;
 
   //
   // Free allocated memory
@@ -293,16 +343,10 @@ PciGetPciRom (
   FreePool (RomHeader);
   FreePool (RomPcir);
 
-  if (RomImageSize > 0) {
-    *RomImage = RomInMemory;
-    *RomSize = RomImageSize;
-    DEBUG ((EFI_D_INFO, "%a: Found Option ROM at %p, length 0x%x\n", __FUNCTION__,
-        RomInMemory, RomImageSize));
+  *RomImage = RomInMemory;
+  *RomSize = RomImageSize;
 
-    Status = EFI_SUCCESS;
-  } else {
-    Status = EFI_NOT_FOUND;
-  }
+  Status = EFI_SUCCESS;
 
 CloseAndReturn:
   //
