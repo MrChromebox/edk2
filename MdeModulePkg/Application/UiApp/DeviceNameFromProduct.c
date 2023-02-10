@@ -190,6 +190,8 @@ GetDeviceNameFromProduct (
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Acer Chromebook 714");
   } else if (!StrCmp(Product, L"Eve")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Google Pixelbook 2017");
+  } else if (!StrCmp(Product, L"Excelsior")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Asus Google Meet Kit (KBL)");
   } else if (!StrCmp(Product, L"Jax")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"AOpen Chromebox Commercial 2");
   } else if (!StrCmp(Product, L"Karma")) {
