@@ -402,7 +402,33 @@ GetDeviceNameFromProduct (
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Acer Chromebook Spin 713 [CP713-3W]");
   }
   //Alderlake
-    else if (!StrCmp(Product, L"Banshee")) {
+    else if (!StrCmp(Product, L"Anahera")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Elite c640 14 inch G3 Chromebook");
+  } else if (!StrCmp(Product, L"Banshee")) {
     StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Framework Laptop Chromebook Edition");
+  } else if (!StrCmp(Product, L"Crota")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Dell Latitude 5430 Chromebook");
+  } else if (!StrCmp(Product, L"Crota360")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Dell Latitude 5430 2-in-1 Chromebook");
+  } else if (!StrCmp(Product, L"Felwinter")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"ASUS Chromebook Flip CX5 [CX5601]");
+  } else if (!StrCmp(Product, L"Kano")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Acer Chromebook Spin 714 [CP714-1WN]");
+  } else if (!StrCmp(Product, L"Mithrax")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"ASUS Chromebook CX34 Flip");
+  } else if (!StrCmp(Product, L"Osiris")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Acer Chromebook 516 GE [CBG516-1H]");
+  } else if (!StrCmp(Product, L"Primus")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Lenovo ThinkPad C14 Gen 1 Chromebook");
+  } else if (!StrCmp(Product, L"Redrix")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"HP Elite Dragonfly Chromebook");
+  } else if (!StrCmp(Product, L"Taniks")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Lenovo IdeaPad Gaming Chromebook 16");
+  } else if (!StrCmp(Product, L"Taeko")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Lenovo Flex 5i Chromebook");
+  } else if (!StrCmp(Product, L"Volmar")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Acer Chromebook Vero 514");
+  } else if (!StrCmp(Product, L"Zavala")) {
+    StrCatS (*DeviceName, 0x60 / sizeof (CHAR16), L"Acer Chromebook Vero 712");
   }
 }
