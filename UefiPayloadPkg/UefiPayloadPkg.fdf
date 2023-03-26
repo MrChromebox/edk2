@@ -411,6 +411,37 @@ INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
 !endif
 
 #
+# Network modules (only available on X64)
+# Available at https://www.realtek.com and https://asix.com.tw
+#
+!if $(NETWORK_ENABLE)
+!if $(ARCH) == IA32
+  # FIXME
+!else
+!if $(NETWORK_RTEK_PCI)
+  FILE DRIVER = D30D5496-6DF9-462D-9B97-0B93F659D1A0 {
+    SECTION PE32 = UefiPayloadPkg/NetworkDrivers/RtkUndiDxe.efi
+  }
+!endif
+!if $(NETWORK_RTEK_USB)
+  FILE DRIVER = 95BA3BCA-F086-4FDA-BBAC-44F5AEE5176B {
+    SECTION PE32 = UefiPayloadPkg/NetworkDrivers/RtkUsbUndiDxe.efi
+  }
+!endif
+!if $(NETWORK_ASIX_USB3)
+  FILE DRIVER = 27E5D3B6-7839-47C2-8618-5D2190729BC7 {
+    SECTION PE32 = UefiPayloadPkg/NetworkDrivers/AX88179X_178A_772D_UEFI_v3.2.0_X64_signed.efi
+  }
+!endif
+!if $(NETWORK_ASIX_USB2)
+  FILE DRIVER = B15239D6-6A01-4808-A0F7-B7F20F073555 {
+    SECTION PE32 = UefiPayloadPkg/NetworkDrivers/AX88772C_772B_772A_UEFI_V2.8.0_X64.efi
+  }
+!endif
+!endif
+!endif
+
+#
 # Shell
 #
 !if $(SHELL_TYPE) == BUILD_SHELL
