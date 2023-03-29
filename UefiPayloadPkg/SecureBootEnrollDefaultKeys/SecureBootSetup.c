@@ -542,7 +542,7 @@ InstallSecureBootHook (
   // FIXME: Force SecureBoot to ON. The AuthService will do this if authenticated variables
   // are supported, which aren't as the SMM handler isn't able to verify them.
 
-  Settings.SecureBootEnable = SECURE_BOOT_ENABLE;
+  Settings.SecureBootEnable = SECURE_BOOT_DISABLE;
   Status = gRT->SetVariable (EFI_SECURE_BOOT_ENABLE_NAME, &gEfiSecureBootEnableDisableGuid,
            EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
            sizeof Settings.SecureBootEnable, &Settings.SecureBootEnable);
@@ -552,7 +552,7 @@ InstallSecureBootHook (
     ASSERT_EFI_ERROR (Status);
   }
 
-  Settings.SecureBoot = SECURE_BOOT_ENABLE;
+  Settings.SecureBoot = SECURE_BOOT_DISABLE;
   Status = gRT->SetVariable (EFI_SECURE_BOOT_MODE_NAME, &gEfiGlobalVariableGuid,
            EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
            sizeof Settings.SecureBoot, &Settings.SecureBoot);
