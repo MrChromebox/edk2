@@ -34,7 +34,6 @@
   DEFINE SECURITY_STUB_ENABLE         = TRUE
   DEFINE SMM_SUPPORT                  = FALSE
   DEFINE PLATFORM_BOOT_TIMEOUT        = 3
-  DEFINE ABOVE_4G_MEMORY              = TRUE
   DEFINE BOOT_MANAGER_ESCAPE          = FALSE
   DEFINE ATA_ENABLE                   = TRUE
   DEFINE SD_ENABLE                    = TRUE
@@ -531,7 +530,6 @@
 !endif
   gEfiMdeModulePkgTokenSpaceGuid.PcdSdMmcGenericTimeoutValue|$(SD_MMC_TIMEOUT)
 
-  gUefiPayloadPkgTokenSpaceGuid.PcdDispatchModuleAbove4GMemory|$(ABOVE_4G_MEMORY)
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape|$(BOOT_MANAGER_ESCAPE)
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification|$(FOLLOW_BGRT_SPEC)
