@@ -380,12 +380,8 @@ INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
 
   FILE FREEFORM = A23665E3-ACA6-4F6D-80CC-341E7D7B8CC6 {
     SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/kek.crt
-    SECTION UI = "SecureBootKekCert"
-  }
-
-  FILE FREEFORM = 6f64916e-9f7a-4c35-b952-cd041efb05a3 {
     SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/kek-system76.crt
-    SECTION UI = "SecureBootS76KekCert"
+    SECTION UI = "SecureBootKekCert"
   }
 
   FILE FREEFORM = F8104268-A364-45F5-8E00-ABA3FDEA12BE {
@@ -395,17 +391,9 @@ INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
 
   FILE FREEFORM = 26A517B0-E3FD-46C2-8932-E926BF98941F {
     SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/db-1.crt
-    SECTION UI = "SecureBootDb1Cert"
-  }
-
-  FILE FREEFORM = 91D2E32B-0134-4306-BA90-54EDCBF349CA {
     SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/db-2.crt
-    SECTION UI = "SecureBootDb2Cert"
-  }
-
-  FILE FREEFORM = c491d352-7623-4843-accc-2791a7574421 {
     SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/db-system76.crt
-    SECTION UI = "SecureBootS76DbCert"
+    SECTION UI = "SecureBootDbCert"
   }
 
   FILE FREEFORM = 74BB6E72-2A56-4D0E-A5B3-5D39FC2EE346 {
