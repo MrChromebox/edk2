@@ -45,6 +45,8 @@ EFI_HII_HANDLE  mTcg2PpStringPackHandle;
 
 #define TPM_PPI_FLAGS  (QEMU_TPM_PPI_FUNC_ALLOWED_USR_REQ)
 
+STATIC volatile QEMU_TPM_PPI  *mPpi;
+
 /**
   Initializes QEMU PPI memory region.
 
