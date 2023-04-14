@@ -1124,7 +1124,8 @@
   }
   SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf {
     <LibraryClasses>
-    Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibRouter/Tpm2DeviceLibRouterDxe.inf
+#    Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibRouter/Tpm2DeviceLibRouterDxe.inf //Modif H.E Avoid Hang Tcg2config
+    Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibTcg2/Tpm2DeviceLibTcg2.inf
   }
   SecurityPkg/Tcg/TcgDxe/TcgDxe.inf {
     <LibraryClasses>
