@@ -492,6 +492,7 @@ InstallSecureBootHook (
 
   Status = gRT->SetVariable (EFI_IMAGE_SECURITY_DATABASE1, &gEfiImageSecurityDatabaseGuid,
            (EFI_VARIABLE_NON_VOLATILE |
+            EFI_VARIABLE_RUNTIME_ACCESS |
             EFI_VARIABLE_BOOTSERVICE_ACCESS |
             EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS),
            MicrosoftDbxSize, MicrosoftDbx);
