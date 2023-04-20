@@ -383,6 +383,7 @@ INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
 #
 !if $(TPM_ENABLE) == TRUE
 INF  SecurityPkg/Tcg/TcgDxe/TcgDxe.inf
+INF  SecurityPkg/Tcg/TcgConfigDxe/TcgConfigDxe.inf
 INF  SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
 INF  SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
 !endif
