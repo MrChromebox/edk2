@@ -51,6 +51,7 @@
   CapsuleLib
   HobLib
   IoLib
+  TcgPhysicalPresenceLib
   Tcg2PhysicalPresenceLib
 
 [Guids]
