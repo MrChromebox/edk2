@@ -193,6 +193,36 @@ InvalidPpiAddress:
 }
 
 /**
+  Check if there is a valid physical presence command request.
+
+  This API should be invoked in BIOS boot phase to process pending request.
+
+  Caution: This function may receive untrusted input.
+
+  If OperationRequest < 128, then ASSERT().
+
+  @param[in]      OperationRequest TPM physical presence operation request.
+  @param[in]      ManagementFlags  BIOS TPM Management Flags.
+  @param[out]     RequestConfirmed If the physical presence operation command required user confirm from UI.
+                                   True, it indicates the command doesn't require user confirm.
+                                   False, it indicates the command need user confirm from UI.
+
+  @retval  TRUE        Physical Presence operation command is valid.
+  @retval  FALSE       Physical Presence operation command is invalid.
+**/
+BOOLEAN
+EFIAPI
+TcgPpVendorLibHasValidRequest (
+  IN UINT32    OperationRequest,
+  IN UINT32    ManagementFlags,
+  OUT BOOLEAN  *RequestConfirmed
+  )
+{
+  ASSERT (OperationRequest >= TCG_PHYSICAL_PRESENCE_VENDOR_SPECIFIC_OPERATION);
+  return FALSE;
+}
+
+/**
   Get string by string id from HII Interface.
 
   @param[in] Id          String ID.
@@ -1151,8 +1181,7 @@ HaveValidTpmRequest  (
 
     default:
       if (TcgPpData->PPRequest >= TCG_PHYSICAL_PRESENCE_VENDOR_SPECIFIC_OPERATION) {
-  //      IsRequestValid = TcgPpVendorLibHasValidRequest (TcgPpData->PPRequest, Flags.PPFlags, RequestConfirmed);  To Fix!!!!!
-  	  IsRequestValid=TRUE;	//Modif H.E To be fix
+        IsRequestValid = TcgPpVendorLibHasValidRequest (TcgPpData->PPRequest, Flags.PPFlags, RequestConfirmed);
         if (!IsRequestValid) {
           return FALSE;
         } else {
