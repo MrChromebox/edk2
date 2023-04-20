@@ -49,6 +49,7 @@
   PrintLib
   PlatformHookLib
   IoLib
+  TcgPhysicalPresenceLib
   Tcg2PhysicalPresenceLib
 
 [Guids]
