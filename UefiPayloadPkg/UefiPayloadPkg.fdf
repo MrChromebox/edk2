@@ -400,9 +400,13 @@ INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
 
   FILE FREEFORM = 26A517B0-E3FD-46C2-8932-E926BF98941F {
     SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/db-1.crt
-    SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/db-2.crt
     SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/db-system76.crt
     SECTION UI = "SecureBootDbCert"
+  }
+
+  FILE FREEFORM = 91D2E32B-0134-4306-BA90-54EDCBF349CA {
+    SECTION RAW = UefiPayloadPkg/SecureBootEnrollDefaultKeys/keys/db-2.crt
+    SECTION UI = "SecureBootDb2Cert"
   }
 
   FILE FREEFORM = 74BB6E72-2A56-4D0E-A5B3-5D39FC2EE346 {
