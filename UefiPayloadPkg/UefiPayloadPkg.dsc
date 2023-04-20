@@ -360,6 +360,8 @@
 
 !if $(TPM_ENABLE) == TRUE
   Tpm12CommandLib|SecurityPkg/Library/Tpm12CommandLib/Tpm12CommandLib.inf
+  TcgPhysicalPresenceLib|UefiPayloadPkg/Library/TcgPhysicalPresenceLibUefiPayload/DxeTcgPhysicalPresenceLib.inf
+  TcgPpVendorLib|SecurityPkg/Library/TcgPpVendorLibNull/TcgPpVendorLibNull.inf
   Tpm2CommandLib|SecurityPkg/Library/Tpm2CommandLib/Tpm2CommandLib.inf
 #  Tcg2PhysicalPresenceLib|OvmfPkg/Library/Tcg2PhysicalPresenceLibQemu/DxeTcg2PhysicalPresenceLib.inf
   Tcg2PhysicalPresenceLib|UefiPayloadPkg/Library/Tcg2PhysicalPresencePlatformLibUefipayload/DxeTcg2PhysicalPresenceLib.inf
@@ -720,6 +722,9 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmInitializationPolicy|0
   ## Match the hash algorithms listed in Tcg2Dxe
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x1F
+
+
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmPhysicalPresence|TRUE
 
 [PcdsDynamicHii]
 !if $(TPM2_ENABLE) == TRUE

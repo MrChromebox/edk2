@@ -7,6 +7,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include "TcgConfigImpl.h"
+#include <IndustryStandard/TcgPhysicalPresence.h>
+#include <Library//TcgPhysicalPresenceLib.h>
 
 CHAR16  mTcgStorageName[] = L"TCG_CONFIGURATION";
 
@@ -40,6 +42,8 @@ HII_VENDOR_DEVICE_PATH  mTcgHiiVendorDevicePath = {
     }
   }
 };
+
+UINT8  mCurrentPpRequest;
 
 /**
   Get current state of TPM device.
@@ -302,6 +306,7 @@ SavePpRequest (
   EFI_STATUS             Status;
   UINTN                  DataSize;
   EFI_PHYSICAL_PRESENCE  PpData;
+  UINT32      ReturnCode;
 
   //
   // Save TPM command to variable.
@@ -330,7 +335,19 @@ SavePpRequest (
     return Status;
   }
 
-  return EFI_SUCCESS;
+  ReturnCode = TcgPhysicalPresenceLibSubmitRequestToPreOSFunction (PpRequest, 0);
+  if (ReturnCode == TCG_PP_SUBMIT_REQUEST_TO_PREOS_SUCCESS) {
+    mCurrentPpRequest = PpRequest;
+    Status            = EFI_SUCCESS;
+  } else if (ReturnCode == TCG_PP_SUBMIT_REQUEST_TO_PREOS_GENERAL_FAILURE) {
+    Status = EFI_OUT_OF_RESOURCES;
+  } else if (ReturnCode == TCG_PP_SUBMIT_REQUEST_TO_PREOS_NOT_IMPLEMENTED) {
+    Status = EFI_UNSUPPORTED;
+  } else {
+    Status = EFI_DEVICE_ERROR;
+  }
+
+  return Status;
 }
 
 /**
