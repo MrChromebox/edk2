@@ -22,8 +22,11 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
   to display request information and get user input to confirm the request. This API should also
   be invoked as early as possible as TPM is locked in this function.
 
+  @retval EFI_SUCCESS       Flags were returns successfully.
+  @retval other             Failed to process.
+
 **/
-VOID
+EFI_STATUS
 EFIAPI
 TcgPhysicalPresenceLibProcessRequest (
   VOID
@@ -45,4 +48,25 @@ TcgPhysicalPresenceLibNeedUserConfirm (
   VOID
   );
 
+/**
+  The handler for TPM physical presence function:
+  Submit TPM Operation Request to Pre-OS Environment and
+  Submit TPM Operation Request to Pre-OS Environment 2.
+
+  This API should be invoked in OS runtime phase to interface with ACPI method.
+
+  Caution: This function may receive untrusted input.
+
+  @param[in]      OperationRequest TPM physical presence operation request.
+  @param[in]      RequestParameter TPM physical presence operation request parameter.
+
+  @return Return Code for Submit TPM Operation Request to Pre-OS Environment and
+          Submit TPM Operation Request to Pre-OS Environment 2.
+**/
+UINT32
+EFIAPI
+TcgPhysicalPresenceLibSubmitRequestToPreOSFunction (
+  IN UINT32  OperationRequest,
+  IN UINT32  RequestParameter
+  );
 #endif
