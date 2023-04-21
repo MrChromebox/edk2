@@ -637,7 +637,7 @@ ExecutePhysicalPresence (
   Read the specified key for user confirmation.
 
   @param[in]  CautionKey  If true,  F12 is used as confirm key;
-                          If false, F10 is used as confirm key.
+                          If false, ENTER is used as confirm key.
 
   @retval     TRUE        User confirmed the changes by input.
   @retval     FALSE       User discarded the changes or device error.
@@ -666,8 +666,8 @@ do {
         InputKey = Key.ScanCode;
       }
 
-      if ((Key.ScanCode == SCAN_F10) && !CautionKey) {
-        InputKey = Key.ScanCode;
+      if ((Key.UnicodeChar == CHAR_CARRIAGE_RETURN) && !CautionKey) {
+        InputKey = Key.UnicodeChar;
       }
 
      if ((Key.ScanCode == SCAN_F12) && CautionKey) {
@@ -799,7 +799,7 @@ UserConfirm (
       break;
 
     case PHYSICAL_PRESENCE_CLEAR:
-      CautionKey = TRUE;
+      CautionKey = FALSE;
       TmpStr2    = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CLEAR));
 
       TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_HEAD_STR));
@@ -811,7 +811,7 @@ UserConfirm (
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), L" \n\n", (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
-      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CAUTION_KEY));
+      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ACCEPT_KEY));
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
       break;
@@ -913,7 +913,7 @@ UserConfirm (
       break;
 
     case PHYSICAL_PRESENCE_DEFERRED_PP_UNOWNERED_FIELD_UPGRADE:
-      CautionKey = TRUE;
+      CautionKey = FALSE;
       TmpStr2    = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_UNOWNED_FIELD_UPGRADE));
 
       TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_UPGRADE_HEAD_STR));
@@ -924,7 +924,7 @@ UserConfirm (
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
-      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CAUTION_KEY));
+      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ACCEPT_KEY));
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
       break;
@@ -938,7 +938,7 @@ UserConfirm (
       break;
 
     case PHYSICAL_PRESENCE_CLEAR_ENABLE_ACTIVATE:
-      CautionKey = TRUE;
+      CautionKey = FALSE;
       TmpStr2    = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CLEAR_TURN_ON));
 
       TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_HEAD_STR));
@@ -957,7 +957,7 @@ UserConfirm (
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
-      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CAUTION_KEY));
+      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ACCEPT_KEY));
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
       break;
@@ -979,7 +979,7 @@ UserConfirm (
       break;
 
     case PHYSICAL_PRESENCE_SET_NO_PPI_CLEAR_TRUE:
-      CautionKey = TRUE;
+      CautionKey = FALSE;
       TmpStr2    = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CLEAR));
 
       TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_PPI_HEAD_STR));
@@ -995,7 +995,7 @@ UserConfirm (
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), L" \n\n", (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
-      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CAUTION_KEY));
+      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ACCEPT_KEY));
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
@@ -1005,7 +1005,7 @@ UserConfirm (
       break;
 
     case PHYSICAL_PRESENCE_SET_NO_PPI_MAINTENANCE_TRUE:
-      CautionKey = TRUE;
+      CautionKey = FALSE;
       TmpStr2    = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_NO_PPI_MAINTAIN));
 
       TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_PPI_HEAD_STR));
@@ -1016,7 +1016,7 @@ UserConfirm (
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
-      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CAUTION_KEY));
+      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ACCEPT_KEY));
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
@@ -1026,7 +1026,7 @@ UserConfirm (
       break;
 
     case PHYSICAL_PRESENCE_ENABLE_ACTIVATE_CLEAR:
-      CautionKey = TRUE;
+      CautionKey = FALSE;
       TmpStr2    = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ENABLE_ACTIVATE_CLEAR));
 
       TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_HEAD_STR));
@@ -1038,13 +1038,13 @@ UserConfirm (
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), L" \n\n", (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
-      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CAUTION_KEY));
+      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ACCEPT_KEY));
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
       break;
 
     case PHYSICAL_PRESENCE_ENABLE_ACTIVATE_CLEAR_ENABLE_ACTIVATE:
-      CautionKey = TRUE;
+      CautionKey = FALSE;
       TmpStr2    = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ENABLE_ACTIVATE_CLEAR_ENABLE_ACTIVATE));
 
       TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_HEAD_STR));
@@ -1063,7 +1063,7 @@ UserConfirm (
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
 
-      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_CAUTION_KEY));
+      TmpStr1 = PhysicalPresenceGetStringById (STRING_TOKEN (TPM_ACCEPT_KEY));
       StrnCatS (ConfirmText, BufSize / sizeof (CHAR16), TmpStr1, (BufSize / sizeof (CHAR16)) - StrLen (ConfirmText) - 1);
       FreePool (TmpStr1);
       break;
