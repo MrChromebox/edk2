@@ -263,6 +263,15 @@ struct cb_smmstorev2 {
   UINT8     unused[3];       /* Set to zero */
 } __attribute__ ((packed));
 
+#define CB_TAG_CFR_ROOT  0x0047
+struct cb_cfr {
+  UINT32 tag;
+  UINT32 size;
+  UINT32 version;
+  UINT32 checksum;  /* Of the following data only; excludes these 3 fields */
+  /* CFR_FORM forms[] */
+};
+
 /* Helpful macros */
 
 #define MEM_RANGE_COUNT(_rec) \
