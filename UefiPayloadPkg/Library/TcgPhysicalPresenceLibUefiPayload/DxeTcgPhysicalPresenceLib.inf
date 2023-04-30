@@ -58,6 +58,7 @@
   DebugLib
   PrintLib
   HiiLib
+  TimerLib
   Tcg2PhysicalPresencePlatformLib
 
 [Protocols]
