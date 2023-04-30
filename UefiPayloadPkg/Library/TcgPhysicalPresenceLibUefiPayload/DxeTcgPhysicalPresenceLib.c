@@ -44,6 +44,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/DxeServicesTableLib.h>
 #include <IndustryStandard/TcgPhysicalPresence.h>
 #include <Library/HobLib.h>
+#include <Library/TimerLib.h>
 
 #define CONFIRM_BUFFER_SIZE  4096
 
@@ -1368,10 +1369,14 @@ ExecutePendingTpmRequest (
       return;
   }
 
-  Print (L"\n\nRebooting system to apply changes to TPM settings\n");
-  
   Flush_PPI_Cache12(TRUE);  //Need to Flush cache to RAM otherwise mPpi are not stored in RAM.
-  
+
+  if (RequestConfirmed) {
+    Print (L"\n\nRebooting system to apply changes to TPM settings\n");
+    // Pause so user see that is the system is about to reboot
+    MicroSecondDelay(3000*1000);
+  }
+
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   ASSERT (FALSE);
 }
