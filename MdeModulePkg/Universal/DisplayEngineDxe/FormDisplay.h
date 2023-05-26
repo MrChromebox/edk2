@@ -85,8 +85,8 @@ extern BOOLEAN  gMisMatch;
 //
 // Display definitions
 //
-#define LEFT_ONEOF_DELIMITER   L'<'
-#define RIGHT_ONEOF_DELIMITER  L'>'
+#define LEFT_ONEOF_DELIMITER   L'['
+#define RIGHT_ONEOF_DELIMITER  L']'
 
 #define LEFT_NUMERIC_DELIMITER   L'['
 #define RIGHT_NUMERIC_DELIMITER  L']'
