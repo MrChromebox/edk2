@@ -678,6 +678,7 @@ CfrCreateRuntimeComponents (
   UINTN               ProcessedLength;
   CFR_OPTION_FORM     *CfrFormData;
   EFI_STATUS          Status;
+  UINT8               *TempHiiBuffer;
 
   //
   // Allocate GUIDed markers at runtime component offset in IFR
@@ -768,6 +769,15 @@ CfrCreateRuntimeComponents (
           break;
       }
     }
+
+    TempHiiBuffer = HiiCreateSubTitleOpCode (
+                      StartOpCodeHandle,
+                      STRING_TOKEN (STR_EMPTY_STRING),
+                      0,
+                      0,
+                      0
+                  );
+    ASSERT (TempHiiBuffer != NULL);
 
     GuidHob = GetNextGuidHob (&gEfiCfrSetupMenuFormGuid, GET_NEXT_HOB (GuidHob));
   }
