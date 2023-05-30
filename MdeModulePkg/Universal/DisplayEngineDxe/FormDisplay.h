@@ -94,8 +94,8 @@ extern BOOLEAN  gMisMatch;
 #define LEFT_CHECKBOX_DELIMITER   L'['
 #define RIGHT_CHECKBOX_DELIMITER  L']'
 
-#define CHECK_ON   L'X'
-#define CHECK_OFF  L' '
+#define CHECK_ON   L"Enabled"
+#define CHECK_OFF  L"Disabled"
 
 #define TIME_SEPARATOR  L':'
 #define DATE_SEPARATOR  L'/'
