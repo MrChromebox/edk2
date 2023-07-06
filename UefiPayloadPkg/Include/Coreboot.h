@@ -297,6 +297,6 @@ struct cb_tpm_physical_presence {
 	UINT32 ppi_address;	/* Address of ACPI PPI communication buffer */
 	UINT8 tpm_version;	/* 1: TPM1.2, 2: TPM2.0 */
 	UINT8 ppi_version;	/* BCD encoded */
-} __packed;
+} __attribute__((packed));
 
 #endif // _COREBOOT_PEI_H_INCLUDED_
