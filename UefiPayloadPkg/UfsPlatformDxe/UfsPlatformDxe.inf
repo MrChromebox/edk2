@@ -1,0 +1,50 @@
+## @file
+#  UFS Platform Driver
+#
+#  This driver provides platform-specific UFS host controller configuration
+#  for Intel platforms by implementing the EDKII_UFS_HC_PLATFORM_PROTOCOL.
+#
+#  Key functionality:
+#  - Disables PA_LOCAL_TX_LCC_ENABLE for Intel UFS controllers
+#  - Sets reference clock frequency to 19.2 MHz
+#
+#  Copyright (c) 2025, Matt DeVillier. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UfsPlatformDxe
+  FILE_GUID                      = 9F3C6294-BF19-4755-B1D3-D5E2B5A4E5A5
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UfsPlatformDxeInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 AARCH64
+#
+
+[Sources]
+  UfsPlatformDxe.c
+  UfsPlatformDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+  BaseLib
+  BaseMemoryLib
+
+[Protocols]
+  gEdkiiUfsHcPlatformProtocolGuid    ## PRODUCES
+
+[Depex]
+  TRUE
+
