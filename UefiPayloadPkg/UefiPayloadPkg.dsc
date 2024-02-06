@@ -44,6 +44,8 @@
   DEFINE USE_CBMEM_FOR_CONSOLE        = FALSE
   DEFINE BOOTSPLASH_IMAGE             = TRUE
   DEFINE NVME_ENABLE                  = TRUE
+  DEFINE UFS_ENABLE                   = FALSE
+  DEFINE CAPSULE_SUPPORT              = FALSE
   DEFINE LOCKBOX_SUPPORT              = FALSE
   DEFINE LOAD_OPTION_ROMS             = FALSE
   DEFINE FOLLOW_BGRT_SPEC             = FALSE
@@ -1237,6 +1239,11 @@
   MdeModulePkg/Bus/Ata/AtaAtapiPassThru/AtaAtapiPassThru.inf
   MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+!if $(UFS_ENABLE) == TRUE
+  MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+  MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+  UefiPayloadPkg/UfsPlatformDxe/UfsPlatformDxe.inf
+!endif
 !if $(NVME_ENABLE) == TRUE
   MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 !endif
