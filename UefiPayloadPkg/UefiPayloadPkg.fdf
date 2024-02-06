@@ -375,6 +375,11 @@ INF MdeModulePkg/Bus/Ata/AtaBusDxe/AtaBusDxe.inf
 INF MdeModulePkg/Bus/Ata/AtaAtapiPassThru/AtaAtapiPassThru.inf
 INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
 INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+!if $(UFS_ENABLE) == TRUE
+INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+INF UefiPayloadPkg/UfsPlatformDxe/UfsPlatformDxe.inf
+!endif
 !if $(NVME_ENABLE) == TRUE
 INF MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 !endif
