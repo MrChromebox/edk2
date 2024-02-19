@@ -997,6 +997,7 @@
   MdeModulePkg/Bus/Ata/AtaAtapiPassThru/AtaAtapiPassThru.inf
   MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+  MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
   MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
 !if $(NVME_ENABLE) == TRUE
   MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
