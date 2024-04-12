@@ -689,7 +689,7 @@
   !if $(SOURCE_DEBUG_ENABLE)
     gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x17
   !else
-    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2F
+    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0xF
   !endif
 !else
   !if $(TARGET) == DEBUG
