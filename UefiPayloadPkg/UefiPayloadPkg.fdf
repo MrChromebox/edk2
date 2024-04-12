@@ -344,6 +344,8 @@ INF  RuleOverride=BINARY USE = X64 FSDrivers/ext4.inf
 # SD/eMMC Support
 #
 !if $(SD_ENABLE) == TRUE
+INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+INF UefiPayloadPkg/AmdPcoSdhciDxe/AmdPcoSdhciDxe.inf
 INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
 INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
 INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
