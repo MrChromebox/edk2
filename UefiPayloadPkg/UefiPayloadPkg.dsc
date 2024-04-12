@@ -46,6 +46,7 @@
   DEFINE CAPSULE_SUPPORT              = FALSE
   DEFINE LOCKBOX_SUPPORT              = FALSE
   DEFINE FOLLOW_BGRT_SPEC             = FALSE
+  DEFINE USE_PCO_MMIO_EMMC            = FALSE
 
   #
   # Crypto Support
@@ -1013,6 +1014,13 @@
   # SD/eMMC Support
   #
 !if $(SD_ENABLE) == TRUE
+  !if $(USE_PCO_MMIO_EMMC) == TRUE
+    MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+    UefiPayloadPkg/AmdPcoSdhciDxe/AmdPcoSdhciDxe.inf {
+      <LibraryClasses>
+        NonDiscoverableDeviceRegistrationLib|MdeModulePkg/Library/NonDiscoverableDeviceRegistrationLib/NonDiscoverableDeviceRegistrationLib.inf
+    }
+  !endif
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
