@@ -1257,6 +1257,11 @@
   # SD/eMMC Support
   #
 !if $(SD_ENABLE) == TRUE
+  MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+  UefiPayloadPkg/AmdPcoSdhciDxe/AmdPcoSdhciDxe.inf {
+    <LibraryClasses>
+      NonDiscoverableDeviceRegistrationLib|MdeModulePkg/Library/NonDiscoverableDeviceRegistrationLib/NonDiscoverableDeviceRegistrationLib.inf
+  }
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
