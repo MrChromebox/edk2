@@ -676,9 +676,6 @@
   gUefiCpuPkgTokenSpaceGuid.PcdCpuDisableMtrrProgramming|TRUE
 
 [PcdsPatchableInModule.X64]
-!if $(NETWORK_DRIVER_ENABLE) == TRUE
-  gEfiNetworkPkgTokenSpaceGuid.PcdAllowHttpConnections|TRUE
-!endif
   gUefiPayloadPkgTokenSpaceGuid.SizeOfIoSpace|16
   gUefiPayloadPkgTokenSpaceGuid.PcdFDTPageSize|8
 
@@ -703,7 +700,9 @@
   #
   # Network Pcds
   #
-!include NetworkPkg/NetworkPcds.dsc.inc
+!if $(NETWORK_DRIVER_ENABLE) == TRUE
+  !include NetworkPkg/NetworkPcds.dsc.inc
+!endif
 
   #
   # The following parameters are set by Library/PlatformHookLib
