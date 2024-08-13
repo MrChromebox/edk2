@@ -294,6 +294,12 @@ INF MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
 !if $(DISABLE_SERIAL_TERMINAL) == FALSE
 INF MdeModulePkg/Universal/Console/TerminalDxe/TerminalDxe.inf
 !endif
+
+!if $(USE_PLATFORM_GOP) == TRUE
+!if "X64" in $(ARCH)
+INF UefiPayloadPkg/PlatformGopPolicy/PlatformGopPolicy.inf
+!endif
+!endif
 INF UefiPayloadPkg/GraphicsOutputDxe/GraphicsOutputDxe.inf
 
 !if $(LOAD_OPTION_ROMS) == TRUE
