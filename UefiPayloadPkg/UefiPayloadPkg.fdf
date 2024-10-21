@@ -430,6 +430,15 @@ INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
 #
 !if $(NETWORK_DRIVER_ENABLE) == TRUE
   !include NetworkPkg/Network.fdf.inc
+  #
+  # Rng Protocol producer
+  #
+  INF  SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
+  
+  #
+  # Hash2 Protocol producer
+  #
+  INF  SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
 !endif
 !endif
 

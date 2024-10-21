@@ -900,6 +900,19 @@
   }
 !endif
 
+!if $(NETWORK_DRIVER_ENABLE) == TRUE
+  #
+  # Rng Protocol producer
+  #
+  SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
+
+  #
+  # Hash2 Protocol producer
+  #
+  SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
+!endif
+
+
 !if $(SECURE_BOOT_ENABLE) == TRUE
   SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
   UefiPayloadPkg/EnrollDefaultKeys/EnrollDefaultKeys.inf
