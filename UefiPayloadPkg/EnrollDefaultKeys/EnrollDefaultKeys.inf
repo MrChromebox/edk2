@@ -1,0 +1,63 @@
+## @file
+# This file handels SecureBoot setup.
+#
+#  Copyright (c) 2013 - 2019, Intel Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = EnrollDefaultKeys
+  FILE_GUID                      = 14693BD4-D114-4177-979E-37F279BAD620
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = DriverEntry
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  EnrollDefaultKeys.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[Guids]
+  gEfiCertPkcs7Guid
+  gEfiCertX509Guid
+  gEfiCustomModeEnableGuid
+  gEfiGlobalVariableGuid
+  gEfiImageSecurityDatabaseGuid
+  gEfiSecureBootEnableDisableGuid
+  gMicrosoftVendorGuid
+  gMicrosoftDbxUpdateGuid
+  gMicrosoftDbUefi2011Guid
+  gMicrosoftDbWin2011Guid
+  gMicrosoftDbUefi2023Guid
+  gMicrosoftDbWinUefi2023Guid
+  gMicrosoftKek2011Guid
+  gMicrosoftKek2023Guid
+  gMicrosoftKekUefi2023Guid
+  gMicrosoftPkOem2023Guid
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  DxeServicesLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiRuntimeServicesTableLib
+
+[Protocols]
+  gEfiVariableWriteArchProtocolGuid                  ## CONSUMES
+
+[Depex]
+  TRUE
