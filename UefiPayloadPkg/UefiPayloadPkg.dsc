@@ -786,6 +786,11 @@
   ## Whether allows PCI RB to allocate DMA memory above 4GB
   gUefiPayloadPkgTokenSpaceGuid.PcdPciAllocateMemoryAbove4GB|FALSE
 
+  # Skip initializing CPU features during S3 resume for coreboot
+!if $(BOOTLOADER) == COREBOOT
+  gUefiCpuPkgTokenSpaceGuid.PcdCpuFeaturesInitOnS3Resume|FALSE
+!endif
+
   # Disable MTRR programming
   gUefiCpuPkgTokenSpaceGuid.PcdCpuDisableMtrrProgramming|TRUE
 
