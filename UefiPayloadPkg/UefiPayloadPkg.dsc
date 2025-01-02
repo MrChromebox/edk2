@@ -800,6 +800,11 @@
   #
   gUefiCpuPkgTokenSpaceGuid.PcdFirstTimeWakeUpAPsBySipi|FALSE
 
+  # Skip initializing CPU features during S3 resume for coreboot
+!if $(BOOTLOADER) == COREBOOT
+  gUefiCpuPkgTokenSpaceGuid.PcdCpuFeaturesInitOnS3Resume|FALSE
+!endif
+
   # Disable MTRR programming
   gUefiCpuPkgTokenSpaceGuid.PcdCpuDisableMtrrProgramming|TRUE
 
