@@ -765,6 +765,11 @@
   # Disable MTRR programming
   gUefiCpuPkgTokenSpaceGuid.PcdCpuDisableMtrrProgramming|TRUE
 
+  # Skip initializing CPU features during S3 resume for coreboot
+!if $(BOOTLOADER) == COREBOOT
+  gUefiCpuPkgTokenSpaceGuid.PcdCpuFeaturesInitOnS3Resume|FALSE
+!endif
+
 [PcdsFixedAtBuild.AARCH64]
   # System Memory Base -- fixed at 0x4000_0000
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x40000000
