@@ -675,6 +675,11 @@
   # Disable MTRR programming
   gUefiCpuPkgTokenSpaceGuid.PcdCpuDisableMtrrProgramming|TRUE
 
+  # Skip initializing CPU features during S3 resume for coreboot
+!if $(BOOTLOADER) == COREBOOT
+  gUefiCpuPkgTokenSpaceGuid.PcdCpuFeaturesInitOnS3Resume|FALSE
+!endif
+
 [PcdsPatchableInModule.X64]
   gUefiPayloadPkgTokenSpaceGuid.SizeOfIoSpace|16
   gUefiPayloadPkgTokenSpaceGuid.PcdFDTPageSize|8
