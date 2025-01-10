@@ -607,7 +607,6 @@ ParseMiscInfo (
   )
 {
   struct cb_cfr                         *CbCfrSetupMenu;
-  UINT32                                CbCfrChecksum;
   UINT32                                CfrCalculatedChecksum;
   UINTN                                 ProcessedLength;
   CFR_OPTION_FORM                       *CbCfrOuterFormOffset;
@@ -619,47 +618,52 @@ ParseMiscInfo (
   // not for individual table-to-HOB conversion
   //
   CbCfrSetupMenu = FindCbTag (CB_TAG_CFR_ROOT);
-  if (CbCfrSetupMenu != NULL) {
-    //
-    // Checksums with this field set to "0"
-    //
-    CbCfrChecksum = CbCfrSetupMenu->checksum;
-    CbCfrSetupMenu->checksum = 0;
-    CfrCalculatedChecksum = CalculateCrc32 (CbCfrSetupMenu, CbCfrSetupMenu->size);
-    CbCfrSetupMenu->checksum = CbCfrChecksum;
+  if (CbCfrSetupMenu == NULL) {
+    DEBUG ((DEBUG_ERROR, "CFR Tag not found in cbtables\n"));
+    return RETURN_NOT_FOUND;
+  }
 
-    if (CfrCalculatedChecksum != CbCfrChecksum) {
-      DEBUG ((DEBUG_WARN, "CFR: Calculated CRC32 0x%x does not match stored CRC32 0x%x!\n", CfrCalculatedChecksum, CbCfrChecksum));
+  //
+  // Checksum over CFR_FORM[] data  -- CbCfrSetupMenu header excluded
+  //
+  CfrCalculatedChecksum = CalculateCrc32 (CbCfrSetupMenu + 1, CbCfrSetupMenu->size - sizeof(*CbCfrSetupMenu));
+
+  if (CfrCalculatedChecksum != CbCfrSetupMenu->checksum) {
+    DEBUG ((DEBUG_WARN, "CFR: Calculated CRC32 0x%x does not match stored CRC32 0x%x!\n", CfrCalculatedChecksum, CbCfrSetupMenu->checksum));
+    return RETURN_CRC_ERROR;
+  }
+
+  ProcessedLength = sizeof (struct cb_cfr);
+
+  //
+  // Copy each form to HOB; TODO: This creates duplicate, copy pointer?
+  //
+  while (ProcessedLength < CbCfrSetupMenu->size) {
+    CbCfrOuterFormOffset = (CFR_OPTION_FORM *)((UINT8 *)CbCfrSetupMenu + ProcessedLength);
+    if (CbCfrOuterFormOffset->tag != CB_TAG_CFR_OPTION_FORM) {
+      DEBUG ((DEBUG_ERROR, "CFR Tag mismatch: 0x%x vs 0x%x\n", CbCfrOuterFormOffset->tag, CB_TAG_CFR_OPTION_FORM));
+      return RETURN_NOT_FOUND;
     }
-
-    ProcessedLength = sizeof (struct cb_cfr);
-
-    //
-    // Copy each form to HOB; TODO: This creates duplicate, copy pointer?
-    //
-    while (ProcessedLength < CbCfrSetupMenu->size) {
-      CbCfrOuterFormOffset = (CFR_OPTION_FORM *)((UINT8 *)CbCfrSetupMenu + ProcessedLength);
-      CfrSetupMenuForm = BuildGuidDataHob (
-                            &gEfiCfrSetupMenuFormGuid,
-                            CbCfrOuterFormOffset,
-                            CbCfrOuterFormOffset->size
-                            );
-      if (CfrSetupMenuForm == NULL) {
-        break;
-      }
-      ASSERT (CfrSetupMenuForm->tag == CB_TAG_CFR_OPTION_FORM);
-
-      CfrFormName = (CFR_VARBINARY *)((UINT8 *)CfrSetupMenuForm + sizeof (CFR_OPTION_FORM));
-      DEBUG ((
-        DEBUG_INFO,
-        "CFR: Found form[%d] \"%a\" of %d bytes\n",
-        CfrSetupMenuForm->object_id,
-        CfrFormName->data,
-        CfrSetupMenuForm->size
-        ));
-
-      ProcessedLength += CfrSetupMenuForm->size;
+    CfrSetupMenuForm = BuildGuidDataHob (
+                          &gEfiCfrSetupMenuFormGuid,
+                          CbCfrOuterFormOffset,
+                          CbCfrOuterFormOffset->size
+                          );
+    if (CfrSetupMenuForm == NULL) {
+      break;
     }
+    ASSERT (CfrSetupMenuForm->tag == CB_TAG_CFR_OPTION_FORM);
+
+    CfrFormName = (CFR_VARBINARY *)((UINT8 *)CfrSetupMenuForm + sizeof (CFR_OPTION_FORM));
+    DEBUG ((
+      DEBUG_INFO,
+      "CFR: Found form[%d] \"%a\" of %d bytes\n",
+      CfrSetupMenuForm->object_id,
+      CfrFormName->data,
+      CfrSetupMenuForm->size
+      ));
+
+    ProcessedLength += CfrSetupMenuForm->size;
   }
 
   return RETURN_SUCCESS;
