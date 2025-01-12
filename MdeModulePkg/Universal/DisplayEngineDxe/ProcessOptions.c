@@ -1363,16 +1363,14 @@ ProcessOptions (
       } else {
         *OptionString = AllocateZeroPool (BufferSize);
         ASSERT (*OptionString);
-
-        *OptionString[0] = LEFT_CHECKBOX_DELIMITER;
-
-        if (QuestionValue->Value.b) {
-          *(OptionString[0] + 1) = CHECK_ON;
-        } else {
-          *(OptionString[0] + 1) = CHECK_OFF;
-        }
-
-        *(OptionString[0] + 2) = RIGHT_CHECKBOX_DELIMITER;
+        CHAR16 *CheckString = (QuestionValue->Value.b) ? CHECK_ON : CHECK_OFF;
+        CHAR16 Delimiter[2];
+        Delimiter[1] = L'\0';
+        Delimiter[0] = LEFT_CHECKBOX_DELIMITER;
+        NewStrCat (OptionString[0], BufferSize, Delimiter);
+        NewStrCat (OptionString[0], BufferSize, CheckString);
+        Delimiter[0] = RIGHT_CHECKBOX_DELIMITER;
+        NewStrCat (OptionString[0], BufferSize, Delimiter);
       }
 
       break;
