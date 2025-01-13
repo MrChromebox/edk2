@@ -658,8 +658,7 @@ ParseMiscInfo (
     CfrFormName = (CFR_VARBINARY *)((UINT8 *)CfrSetupMenuForm + sizeof (CFR_OPTION_FORM));
     DEBUG ((
       DEBUG_INFO,
-      "CFR: Found form[%d] \"%a\" of %d bytes\n",
-      CfrSetupMenuForm->object_id,
+      "CFR: Found form \"%a\", size 0x%x bytes\n",
       CfrFormName->data,
       CfrSetupMenuForm->size
       ));
