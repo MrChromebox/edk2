@@ -253,8 +253,7 @@ CfrProcessFormOption (
 
   DEBUG ((
     DEBUG_INFO,
-    "CFR: Process form[%d] \"%a\" of size 0x%x\n",
-    Option->object_id,
+    "CFR: Processing form \"%a\", size 0x%x\n",
     CfrFormName->data,
     Option->size
     ));
@@ -337,8 +336,7 @@ CfrProcessNumericOption (
 
   DEBUG ((
     DEBUG_INFO,
-    "CFR: Process option[%d] \"%a\" of size 0x%x\n",
-    Option->object_id,
+    "CFR: Processing option \"%a\", size 0x%x\n",
     CfrOptionName->data,
     Option->size
     ));
@@ -544,8 +542,7 @@ CfrProcessCharacterOption (
 
   DEBUG ((
     DEBUG_INFO,
-    "CFR: Process option[%d] \"%a\" of size 0x%x\n",
-    Option->object_id,
+    "CFR: Processing option \"%a\", size 0x%x\n",
     (CfrOptionName != NULL) ? CfrOptionName->data : CfrDisplayName->data,
     Option->size
     ));
