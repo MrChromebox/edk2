@@ -399,7 +399,7 @@ CfrProcessFormOption (
   if (Option->flags & CFR_OPTFLAG_SUPPRESS) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_SUPPRESS_IF_OP);
   }
-  if (Option->flags & CFR_OPTFLAG_GRAYOUT) {
+  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_GRAY_OUT_IF_OP);
   }
 
@@ -412,7 +412,7 @@ CfrProcessFormOption (
                     );
   ASSERT (TempHiiBuffer != NULL);
 
-  if (Option->flags & CFR_OPTFLAG_GRAYOUT) {
+  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
     TempHiiBuffer = HiiCreateEndOpCode (StartOpCodeHandle);
     ASSERT (TempHiiBuffer != NULL);
   }
@@ -523,7 +523,7 @@ CfrProcessNumericOption (
   if (Option->flags & CFR_OPTFLAG_SUPPRESS) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_SUPPRESS_IF_OP);
   }
-  if (Option->flags & CFR_OPTFLAG_GRAYOUT) {
+  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_GRAY_OUT_IF_OP);
   }
 
@@ -622,7 +622,7 @@ CfrProcessNumericOption (
     ASSERT (TempHiiBuffer != NULL);
   }
 
-  if (Option->flags & CFR_OPTFLAG_GRAYOUT) {
+  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
     TempHiiBuffer = HiiCreateEndOpCode (StartOpCodeHandle);
     ASSERT (TempHiiBuffer != NULL);
   }
@@ -766,7 +766,7 @@ CfrProcessCharacterOption (
   if (Option->flags & CFR_OPTFLAG_SUPPRESS) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_SUPPRESS_IF_OP);
   }
-  if (Option->flags & CFR_OPTFLAG_GRAYOUT) {
+  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_GRAY_OUT_IF_OP);
   }
 
@@ -827,7 +827,7 @@ CfrProcessCharacterOption (
     ASSERT (TempHiiBuffer != NULL);
   }
 
-  if (Option->flags & CFR_OPTFLAG_GRAYOUT) {
+  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
     TempHiiBuffer = HiiCreateEndOpCode (StartOpCodeHandle);
     ASSERT (TempHiiBuffer != NULL);
   }
