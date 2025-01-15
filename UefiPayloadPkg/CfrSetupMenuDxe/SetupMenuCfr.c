@@ -258,6 +258,9 @@ CfrProduceStorageForOption (
   if (!(OptionFlags & CFR_OPTFLAG_VOLATILE)) {
     VariableAttributes |= EFI_VARIABLE_NON_VOLATILE;
   }
+  if (OptionFlags & CFR_OPTFLAG_RUNTIME) {
+    VariableAttributes |= EFI_VARIABLE_RUNTIME_ACCESS;
+  }
 
   DataSize = 0;
   Status = gRT->GetVariable (
