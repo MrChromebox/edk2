@@ -707,7 +707,7 @@
   # Network Pcds
   #
 !if $(NETWORK_DRIVER_ENABLE) == TRUE
-  !include NetworkPkg/NetworkPcds.dsc.inc
+  !include NetworkPkg/NetworkFixedPcds.dsc.inc
 !endif
 
   #
@@ -807,6 +807,7 @@
   ## Match the hash algorithms listed in Tcg2Dxe
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x1F
 
+!include NetworkPkg/NetworkDynamicPcds.dsc.inc
 
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPhysicalPresence|TRUE
 
