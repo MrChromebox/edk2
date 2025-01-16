@@ -415,9 +415,6 @@ PlatformBootManagerAfterConsole (
     BootLogoEnableLogo ();
   }
 
-  EfiBootManagerConnectAll ();
-  EfiBootManagerRefreshAllBootOption ();
-
   //
   // Process TPM PPI request
   //
@@ -429,7 +426,7 @@ PlatformBootManagerAfterConsole (
   //
   // Register UEFI Shell
   //
-  PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+  PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", 0);
 
   if (FixedPcdGetBool (PcdBootManagerEscape)) {
     BootLogoUpdateProgress (
@@ -487,5 +484,35 @@ PlatformBootManagerUnableToBoot (
   VOID
   )
 {
-  return;
+  EFI_STATUS                   Status;
+  EFI_BOOT_MANAGER_LOAD_OPTION BootManagerMenu;
+  EFI_BOOT_MANAGER_LOAD_OPTION *BootOptions;
+  UINTN                        OldBootOptionCount;
+  UINTN                        NewBootOptionCount;
+
+  BootOptions = EfiBootManagerGetLoadOptions (&OldBootOptionCount,
+                  LoadOptionTypeBoot);
+  EfiBootManagerFreeLoadOptions (BootOptions, OldBootOptionCount);
+
+  EfiBootManagerConnectAll ();
+  EfiBootManagerRefreshAllBootOption ();
+
+  BootOptions = EfiBootManagerGetLoadOptions (&NewBootOptionCount,
+                  LoadOptionTypeBoot);
+  EfiBootManagerFreeLoadOptions (BootOptions, NewBootOptionCount);
+
+  if (NewBootOptionCount != OldBootOptionCount) {
+    DEBUG ((DEBUG_WARN, "%a: rebooting after refreshing all boot options\n",
+      __FUNCTION__));
+    gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+  }
+
+  Status = EfiBootManagerGetBootManagerMenu (&BootManagerMenu);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  for (;;) {
+    EfiBootManagerBoot (&BootManagerMenu);
+  }
 }
