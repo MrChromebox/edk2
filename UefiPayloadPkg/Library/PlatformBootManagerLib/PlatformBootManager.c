@@ -212,6 +212,108 @@ PlatformRegisterFvBootOption (
   }
 }
 
+EFI_HANDLE BootManagerEntryNotifyHandle1;
+EFI_HANDLE BootManagerEntryNotifyHandle2;
+
+VOID
+PlatformUnregisterBootManagerEntryNotifyCallback (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL  *SimpleEx;
+
+  Status = gBS->LocateProtocol (
+                  &gEfiSimpleTextInputExProtocolGuid,
+                  NULL,
+                  (VOID **)&SimpleEx
+                  );
+  if (!EFI_ERROR (Status)) {
+    Status = SimpleEx->UnregisterKeyNotify (SimpleEx, BootManagerEntryNotifyHandle1);
+    Status = SimpleEx->UnregisterKeyNotify (SimpleEx, BootManagerEntryNotifyHandle2);
+  }
+}
+
+EFI_STATUS
+EFIAPI
+BootManagerEntryNotifyCallback (
+  EFI_KEY_DATA *KeyData
+  )
+{
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Black;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  White;
+
+  //
+  // We can't call UnregisterKeyNotify () from this handler,
+  // so work around it by only updating the progress message once
+  //
+  static UINTN UpdateProgressMessage = 1;
+
+  Black.Blue = Black.Green = Black.Red = Black.Reserved = 0;
+  White.Blue = White.Green = White.Red = White.Reserved = 0xFF;
+
+  if (UpdateProgressMessage) {
+    BootLogoUpdateProgress (
+      White,
+      Black,
+      L"Entering Setup, Please Wait...",
+      White,
+      0,
+      0
+      );
+    UpdateProgressMessage = 0;
+  }
+
+  return EFI_SUCCESS;
+}
+
+VOID
+PlatformRegisterBootManagerEntryNotifyCallback (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL  *SimpleEx;
+  EFI_KEY_DATA                       KeyData;
+
+  Status = gBS->LocateProtocol (
+                  &gEfiSimpleTextInputExProtocolGuid,
+                  NULL,
+                  (VOID **)&SimpleEx
+                  );
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  KeyData.Key.UnicodeChar         = CHAR_NULL;
+  KeyData.KeyState.KeyShiftState  = 0;
+  KeyData.KeyState.KeyToggleState = 0;
+
+  if (FixedPcdGetBool (PcdBootManagerEscape)) {
+    KeyData.Key.ScanCode = SCAN_ESC;
+  } else {
+    KeyData.Key.ScanCode = SCAN_F2;
+  }
+
+  Status = SimpleEx->RegisterKeyNotify (
+                       SimpleEx,
+                       &KeyData,
+                       BootManagerEntryNotifyCallback,
+                       &BootManagerEntryNotifyHandle1
+                       );
+
+  KeyData.Key.ScanCode = SCAN_DOWN;
+
+  if (!EFI_ERROR (Status)) {
+    Status = SimpleEx->RegisterKeyNotify (
+                         SimpleEx,
+                         &KeyData,
+                         BootManagerEntryNotifyCallback,
+                         &BootManagerEntryNotifyHandle2
+                         );
+  }
+}
+
 /**
   Do the platform specific action before the console is connected.
 
@@ -262,6 +364,11 @@ PlatformBootManagerBeforeConsole (
   Down.UnicodeChar = CHAR_NULL;
   EfiBootManagerGetBootManagerMenu (&BootOption);
   EfiBootManagerAddKeyOptionVariable (NULL, (UINT16)BootOption.OptionNumber, 0, &Down, NULL);
+
+  //
+  // Register a callback to show a message when the Boot Manager Menu hotkey is pressed.
+  //
+  PlatformRegisterBootManagerEntryNotifyCallback ();
 
   //
   // Install ready to lock.
@@ -361,6 +468,7 @@ PlatformBootManagerWaitCallback (
 {
   if (TimeoutRemain == 0) {
     BootLogoClearProgress ();
+    PlatformUnregisterBootManagerEntryNotifyCallback ();
   }
 
   return;
