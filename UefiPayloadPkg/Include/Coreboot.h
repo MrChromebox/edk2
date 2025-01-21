@@ -266,6 +266,7 @@ struct cb_smmstorev2 {
 struct cb_cfr {
   UINT32 tag;
   UINT32 size;
+  UINT32 version;
   UINT32 checksum;  /* Of the following data only; excludes these 3 fields */
   /* CFR_FORM forms[] */
 };
