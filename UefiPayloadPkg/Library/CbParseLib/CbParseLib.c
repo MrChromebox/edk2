@@ -78,6 +78,43 @@ CbCheckSum16 (
 }
 
 /**
+  Coreboot implements a CRC32 checksum which differs from the one in EDK2. This function
+  calculates the CRC32 checksum of a given buffer with the coreboot implementation.
+
+  @param  Buffer      The pointer to the buffer of which to calculate the CRC32.
+  @param  Length      The size, in bytes, of Buffer.
+
+  @return Crc         The CRC32 checksum of Buffer.
+
+**/
+UINT32
+CbCalculateCrc32 (
+  IN  VOID   *Buffer,
+  IN  UINTN  Length
+  )
+{
+  UINT32  Crc;
+  UINT8   *Ptr;
+  UINTN   Idx;
+  UINTN   BitIdx;
+
+  Crc = 0;
+  for (Idx = 0, Ptr = Buffer; Idx < Length; Idx++, Ptr++) {
+    Crc ^= (UINT32)*Ptr << 24;
+
+    for (BitIdx = 0; BitIdx < 8; BitIdx++) {
+      if ((Crc & 0x80000000UL) != 0) {
+        Crc = ((Crc << 1) ^ 0x04C11DB7UL);
+      } else {
+        Crc <<= 1;
+      }
+    }
+  }
+
+  return Crc;
+}
+
+/**
   Check the coreboot table if it is valid.
 
   @param  Header            Pointer to coreboot table
@@ -596,6 +633,7 @@ ParseGfxDeviceInfo (
   Parse and handle the misc info provided by bootloader
 
   @retval RETURN_SUCCESS           The misc information was parsed successfully.
+  @retval RETURN_CRC_ERROR         The calculated checksum does not match the supplied one.
   @retval RETURN_NOT_FOUND         Could not find required misc info.
   @retval RETURN_OUT_OF_RESOURCES  Insufficant memory space.
 
@@ -626,12 +664,11 @@ ParseMiscInfo (
   //
   // Checksum over CFR_FORM[] data  -- CbCfrSetupMenu header excluded
   //
-  CfrCalculatedChecksum = CalculateCrc32 (CbCfrSetupMenu + 1, CbCfrSetupMenu->size - sizeof(*CbCfrSetupMenu));
+  CfrCalculatedChecksum = CbCalculateCrc32 (CbCfrSetupMenu + 1, CbCfrSetupMenu->size - sizeof(*CbCfrSetupMenu));
 
   if (CfrCalculatedChecksum != CbCfrSetupMenu->checksum) {
     DEBUG ((DEBUG_WARN, "CFR: Calculated CRC32 0x%x does not match stored CRC32 0x%x!\n", CfrCalculatedChecksum, CbCfrSetupMenu->checksum));
-    // Disable for now until cause of checksum mismatch found
-    //return RETURN_CRC_ERROR;
+    return RETURN_CRC_ERROR;
   }
 
   ProcessedLength = sizeof (struct cb_cfr);
