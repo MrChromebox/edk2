@@ -47,6 +47,7 @@
   DEFINE LOCKBOX_SUPPORT              = FALSE
   DEFINE FOLLOW_BGRT_SPEC             = FALSE
   DEFINE USE_PCO_MMIO_EMMC            = FALSE
+  DEFINE LOAD_OPTION_ROMS             = FALSE
 
   #
   # Crypto Support
@@ -1042,6 +1043,13 @@
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
+!endif
+
+  #
+  # Support for loading Option ROMs from PCI-Express devices
+  #
+!if $(LOAD_OPTION_ROMS) == TRUE
+  UefiPayloadPkg/PciPlatformDxe/PciPlatformDxe.inf
 !endif
 
   #
