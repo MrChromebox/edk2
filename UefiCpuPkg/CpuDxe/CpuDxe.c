@@ -1034,11 +1034,6 @@ InitializeCpu (
   ASSERT_EFI_ERROR (Status);
 
   //
-  // Install EFI memory attribute Protocol
-  //
-  InstallEfiMemoryAttributeProtocol (mCpuHandle);
-
-  //
   // Refresh GCD memory space map according to MTRR value.
   //
   RefreshGcdMemoryAttributes ();
