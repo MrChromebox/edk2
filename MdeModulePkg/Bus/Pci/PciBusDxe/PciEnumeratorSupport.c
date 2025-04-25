@@ -2732,6 +2732,9 @@ IsPciDeviceRejected (
     return FALSE;
   }
 
+  // This code is buggy AF, so don't reject anything
+  return FALSE;
+
   if (IS_CARDBUS_BRIDGE (&PciIoDevice->Pci)) {
     //
     // Only test base registers for P2C
