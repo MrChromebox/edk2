@@ -525,7 +525,7 @@ SmmStoreLibInitialize (
   // Mark the memory mapped store as MMIO memory
   //
   Status = gDS->GetMemorySpaceDescriptor (mSmmStoreInfo->MmioAddress, &GcdDescriptor);
-  if (EFI_ERROR (Status) || (GcdDescriptor.GcdMemoryType != EfiGcdMemoryTypeMemoryMappedIo)) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_INFO,
       "%a: No memory space descriptor for com buffer found\n",
@@ -542,17 +542,31 @@ SmmStoreLibInitialize (
                     EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
                     );
     ASSERT_EFI_ERROR (Status);
+  } else {
+    Status = gDS->SetMemorySpaceCapabilities (
+      mSmmStoreInfo->MmioAddress,
+      mSmmStoreInfo->NumBlocks * mSmmStoreInfo->BlockSize,
+      GcdDescriptor.Capabilities | EFI_MEMORY_RUNTIME
+      );
+    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a:%d SetMemorySpaceCapabilities failed\n", __func__, __LINE__));
+      return Status;
+    }
+    //
+    // Mark as runtime service
+    //
+    Status = gDS->SetMemorySpaceAttributes (
+      mSmmStoreInfo->MmioAddress,
+      mSmmStoreInfo->NumBlocks * mSmmStoreInfo->BlockSize,
+      GcdDescriptor.Attributes | EFI_MEMORY_RUNTIME
+      );
+    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a:%d SetMemorySpaceAttributes failed\n", __func__, __LINE__));
+      return Status;
+    }
   }
-
-  //
-  // Mark as runtime service
-  //
-  Status = gDS->SetMemorySpaceAttributes (
-                  mSmmStoreInfo->MmioAddress,
-                  mSmmStoreInfo->NumBlocks * mSmmStoreInfo->BlockSize,
-                  EFI_MEMORY_RUNTIME
-                  );
-  ASSERT_EFI_ERROR (Status);
 
   return EFI_SUCCESS;
 }
