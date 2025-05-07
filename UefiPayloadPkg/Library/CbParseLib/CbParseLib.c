@@ -734,13 +734,20 @@ ParseSmmStoreInfo (
   DEBUG ((DEBUG_INFO, "number of blocks: 0x%x\n", CbSSRec->num_blocks));
   DEBUG ((DEBUG_INFO, "communication buffer: 0x%x\n", CbSSRec->com_buffer));
   DEBUG ((DEBUG_INFO, "communication buffer size: 0x%x\n", CbSSRec->com_buffer_size));
-  DEBUG ((DEBUG_INFO, "MMIO address of store: 0x%x\n", CbSSRec->mmap_addr));
 
   SmmStoreInfo->ComBuffer     = CbSSRec->com_buffer;
   SmmStoreInfo->ComBufferSize = CbSSRec->com_buffer_size;
   SmmStoreInfo->BlockSize     = CbSSRec->block_size;
   SmmStoreInfo->NumBlocks     = CbSSRec->num_blocks;
-  SmmStoreInfo->MmioAddress   = CbSSRec->mmap_addr;
+
+  if (CbSSRec->size >= 40 && CbSSRec->mmap_addr_ext) {
+    SmmStoreInfo->MmioAddress   = CbSSRec->mmap_addr_ext;
+  } else {
+    SmmStoreInfo->MmioAddress   = CbSSRec->mmap_addr;
+  }
+
+  DEBUG ((DEBUG_INFO, "MMIO address of store: 0x%llx\n", SmmStoreInfo->MmioAddress));
+
   SmmStoreInfo->ApmCmd        = CbSSRec->apm_cmd;
 
   return RETURN_SUCCESS;
