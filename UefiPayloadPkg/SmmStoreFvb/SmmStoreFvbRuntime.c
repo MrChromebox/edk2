@@ -174,7 +174,7 @@ SmmStoreInitialize (
   EFI_PHYSICAL_ADDRESS  MmioAddress;
   UINTN                 BlockSize;
   UINTN                 BlockCount;
-  UINT32                NvStorageBase;
+  UINT64                NvStorageBase;
   UINT32                NvStorageSize;
   UINT32                NvVariableSize;
   UINT32                FtwWorkingSize;
@@ -225,26 +225,32 @@ SmmStoreInitialize (
   FtwSpareSize   = (BlockCount / 2) * BlockSize;
   FtwWorkingSize = 1 * BlockSize;
   NvVariableSize = NvStorageSize - FtwSpareSize - FtwWorkingSize;
-  DEBUG ((DEBUG_INFO, "NvStorageBase:0x%x, NvStorageSize:0x%x\n", NvStorageBase, NvStorageSize));
+  DEBUG ((DEBUG_INFO, "NvStorageBase:0x%llx, NvStorageSize:0x%x\n", NvStorageBase, NvStorageSize));
 
   Status = PcdSet32S (PcdFlashNvStorageVariableSize, NvVariableSize);
   ASSERT_EFI_ERROR (Status);
-  Status = PcdSet32S (PcdFlashNvStorageVariableBase, NvStorageBase);
-  ASSERT_EFI_ERROR (Status);
+  if (NvStorageBase < 0x100000000ULL) {
+    Status = PcdSet32S (PcdFlashNvStorageVariableBase, NvStorageBase);
+    ASSERT_EFI_ERROR (Status);
+  }
   Status = PcdSet64S (PcdFlashNvStorageVariableBase64, NvStorageBase);
   ASSERT_EFI_ERROR (Status);
 
   Status = PcdSet32S (PcdFlashNvStorageFtwWorkingSize, FtwWorkingSize);
   ASSERT_EFI_ERROR (Status);
-  Status = PcdSet32S (PcdFlashNvStorageFtwWorkingBase, NvStorageBase + NvVariableSize);
-  ASSERT_EFI_ERROR (Status);
+  if ((NvStorageBase + NvVariableSize) < 0x100000000ULL) {
+    Status = PcdSet32S (PcdFlashNvStorageFtwWorkingBase, NvStorageBase + NvVariableSize);
+    ASSERT_EFI_ERROR (Status);
+  }
   Status = PcdSet64S (PcdFlashNvStorageFtwWorkingBase64, NvStorageBase + NvVariableSize);
   ASSERT_EFI_ERROR (Status);
 
   Status = PcdSet32S (PcdFlashNvStorageFtwSpareSize, FtwSpareSize);
   ASSERT_EFI_ERROR (Status);
-  Status = PcdSet32S (PcdFlashNvStorageFtwSpareBase, NvStorageBase + NvVariableSize + FtwWorkingSize);
-  ASSERT_EFI_ERROR (Status);
+  if ((NvStorageBase + NvVariableSize + FtwWorkingSize) < 0x100000000ULL) {
+    Status = PcdSet32S (PcdFlashNvStorageFtwSpareBase, NvStorageBase + NvVariableSize + FtwWorkingSize);
+    ASSERT_EFI_ERROR (Status);
+  }
   Status = PcdSet64S (PcdFlashNvStorageFtwSpareBase64, NvStorageBase + NvVariableSize + FtwWorkingSize);
   ASSERT_EFI_ERROR (Status);
 
