@@ -260,7 +260,9 @@ struct cb_smmstorev2 {
   UINT32    com_buffer_size; /* Size of the communication buffer in byte */
   UINT8     apm_cmd;         /* The command byte to write to the APM I/O port */
   UINT8     unused[3];       /* Set to zero */
-};
+  UINT64    mmap_addr_ext;   /* 64-bit MMIO address of the store for read only access.
+                              * Only available when size field >= 40. */
+} __attribute__ ((packed));
 
 #define CB_TAG_CFR_ROOT  0x0047
 struct cb_cfr {
