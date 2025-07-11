@@ -411,6 +411,16 @@ SmmStoreLibInitialize (
                     );
     ASSERT_EFI_ERROR (Status);
   } else {
+    Status = gDS->SetMemorySpaceCapabilities (
+      mSmmStoreInfo->MmioAddress,
+      mSmmStoreInfo->NumBlocks * mSmmStoreInfo->BlockSize,
+      GcdDescriptor.Capabilities | EFI_MEMORY_RUNTIME
+      );
+    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a:%d SetMemorySpaceCapabilities failed\n", __func__, __LINE__));
+      return Status;
+    }
     //
     // Mark as runtime service
     //
@@ -420,6 +430,10 @@ SmmStoreLibInitialize (
       GcdDescriptor.Attributes | EFI_MEMORY_RUNTIME
       );
     ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a:%d SetMemorySpaceAttributes failed\n", __func__, __LINE__));
+      return Status;
+    }
   }
 
   return EFI_SUCCESS;
