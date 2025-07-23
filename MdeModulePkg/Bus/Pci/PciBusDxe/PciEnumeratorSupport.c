@@ -2770,6 +2770,12 @@ IsPciDeviceRejected (
       //
       Mask      = 0xFFFFFFFC;
       TestValue = TestValue & Mask;
+      if ((TestValue != 0) && ((TestValue & 0xFFFF0000) == 0)) {
+        //
+        // IO Bar uses 16-bit decoding, pad for comparison
+        //
+        TestValue = TestValue | 0xFFFF0000;
+      }
       if ((TestValue != 0) && (TestValue == (OldValue & Mask))) {
         return TRUE;
       }
