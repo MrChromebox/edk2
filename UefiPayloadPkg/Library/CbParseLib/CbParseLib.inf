@@ -39,6 +39,7 @@
 
 [Guids]
   gEfiCfrSetupMenuFormGuid
+  gUniversalPayloadPciRootBridgeInfoGuid
 
 [Pcd]
   gUefiPayloadPkgTokenSpaceGuid.PcdBootloaderParameter

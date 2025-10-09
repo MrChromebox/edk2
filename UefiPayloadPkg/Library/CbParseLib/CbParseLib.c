@@ -21,6 +21,7 @@
 #include <IndustryStandard/Acpi.h>
 #include <Coreboot.h>
 #include <Guid/CfrSetupMenuGuid.h>
+#include <UniversalPayload/PciRootBridges.h>
 
 /**
   Convert a packed value from cbuint64 to a UINT64 value.
@@ -622,6 +623,54 @@ ParseGfxDeviceInfo (
 }
 
 /**
+  Find the RootBridge info.
+
+  @param  SmmStoreInfo       Pointer to the SMMSTORE_INFO structure
+
+  @retval RETURN_SUCCESS     Successfully find the Smm store buffer information.
+  @retval RETURN_NOT_FOUND   Failed to find the Smm store buffer information .
+**/
+RETURN_STATUS
+EFIAPI
+ParseRootBridgeInfo (
+  VOID
+  )
+{
+  RETURN_STATUS                       Status;
+  UNIVERSAL_PAYLOAD_PCI_ROOT_BRIDGES  *BlRootBridgesHob = NULL;
+  UNIVERSAL_PAYLOAD_PCI_ROOT_BRIDGES  *PldRootBridgesHob;
+  struct cb_cbmem_ref  *CbMemRef;
+
+  Status           = RETURN_NOT_FOUND;
+  CbMemRef         = FindCbTag (CB_TAG_RB_INFO);
+
+  if (CbMemRef != NULL) {
+    BlRootBridgesHob = (UNIVERSAL_PAYLOAD_PCI_ROOT_BRIDGES *)(UINTN)CbMemRef->cbmem_addr;
+  }
+
+  if (BlRootBridgesHob != NULL) {
+    //
+    // Migrate bootloader root bridge info hob from bootloader to payload.
+    //
+    PldRootBridgesHob = BuildGuidHob (
+                          &gUniversalPayloadPciRootBridgeInfoGuid,
+                          BlRootBridgesHob->Header.Length
+                          );
+    ASSERT (PldRootBridgesHob != NULL);
+    if (PldRootBridgesHob != NULL) {
+      CopyMem (PldRootBridgesHob, BlRootBridgesHob, BlRootBridgesHob->Header.Length);
+      DEBUG ((DEBUG_INFO, "Create PCI root bridge info guid hob\n"));
+      Status = RETURN_SUCCESS;
+    } else {
+      Status = RETURN_OUT_OF_RESOURCES;
+    }
+  }
+
+  return Status;
+}
+
+
+/**
   Parse and handle the misc info provided by bootloader
 
   @retval RETURN_SUCCESS               The misc information was parsed successfully.
@@ -643,6 +692,10 @@ ParseMiscInfo (
   CFR_OPTION_FORM                       *CbCfrOuterFormOffset;
   CFR_OPTION_FORM                       *CfrSetupMenuForm;
   CFR_VARBINARY                         *CfrFormName;
+
+  if (ParseRootBridgeInfo () != RETURN_SUCCESS) {
+    DEBUG ((DEBUG_INFO, "Failed to create PCI root bridge info guid hob\n"));
+  }
 
   //
   // CFR has several CB tags, though these are nested structures,
