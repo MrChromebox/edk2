@@ -291,6 +291,8 @@ struct cb_range {
   UINT32    range_size;
 } __attribute__ ((packed));
 
+#define CB_TAG_RB_INFO  0x0048
+
 /* Helpful macros */
 
 #define MEM_RANGE_COUNT(_rec) \
