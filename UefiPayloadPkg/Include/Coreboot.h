@@ -274,6 +274,8 @@ struct cb_cfr {
   /* CFR_FORM forms[] */
 };
 
+#define CB_TAG_RB_INFO  0x0048
+
 /* Helpful macros */
 
 #define MEM_RANGE_COUNT(_rec) \
