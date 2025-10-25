@@ -411,7 +411,7 @@ INF  RuleOverride=BINARY USE = X64 FSDrivers/ext4.inf
 INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
 INF UefiPayloadPkg/AmdPcoSdhciDxe/AmdPcoSdhciDxe.inf
 !endif
-INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
+INF UefiPayloadPkg/Bus/Pci/SdMmcPciCbDxe/SdMmcPciCbDxe.inf
 INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
 INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
 !endif
@@ -460,7 +460,7 @@ INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
   # Rng Protocol producer
   #
   INF  SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
-  
+
   #
   # Hash2 Protocol producer
   #
