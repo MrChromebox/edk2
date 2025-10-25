@@ -69,8 +69,40 @@ MediaChangeTimerCallback (
 
     if (CurrentPresent) {
       DEBUG ((DEBUG_INFO, "SdMmcCb: SD card inserted! MediaId=%d\n", Device->BlockIoMedia.MediaId));
+
+      //
+      // Re-initialize the SD card to get its capacity and parameters
+      // First, reset the controller to clear any stale state from previous card
+      //
+      SdhciReset (Device, SDHCI_RESET_ALL);
+      gBS->Stall (10000);  // 10ms for reset to complete
+
+      // Re-initialize the controller for the new card
+      EFI_STATUS Status = SdhciInit (Device);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "SdMmcCb: SdhciInit failed during hot-plug: %r\n", Status));
+        Device->BlockIoMedia.MediaPresent = FALSE;
+        Device->BlockIoMedia.LastBlock = 0;
+      } else {
+        // Now initialize the card
+        Status = SdStartup (Device);
+        if (!EFI_ERROR (Status)) {
+          // Update BlockIo media with new card's capacity
+          Device->BlockIoMedia.BlockSize = Device->BlockSize;
+          Device->BlockIoMedia.LastBlock = Device->TotalBlocks > 0 ? Device->TotalBlocks - 1 : 0;
+          DEBUG ((DEBUG_INFO, "SdMmcCb: SD card initialized: %lld blocks\n", Device->TotalBlocks));
+        } else {
+          DEBUG ((DEBUG_ERROR, "SdMmcCb: SD card initialization failed: %r\n", Status));
+          // Set media as not present if init fails
+          Device->BlockIoMedia.MediaPresent = FALSE;
+          Device->BlockIoMedia.LastBlock = 0;
+        }
+      }
     } else {
       DEBUG ((DEBUG_INFO, "SdMmcCb: SD card removed! MediaId=%d\n", Device->BlockIoMedia.MediaId));
+      // Reset capacity when card is removed
+      Device->TotalBlocks = 0;
+      Device->BlockIoMedia.LastBlock = 0;
     }
 
     //
