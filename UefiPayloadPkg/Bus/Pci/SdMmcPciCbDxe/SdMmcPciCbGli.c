@@ -41,8 +41,6 @@ Gl9763eInit (
     return Status;
   }
 
-  DEBUG ((DEBUG_INFO, "SdMmcPciCb: GL9763E CFG_REG_2 before = 0x%08x\n", Value));
-
   //
   // Disable L0s
   //
@@ -76,7 +74,6 @@ Gl9763eInit (
                                 1,
                                 &Value
                                 );
-  DEBUG ((DEBUG_INFO, "SdMmcPciCb: GL9763E CFG_REG_2 after  = 0x%08x (target: 0xC2A7F646)\n", Value));
 
   DEBUG ((DEBUG_INFO, "SdMmcPciCb: Gl9763eInit complete\n"));
 

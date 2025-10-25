@@ -404,12 +404,12 @@ SdhciSetupAdma (
   IN BOOLEAN           IsRead
   )
 {
-  UINT32       NeedDescriptors;
-  UINT32       Remaining;
-  UINT32       i;
-  UINT8        *BufferPtr;
-  UINT16       Attributes;
-  UINT32       DescLength;
+  UINT32                NeedDescriptors;
+  UINT32                Remaining;
+  UINT32                i;
+  UINT8                 *BufferPtr;
+  UINT16                Attributes;
+  UINT32                DescLength;
   EFI_PHYSICAL_ADDRESS  DescTableAddr;
 
   if (TotalBytes == 0) {
@@ -441,7 +441,7 @@ SdhciSetupAdma (
   }
 
   //
-  // Build descriptor chain (no need to zero - we set all fields)
+  // Build descriptor chain using direct physical addresses
   //
   BufferPtr = (UINT8 *)DataBuffer;
   Remaining = TotalBytes;
@@ -460,10 +460,6 @@ SdhciSetupAdma (
     }
 
     Device->AdmaDescs[i].Attributes = Attributes;
-    //
-    // ADMA spec: A length of 0x0000 means 65536 bytes (SDHCI_MAX_PER_DESCRIPTOR)
-    // So we store (DescLength & 0xFFFF) which naturally wraps 65536 to 0
-    //
     Device->AdmaDescs[i].Length = (UINT16)(DescLength & 0xFFFF);
     Device->AdmaDescs[i].Address = (UINT32)(UINTN)BufferPtr;
 
@@ -479,11 +475,8 @@ SdhciSetupAdma (
     SdhciWritel (Device, SDHCI_ADMA_ADDRESS_HI, (UINT32)(DescTableAddr >> 32));
   }
 
-  // Reduce debug verbosity - only log large transfers
-  if (TotalBytes > 4096) {
-    DEBUG ((DEBUG_VERBOSE, "SdMmcPciCb: ADMA setup: %d descriptors, %d bytes\n",
-            NeedDescriptors, TotalBytes));
-  }
+  DEBUG ((DEBUG_VERBOSE, "SdMmcPciCb: ADMA setup: %d descriptors, %d bytes\n",
+          NeedDescriptors, TotalBytes));
 
   return EFI_SUCCESS;
 }

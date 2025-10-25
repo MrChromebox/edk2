@@ -50,11 +50,9 @@ CheckMediaPresence (
     Device->BlockIoMedia.MediaId++;  // Increment to indicate media change
 
     if (CurrentPresent) {
-      DEBUG ((DEBUG_INFO, "SdMmcPciCb: Media inserted (MediaId now %d)\n",
-              Device->BlockIoMedia.MediaId));
+      DEBUG ((DEBUG_INFO, "SdMmcPciCb: Media status: inserted\n"));
     } else {
-      DEBUG ((DEBUG_INFO, "SdMmcPciCb: Media removed (MediaId now %d)\n",
-              Device->BlockIoMedia.MediaId));
+      DEBUG ((DEBUG_INFO, "SdMmcPciCb: Media status: removed\n"));
     }
 
     return EFI_MEDIA_CHANGED;

@@ -38,7 +38,9 @@ MmcStartup (
     return Status;
   }
 
-  gBS->Stall (1000); // 1ms delay after CMD0
+  // 10ms delay to settle after reset
+  // init fails on release builds without this
+  gBS->Stall (10000);
 
   //
   // CMD1: SEND_OP_COND (with retry loop like Depthcharge)
