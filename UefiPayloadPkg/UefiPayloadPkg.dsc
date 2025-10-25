@@ -1281,6 +1281,7 @@
   # SD/eMMC Support
   #
 !if $(SD_ENABLE) == TRUE
+  UefiPayloadPkg/SdMmcPciGliDxe/SdMmcPciGliDxe.inf
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf

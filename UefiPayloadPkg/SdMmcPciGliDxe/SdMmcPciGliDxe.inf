@@ -1,0 +1,62 @@
+## @file
+#  Genesys Logic SD/MMC PCI Host Controller Driver
+#  Specialized SDHCI driver for GL9750/GL9755/GL9763E controllers
+#
+#  This driver implements Depthcharge's proven SDHCI/MMC stack combined with
+#  coreboot's vendor-specific register programming for Genesys Logic controllers.
+#
+#  Supported controllers:
+#  - GL9763E (0xe763) - eMMC with HS400-ES support
+#  - GL9750 (0x9750) - SD card with UHS-I support
+#  - GL9755 (0x9755) - SD card with UHS-I and LTR support
+#
+#  Returns EFI_UNSUPPORTED for non-Genesys Logic controllers to allow
+#  SdMmcPciHcDxe to bind to them.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SdMmcPciGliDxe
+  MODULE_UNI_FILE                = SdMmcPciGliDxe.uni
+  FILE_GUID                      = 2b3c4d5e-6f70-8091-a2b3-c4d5e6f70809
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeSdMmcPciGliDxe
+
+[Sources]
+  SdMmcPciGliDxe.h
+  SdMmcPciGliDxe.c
+  SdMmcPciGliSdhci.c
+  SdMmcPciGliMmc.c
+  SdMmcPciGliSd.c
+  SdMmcPciGli.c
+  SdMmcPciGliBlockIo.c
+  SdMmcPciGliDiskInfo.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  DevicePathLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid                       ## TO_START
+  gEfiBlockIoProtocolGuid                     ## BY_START
+  gEfiDevicePathProtocolGuid                  ## BY_START
+  gEfiDiskInfoProtocolGuid                    ## BY_START
+  gEfiDriverBindingProtocolGuid               ## PRODUCES
+
+[Guids]
+  gEfiDiskInfoSdMmcInterfaceGuid              ## SOMETIMES_CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  SdMmcPciGliDxeExtra.uni
+
