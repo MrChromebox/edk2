@@ -1,0 +1,58 @@
+## @file
+#  Depthcharge-based SD/MMC PCI Host Controller Driver
+#  Universal SDHCI 3.0+ driver for Chromebook eMMC and SD controllers
+#
+#  This driver implements a complete port of Depthcharge's proven SDHCI/MMC stack
+#  to EDK2. It supports ALL standard SDHCI 3.0+ controllers (Class 08, SubClass 05),
+#  including Intel integrated controllers and Genesys Logic discrete controllers.
+#
+#  Vendor-specific quirks (e.g., GL9763E L1 delay) are applied automatically.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SdMmcPciCbDxe
+  MODULE_UNI_FILE                = SdMmcPciCbDxe.uni
+  FILE_GUID                      = 2b3c4d5e-6f70-8091-a2b3-c4d5e6f70809
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeSdMmcPciCbDxe
+
+[Sources]
+  SdMmcPciCbDxe.h
+  SdMmcPciCbDxe.c
+  SdMmcPciCbSdhci.c
+  SdMmcPciCbMmc.c
+  SdMmcPciCbSd.c
+  SdMmcPciCbGli.c
+  SdMmcPciCbBlockIo.c
+  SdMmcPciCbDiskInfo.c
+  ComponentName.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  DevicePathLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid                       ## TO_START
+  gEfiBlockIoProtocolGuid                     ## BY_START
+  gEfiDevicePathProtocolGuid                  ## BY_START
+  gEfiDiskInfoProtocolGuid                    ## BY_START
+  gEfiDriverBindingProtocolGuid               ## PRODUCES
+
+[Guids]
+  gEfiDiskInfoSdMmcInterfaceGuid              ## SOMETIMES_CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  SdMmcPciCbDxeExtra.uni
+
