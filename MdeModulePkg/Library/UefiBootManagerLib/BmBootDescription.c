@@ -451,13 +451,7 @@ BmGetDescriptionFromDiskInfo (
         return NULL;
       }
 
-      Description = BmGetSdMmcDescription (
-                      BmGetSdMmcManufacturerName (SdCid.ManufacturerId, FALSE),
-                      SdCid.ProductName,
-                      ARRAY_SIZE (SdCid.ProductName),
-                      SdCid.ProductSerialNumber,
-                      mBootDescSd
-                      );
+      Description = L"Internal SD card";
     } else if (DevicePathSubType (DevicePath) == MSG_EMMC_DP) {
       BufferSize = sizeof (EMMC_CID);
       Status     = DiskInfo->Inquiry (DiskInfo, &EmmcCid, &BufferSize);
