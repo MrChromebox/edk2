@@ -409,7 +409,7 @@ INF  RuleOverride=BINARY USE = X64 FSDrivers/ext4.inf
 !if $(SD_ENABLE) == TRUE
 !if $(USE_PCO_MMIO_EMMC) == TRUE
 INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
-INF UefiPayloadPkg/AmdPcoSdhciDxe/AmdPcoSdhciDxe.inf
+INF UefiPayloadPkg/SdMmcMmioDxe/SdMmcMmioDxe.inf
 !endif
 INF UefiPayloadPkg/Bus/Pci/SdMmcPciCbDxe/SdMmcPciCbDxe.inf
 INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf

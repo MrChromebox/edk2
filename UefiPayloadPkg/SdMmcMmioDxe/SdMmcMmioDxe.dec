@@ -1,0 +1,29 @@
+## @file
+#
+#  Universal MMIO SDHCI eMMC/SD driver PCD definitions
+#
+#  Copyright (c) 2024, CoolStar <coolstarorganization@gmail.com>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = SdMmcMmioDxe
+  PACKAGE_GUID                   = 4cd3a91b-990e-46a6-b609-9fa5d70d1f5f
+  PACKAGE_VERSION                = 1.0
+
+[PcdsFixedAtBuild]
+  ## MMIO base address for eMMC controller
+  #  Set to 0 to disable eMMC controller registration
+  #  Default: 0xFEDD5000 (AMD Picasso eMMC controller)
+  gSdMmcMmioDxeTokenSpaceGuid.PcdEmmcMmioBaseAddress|0xFEDD5000|UINT64|0x00000001
+
+  ## MMIO base address for SD controller
+  #  Set to 0 to disable SD controller registration
+  #  Default: 0 (disabled)
+  gSdMmcMmioDxeTokenSpaceGuid.PcdSdMmioBaseAddress|0x0|UINT64|0x00000002
+
+[Guids]
+  gSdMmcMmioDxeTokenSpaceGuid = { 0x4cd3a91b, 0x990e, 0x46a6, { 0xb6, 0x09, 0x9f, 0xa5, 0xd7, 0x0d, 0x1f, 0x5f } }

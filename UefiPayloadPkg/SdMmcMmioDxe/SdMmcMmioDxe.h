@@ -1,6 +1,6 @@
 /** @file
  *
- *  AMD Picasso SDHCI eMMC driver
+ *  Universal MMIO SDHCI eMMC/SD driver
  *
  *  Copyright (c) 2022, Patrick Wildt <patrick@blueri.se>
  *  Copyright (c) 2023, Mario Bălănică <mariobalanica02@gmail.com>
@@ -10,10 +10,14 @@
  *
  **/
 
-#ifndef __AMDPCOSDHCIDXE_H__
-#define __AMDPCOSDHCIDXE_H__
+#ifndef __SDMMCMMIODXE_H__
+#define __SDMMCMMIODXE_H__
 
-#define AMD_PCO_SDHCI_BASE          0xFEDD5000
+#include <Library/PcdLib.h>
+
+// PCD definitions for configurable MMIO base addresses
+#define PCD_EMMC_MMIO_BASE_ADDRESS  PcdGet64 (PcdEmmcMmioBaseAddress)
+#define PCD_SD_MMIO_BASE_ADDRESS    PcdGet64 (PcdSdMmioBaseAddress)
 
 typedef enum {
   RemovableSlot,
@@ -58,4 +62,4 @@ typedef struct {
   UINT32    Hs400         : 1; // bit 63
 } SD_MMC_HC_SLOT_CAP;
 
-#endif // __AMDPCOSDHCIDXE_H__
+#endif // __SDMMCMMIODXE_H__

@@ -703,6 +703,10 @@
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdPrioritizeInternal|$(PRIORITIZE_INTERNAL)
 
+  # Universal MMIO SDHCI Driver PCDs
+  gSdMmcMmioDxeTokenSpaceGuid.PcdEmmcMmioBaseAddress|0xFEDD5000
+  gSdMmcMmioDxeTokenSpaceGuid.PcdSdMmioBaseAddress|0x0
+
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape|$(BOOT_MANAGER_ESCAPE)
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification|$(FOLLOW_BGRT_SPEC)
@@ -1197,7 +1201,7 @@
 !if $(SD_ENABLE) == TRUE
   !if $(USE_PCO_MMIO_EMMC) == TRUE
     MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
-    UefiPayloadPkg/AmdPcoSdhciDxe/AmdPcoSdhciDxe.inf {
+    UefiPayloadPkg/SdMmcMmioDxe/SdMmcMmioDxe.inf {
       <LibraryClasses>
         NonDiscoverableDeviceRegistrationLib|MdeModulePkg/Library/NonDiscoverableDeviceRegistrationLib/NonDiscoverableDeviceRegistrationLib.inf
     }

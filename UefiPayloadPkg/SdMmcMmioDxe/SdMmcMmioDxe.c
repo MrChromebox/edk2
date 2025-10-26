@@ -1,6 +1,6 @@
 /** @file
  *
- *  AMD Picasso SDHCI eMMC driver
+ *  Universal MMIO SDHCI eMMC/SD driver
  *
  *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.<BR>
  *  Copyright (c) 2022, Patrick Wildt <patrick@blueri.se>
@@ -19,10 +19,11 @@
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/SdMmcOverride.h>
 
-#include "AmdPcoSdhciDxe.h"
+#include "SdMmcMmioDxe.h"
 
 
-STATIC EFI_HANDLE mSdMmcControllerHandle;
+STATIC EFI_HANDLE mEmmcControllerHandle;
+STATIC EFI_HANDLE mSdControllerHandle;
 
 /**
   Override function for SDHCI capability bits
@@ -55,7 +56,7 @@ EmmcSdMmcCapability (
   if (SdMmcHcSlotCapability == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-  if (ControllerHandle != mSdMmcControllerHandle) {
+  if (ControllerHandle != mEmmcControllerHandle && ControllerHandle != mSdControllerHandle) {
     return EFI_NOT_FOUND;
   }
 
@@ -92,7 +93,7 @@ EmmcSdMmcNotifyPhase (
 {
   DEBUG ((DEBUG_INFO, "%a\n", __FUNCTION__));
 
-  if (ControllerHandle != mSdMmcControllerHandle) {
+  if (ControllerHandle != mEmmcControllerHandle && ControllerHandle != mSdControllerHandle) {
     return EFI_SUCCESS;
   }
 
@@ -110,30 +111,74 @@ STATIC EDKII_SD_MMC_OVERRIDE mSdMmcOverride = {
 
 EFI_STATUS
 EFIAPI
-AmdPcoSdhciDxeInitialize (
+SdMmcMmioDxeInitialize (
   IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
   EFI_STATUS                      Status;
   EFI_HANDLE                      Handle;
+  UINT64                          EmmcMmioBase;
+  UINT64                          SdMmioBase;
+  UINTN                           ControllerCount = 0;
 
   DEBUG ((DEBUG_BLKIO, "%a\n", __FUNCTION__));
 
-  Status = RegisterNonDiscoverableMmioDevice (
-             NonDiscoverableDeviceTypeSdhci,
-             NonDiscoverableDeviceDmaTypeCoherent,
-             NULL,
-             &mSdMmcControllerHandle,
-             1,
-             (UINTN)AMD_PCO_SDHCI_BASE, (UINTN)0x1000);
-  ASSERT_EFI_ERROR (Status);
+  // Get MMIO base addresses from PCDs
+  EmmcMmioBase = PCD_EMMC_MMIO_BASE_ADDRESS;
+  SdMmioBase = PCD_SD_MMIO_BASE_ADDRESS;
 
-  Handle = NULL;
-  Status = gBS->InstallProtocolInterface (&Handle,
-                  &gEdkiiSdMmcOverrideProtocolGuid,
-                  EFI_NATIVE_INTERFACE, (VOID **)&mSdMmcOverride);
-  ASSERT_EFI_ERROR (Status);
+  DEBUG ((DEBUG_BLKIO, "SdMmcMmioDxe: eMMC MMIO base = 0x%llx\n", EmmcMmioBase));
+  DEBUG ((DEBUG_BLKIO, "SdMmcMmioDxe: SD MMIO base = 0x%llx\n", SdMmioBase));
+
+  // Register eMMC controller if MMIO base is non-zero
+  if (EmmcMmioBase != 0) {
+    Status = RegisterNonDiscoverableMmioDevice (
+               NonDiscoverableDeviceTypeSdhci,
+               NonDiscoverableDeviceDmaTypeCoherent,
+               NULL,
+               &mEmmcControllerHandle,
+               1,
+               (UINTN)EmmcMmioBase, (UINTN)0x1000);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "SdMmcMmioDxe: Failed to register eMMC controller: %r\n", Status));
+    } else {
+      DEBUG ((DEBUG_INFO, "SdMmcMmioDxe: eMMC controller registered at 0x%llx\n", EmmcMmioBase));
+      ControllerCount++;
+    }
+  }
+
+  // Register SD controller if MMIO base is non-zero
+  if (SdMmioBase != 0) {
+    Status = RegisterNonDiscoverableMmioDevice (
+               NonDiscoverableDeviceTypeSdhci,
+               NonDiscoverableDeviceDmaTypeCoherent,
+               NULL,
+               &mSdControllerHandle,
+               1,
+               (UINTN)SdMmioBase, (UINTN)0x1000);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "SdMmcMmioDxe: Failed to register SD controller: %r\n", Status));
+    } else {
+      DEBUG ((DEBUG_INFO, "SdMmcMmioDxe: SD controller registered at 0x%llx\n", SdMmioBase));
+      ControllerCount++;
+    }
+  }
+
+  // Only install override protocol if at least one controller was registered
+  if (ControllerCount > 0) {
+    Handle = NULL;
+    Status = gBS->InstallProtocolInterface (&Handle,
+                    &gEdkiiSdMmcOverrideProtocolGuid,
+                    EFI_NATIVE_INTERFACE, (VOID **)&mSdMmcOverride);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "SdMmcMmioDxe: Failed to install SD/MMC override protocol: %r\n", Status));
+      return Status;
+    }
+    DEBUG ((DEBUG_INFO, "SdMmcMmioDxe: Registered %d controller(s)\n", ControllerCount));
+  } else {
+    DEBUG ((DEBUG_WARN, "SdMmcMmioDxe: No controllers configured (both PCDs are 0)\n"));
+  }
 
   return EFI_SUCCESS;
 }

@@ -140,3 +140,7 @@ gUefiPayloadPkgTokenSpaceGuid.PcdFDTPageSize|8|UINT8|0x0000002C
 #-  PcdUseUniversalPayloadSerialPort is TRUE, Serial Port parameters will be updated
 #-  PcdUseUniversalPayloadSerialPort is FALSE, Serial Port parameters are fixed
 gUefiPayloadPkgTokenSpaceGuid.PcdUseUniversalPayloadSerialPort|TRUE|BOOLEAN|0x0000002D
+
+## PCDs for SdMmcMmioDxe
+gSdMmcMmioDxeTokenSpaceGuid.PcdEmmcMmioBaseAddress|0x0000000000000000 |UINT64|0x0000002E
+gSdMmcMmioDxeTokenSpaceGuid.PcdSdMmioBaseAddress  |0x0000000000000000 |UINT64|0x0000002F

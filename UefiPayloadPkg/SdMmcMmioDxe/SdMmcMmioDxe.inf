@@ -1,6 +1,6 @@
 #/** @file
 #
-#  AMD Picasso SDHCI eMMC driver
+#  Universal MMIO SDHCI eMMC/SD driver
 #
 #  Copyright (c) 2014-2017, Linaro Limited. All rights reserved.
 #  Copyright (c) 2022, Patrick Wildt <patrick@blueri.se>
@@ -13,15 +13,15 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = DwcSdhciDxe
+  BASE_NAME                      = SdMmcMmioDxe
   FILE_GUID                      = 4cd3a91b-990e-46a6-b609-9fa5d70d1f5f
   MODULE_TYPE                    = UEFI_DRIVER
   VERSION_STRING                 = 1.0
 
-  ENTRY_POINT                    = AmdPcoSdhciDxeInitialize
+  ENTRY_POINT                    = SdMmcMmioDxeInitialize
 
 [Sources.common]
-  AmdPcoSdhciDxe.c
+  SdMmcMmioDxe.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -31,6 +31,7 @@
   UefiDriverEntryPoint
   DebugLib
   IoLib
+  PcdLib
   NonDiscoverableDeviceRegistrationLib
   UefiBootServicesTableLib
 
