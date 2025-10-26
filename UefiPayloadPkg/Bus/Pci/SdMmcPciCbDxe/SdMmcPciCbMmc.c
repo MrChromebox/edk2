@@ -29,6 +29,20 @@ MmcStartup (
   DEBUG ((DEBUG_INFO, "SdMmcPciCb: MmcStartup begin\n"));
 
   //
+  // On warm boot, clear any leftover timing modes (HS400/HS200/etc.) from previous session
+  // Reset HOST_CONTROL and HOST_CONTROL2 to default state
+  //
+  SdhciWriteb (Device, 0, SDHCI_HOST_CONTROL);
+  SdhciWritew (Device, 0, SDHCI_HOST_CONTROL2);
+  DEBUG ((DEBUG_VERBOSE, "SdMmcPciCb: Reset host control registers for warm boot\n"));
+
+  // On warm boot, if GL9763E had Enhanced Strobe enabled, it must be disabled
+  if (Device->IsGL9763E) {
+    Gl9763eSetEnhancedStrobe (Device, FALSE);
+    DEBUG ((DEBUG_VERBOSE, "SdMmcPciCb: Disabled Enhanced Strobe for warm boot\n"));
+  }
+
+  //
   // CMD0: GO_IDLE_STATE
   //
   DEBUG ((DEBUG_VERBOSE, "SdMmcPciCb: Sending CMD0\n"));
@@ -38,8 +52,7 @@ MmcStartup (
     return Status;
   }
 
-  // 10ms delay to settle after reset
-  // init fails on release builds without this
+  // 10ms delay after CMD0 - eMMC needs time to exit idle state
   gBS->Stall (10000);
 
   //
@@ -173,6 +186,37 @@ MmcStartup (
     // Card supports HS200 - switch to it for maximum performance (200 MHz)
     //
     DEBUG ((DEBUG_INFO, "SdMmcPciCb: Switching to HS200 mode (200 MHz)...\n"));
+
+    //
+    // On warm boot, wait for card to be not busy before attempting mode switches
+    // After CMD0 reset, DAT0 line might still be low (busy)
+    //
+    UINT32 Timeout = 100000; // 100ms timeout
+    UINT32 PresentState;
+    while (Timeout > 0) {
+      PresentState = SdhciReadl (Device, SDHCI_PRESENT_STATE);
+      if ((PresentState & SDHCI_DATA_INHIBIT) == 0) {
+        break; // DAT0 is high, card not busy
+      }
+      gBS->Stall (1000);  // 1ms
+      Timeout -= 1000;
+    }
+    if (Timeout == 0) {
+      DEBUG ((DEBUG_WARN, "SdMmcPciCb: Card still busy after reset, PresentState=0x%08x\n", PresentState));
+    }
+
+    //
+    // Reset card to legacy timing mode (warm boot: exits HS400/HS200 from previous session)
+    //
+    SwitchArg = (MMC_SWITCH_MODE_WRITE_BYTE << 24) |
+                (EXT_CSD_HS_TIMING << 16) |
+                (EXT_CSD_TIMING_LEGACY << 8);
+    Status = SdhciSendCommand (Device, MMC_CMD_SWITCH, SwitchArg, MMC_RSP_R1B, Response, NULL, 0, 0, FALSE);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN, "SdMmcPciCb: Failed to reset to legacy timing: %r\n", Status));
+      // Continue anyway, might work
+    }
+    gBS->Stall (1000);  // 1ms for timing change to take effect
 
     // Step 1: Switch bus width to 8-bit
     SwitchArg = (MMC_SWITCH_MODE_WRITE_BYTE << 24) |

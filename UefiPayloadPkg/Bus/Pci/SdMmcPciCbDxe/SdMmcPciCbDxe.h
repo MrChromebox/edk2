@@ -278,6 +278,7 @@ extern EFI_DRIVER_BINDING_PROTOCOL   gSdMmcPciCbDriverBinding;
 //
 #define SD_CMD_SEND_IF_COND         8   // CMD8
 #define SD_CMD_SEND_CSD             9   // CMD9
+#define SD_VOLTAGE_SWITCH           11  // CMD11 (UHS-I voltage switch)
 #define SD_CMD_APP_CMD              55  // CMD55 (precedes ACMD)
 #define SD_CMD_READ_OCR             58  // CMD58
 

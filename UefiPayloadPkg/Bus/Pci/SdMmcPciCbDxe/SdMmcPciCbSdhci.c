@@ -344,11 +344,16 @@ SdhciSendCommand (
       //
       if (Response != NULL && (ResponseType & MMC_RSP_PRESENT)) {
         if (ResponseType & MMC_RSP_136) {
-          // Long response (R2)
-          Response[0] = SdhciReadl (Device, SDHCI_RESPONSE + 0);
-          Response[1] = SdhciReadl (Device, SDHCI_RESPONSE + 4);
-          Response[2] = SdhciReadl (Device, SDHCI_RESPONSE + 8);
-          Response[3] = SdhciReadl (Device, SDHCI_RESPONSE + 12);
+          // Long response (R2) - CRC is stripped so we need to do some shifting
+          // Read in reverse order and shift by 8 bits (like Depthcharge does)
+          Response[0] = SdhciReadl (Device, SDHCI_RESPONSE + 12) << 8;
+          Response[1] = SdhciReadl (Device, SDHCI_RESPONSE + 8) << 8;
+          Response[2] = SdhciReadl (Device, SDHCI_RESPONSE + 4) << 8;
+          Response[3] = SdhciReadl (Device, SDHCI_RESPONSE + 0) << 8;
+          // OR in the last byte from the previous register
+          Response[0] |= (SdhciReadl (Device, SDHCI_RESPONSE + 8) >> 24) & 0xFF;
+          Response[1] |= (SdhciReadl (Device, SDHCI_RESPONSE + 4) >> 24) & 0xFF;
+          Response[2] |= (SdhciReadl (Device, SDHCI_RESPONSE + 0) >> 24) & 0xFF;
         } else {
           // Short response
           Response[0] = SdhciReadl (Device, SDHCI_RESPONSE);
@@ -600,6 +605,23 @@ SdhciInit (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
+  //
+  // Power cycle to ensure clean state (important for warm boot)
+  // On warm boot, card may be in high-speed mode (HS400/HS200/SDR50)
+  //
+  SdhciWriteb (Device, 0, SDHCI_POWER_CONTROL);
+  gBS->Stall (10000);  // 10ms
+
+  // Set appropriate voltage (1.8V for eMMC, will be adjusted for SD if needed)
+  UINT8 PowerMode = SDHCI_POWER_ON;
+  if (Device->IsEMMC) {
+    PowerMode |= SDHCI_POWER_180;
+  } else {
+    PowerMode |= SDHCI_POWER_330;
+  }
+  SdhciWriteb (Device, PowerMode, SDHCI_POWER_CONTROL);
+  gBS->Stall (10000);  // 10ms for power to stabilize
 
   //
   // Read capabilities to determine clock base and ADMA support

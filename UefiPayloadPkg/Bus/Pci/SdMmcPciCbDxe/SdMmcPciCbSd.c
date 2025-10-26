@@ -72,7 +72,6 @@ SdStartup (
   UINT32      Response[4];
   UINT32      Ocr;
   UINT32      Retry;
-  UINT8       Csd[16];
 
   DEBUG ((DEBUG_INFO, "SdMmcPciCb: SdStartup begin\n"));
 
@@ -132,8 +131,8 @@ SdStartup (
 
   Retry = 100;
   while (Retry > 0) {
-    // Send ACMD41 with HCS (High Capacity Support) and voltage range
-    UINT32 Arg = SD_OCR_HCS | SD_OCR_VDD_32_33 | 0x00FF8000;  // 2.7-3.6V range
+    // Send ACMD41 with HCS (High Capacity Support), S18R (1.8V request), and voltage range
+    UINT32 Arg = SD_OCR_HCS | SD_OCR_S18R | SD_OCR_VDD_32_33 | 0x00FF8000;  // 2.7-3.6V range + 1.8V switching
 
     Status = SdSendAppCmd (Device, SD_ACMD_SEND_OP_COND, Arg, MMC_RSP_R3, Response);
     if (EFI_ERROR (Status)) {
@@ -161,6 +160,52 @@ SdStartup (
   Device->HighCapacity = (Ocr & OCR_HCS) != 0;
   DEBUG ((DEBUG_INFO, "SdMmcPciCb: SD card ready! OCR=0x%08x, HighCapacity=%d\n",
           Ocr, Device->HighCapacity));
+
+  //
+  // Perform voltage switch to 1.8V if supported (UHS-I requirement)
+  // Must be done early, before CMD2/CMD3
+  //
+  BOOLEAN CardSupports1_8V = (Ocr & SD_OCR_S18R) != 0;
+  UINT32 Caps1 = SdhciReadl (Device, SDHCI_CAPABILITIES_1);
+  BOOLEAN ControllerSupportsUHS = ((Caps1 & (SDHCI_SUPPORT_SDR50 | SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_DDR50)) != 0);
+
+  if (CardSupports1_8V && ControllerSupportsUHS) {
+    DEBUG ((DEBUG_INFO, "SdMmcPciCb: Attempting voltage switch to 1.8V for UHS-I...\n"));
+
+    // Send CMD11
+    Status = SdhciSendCommand (Device, SD_VOLTAGE_SWITCH, 0, MMC_RSP_R1, Response, NULL, 0, 0, FALSE);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN, "SdMmcPciCb: CMD11 failed: %r, continuing without UHS\n", Status));
+    } else {
+      // Stop SD clock
+      SdhciWritew (Device, 0, SDHCI_CLOCK_CONTROL);
+      gBS->Stall (5000);  // 5ms
+
+      // Check DAT[3:0] lines should be 0
+      UINT32 PresentState = SdhciReadl (Device, SDHCI_PRESENT_STATE);
+      if (((PresentState >> 20) & 0xF) != 0) {
+        DEBUG ((DEBUG_WARN, "SdMmcPciCb: Voltage switch failed - DAT lines not 0 (PresentState=0x%08x)\n", PresentState));
+      } else {
+        // Set 1.8V signaling enable bit
+        UINT16 HostControl2 = SdhciReadw (Device, SDHCI_HOST_CONTROL2);
+        HostControl2 |= SDHCI_CTRL_180V_SIGNALING_ENABLE;
+        SdhciWritew (Device, SDHCI_HOST_CONTROL2, HostControl2);
+        gBS->Stall (5000);  // 5ms
+
+        // Verify bit is set
+        HostControl2 = SdhciReadw (Device, SDHCI_HOST_CONTROL2);
+        if (!(HostControl2 & SDHCI_CTRL_180V_SIGNALING_ENABLE)) {
+          DEBUG ((DEBUG_WARN, "SdMmcPciCb: 1.8V signaling bit not set\n"));
+        } else {
+          DEBUG ((DEBUG_INFO, "SdMmcPciCb: Voltage switched to 1.8V successfully\n"));
+        }
+      }
+
+      // Restart SD clock
+      SdhciSetClock (Device, 400000);  // Restart at 400 KHz
+      gBS->Stall (1000);  // 1ms
+    }
+  }
 
   //
   // CMD2: ALL_SEND_CID
@@ -210,20 +255,23 @@ SdStartup (
   }
 
   // Parse CSD to get capacity
-  CopyMem (((UINT8 *)Csd) + 1, &Response[0], 15);
+  // Extract CSD_STRUCTURE from bits [127:126] (first 2 bits of Response[0])
+  UINT8 CsdStructure = (Response[0] >> 30) & 0x03;
 
-  UINT8 CsdStructure = (Csd[0] & 0xC0) >> 6;
+  DEBUG ((DEBUG_INFO, "SdMmcPciCb: CSD Response = %08x %08x %08x %08x\n",
+          Response[0], Response[1], Response[2], Response[3]));
+  DEBUG ((DEBUG_INFO, "SdMmcPciCb: CSD_STRUCTURE = %d\n", CsdStructure));
 
   if (CsdStructure == 0) {
-    // CSD Version 1.0 (SDSC)
-    UINT32 ReadBlLen = Csd[5] & 0x0F;
-    UINT32 CMult = ((Csd[9] & 0x03) << 1) | ((Csd[10] & 0x80) >> 7);
-    UINT32 CSize = ((Csd[6] & 0x03) << 10) | (Csd[7] << 2) | ((Csd[8] & 0xC0) >> 6);
+    // CSD Version 1.0 (SDSC): C_SIZE at bits [73:62], C_SIZE_MULT at bits [49:47], READ_BL_LEN at bits [83:80]
+    UINT32 ReadBlLen = (Response[1] >> 16) & 0x0F;  // bits [83:80]
+    UINT32 CSize = ((Response[1] & 0x03FF) << 2) | ((Response[2] >> 30) & 0x03);  // bits [73:62]
+    UINT32 CMult = (Response[2] >> 15) & 0x07;  // bits [49:47]
 
     Device->TotalBlocks = (CSize + 1) * (1 << (CMult + 2)) * (1 << ReadBlLen) / 512;
   } else if (CsdStructure == 1) {
-    // CSD Version 2.0 (SDHC/SDXC)
-    UINT32 CSize = ((Csd[7] & 0x3F) << 16) | (Csd[8] << 8) | Csd[9];
+    // CSD Version 2.0 (SDHC/SDXC): C_SIZE at bits [69:48]
+    UINT32 CSize = ((Response[1] & 0x3F) << 16) | (Response[2] >> 16);  // bits [69:48]
     Device->TotalBlocks = (CSize + 1) * 1024;  // In 512-byte blocks
   } else {
     DEBUG ((DEBUG_ERROR, "SdMmcPciCb: Unknown CSD structure version: %d\n", CsdStructure));
@@ -332,15 +380,106 @@ SdStartup (
           DEBUG ((DEBUG_INFO, "SdMmcPciCb: Switched to High Speed @ 50 MHz!\n"));
         }
 
-        // Reset CMD and DATA lines to clear any stuck state from CMD6
-        SdhciReset (Device, SDHCI_RESET_CMD | SDHCI_RESET_DATA);
-        DEBUG ((DEBUG_VERBOSE, "SdMmcPciCb: Controller reset after speed switch\n"));
-      }
-    } else {
+        //
+        // Try to upgrade to UHS-I modes if 1.8V signaling is enabled
+        //
+        UINT16 HostControl2 = SdhciReadw (Device, SDHCI_HOST_CONTROL2);
+        if (HostControl2 & SDHCI_CTRL_180V_SIGNALING_ENABLE) {
+          DEBUG ((DEBUG_INFO, "SdMmcPciCb: 1.8V signaling enabled, attempting UHS-I mode upgrade...\n"));
+
+          // Try SDR104 first (fastest), then SDR50
+          UINT8 TargetMode = 0;
+          UINT32 TargetClock = 0;
+          UINT16 UhsMode = 0;
+          CONST CHAR8 *ModeName = NULL;
+
+          // Check card capabilities via CMD6 mode 0 (check)
+          Status = SdhciSendCommand (
+                     Device,
+                     MMC_CMD_SWITCH,
+                     0x00FFFF01,  // Mode=0 (check), Group1=0xF (query all)
+                     MMC_RSP_R1,
+                     Response,
+                     SwitchStatus,
+                     64,
+                     1,
+                     TRUE
+                     );
+
+          if (!EFI_ERROR (Status)) {
+            // Check which UHS modes are supported (byte 13, bits 400-407)
+            // Bit 403=SDR104, 402=SDR50, 401=HS (already set), 400=Default
+            UINT8 SupportedModes = SwitchStatus[13];
+            DEBUG ((DEBUG_INFO, "SdMmcPciCb: Card supported modes = 0x%02x\n", SupportedModes));
+
+            // Try SDR104 @ 208 MHz (bit 3)
+            if (SupportedModes & 0x08) {
+              TargetMode = 3;  // SDR104
+              TargetClock = 208000000;
+              UhsMode = SDHCI_CTRL_UHS_SDR104;
+              ModeName = "SDR104";
+            }
+            // Try SDR50 @ 100 MHz (bit 2)
+            else if (SupportedModes & 0x04) {
+              TargetMode = 2;  // SDR50
+              TargetClock = 100000000;
+              UhsMode = SDHCI_CTRL_UHS_SDR50;
+              ModeName = "SDR50";
+            }
+
+            if (TargetMode != 0) {
+              DEBUG ((DEBUG_INFO, "SdMmcPciCb: Attempting to switch to %a...\n", ModeName));
+
+              // CMD6 mode 1 (switch) to target mode
+              UINT32 SwitchArg = 0x80FFFF00 | TargetMode;  // Mode=1 (switch), Group1=target
+              Status = SdhciSendCommand (
+                         Device,
+                         MMC_CMD_SWITCH,
+                         SwitchArg,
+                         MMC_RSP_R1,
+                         Response,
+                         SwitchStatus,
+                         64,
+                         1,
+                         TRUE
+                         );
+
+              if (!EFI_ERROR (Status)) {
+                // Stop clock before changing timing
+                SdhciWritew (Device, 0, SDHCI_CLOCK_CONTROL);
+
+                // Set UHS mode in HOST_CONTROL2
+                HostControl2 = SdhciReadw (Device, SDHCI_HOST_CONTROL2);
+                HostControl2 &= ~SDHCI_CTRL_UHS_MASK;
+                HostControl2 |= UhsMode;
+                SdhciWritew (Device, SDHCI_HOST_CONTROL2, HostControl2);
+
+                // Set the target clock frequency
+                Status = SdhciSetClock (Device, TargetClock);
+                if (!EFI_ERROR (Status)) {
+                  DEBUG ((DEBUG_INFO, "SdMmcPciCb: Switched to UHS-I %a @ %d MHz!\n",
+                          ModeName, TargetClock / 1000000));
+                } else {
+                  DEBUG ((DEBUG_WARN, "SdMmcPciCb: Failed to set %d MHz clock\n", TargetClock / 1000000));
+                }
+              } else {
+                DEBUG ((DEBUG_WARN, "SdMmcPciCb: CMD6 switch to %a failed: %r\n", ModeName, Status));
+              }
+            } else {
+              DEBUG ((DEBUG_INFO, "SdMmcPciCb: No UHS-I modes supported by card, staying at HS\n"));
+            }
+          } else {
+            DEBUG ((DEBUG_WARN, "SdMmcPciCb: CMD6 check for UHS modes failed: %r\n", Status));
+          }
+        }
+      }  // Close if (!EFI_ERROR (Status)) from CMD6 mode 1 for HS
+    } // Close if (SwitchStatus[13] & 0x02) - HS supported check
+    else {  // HS not supported
       DEBUG ((DEBUG_INFO, "SdMmcPciCb: High Speed not supported, staying at 25 MHz\n"));
       Status = SdhciSetClock (Device, 25000000);
     }
-  } else {
+  } // Close if (!EFI_ERROR (Status)) from line 304 (CMD6 mode 0 for HS)
+  else {
     // CMD6 failed, stay at default speed
     DEBUG ((DEBUG_WARN, "SdMmcPciCb: CMD6 failed, staying at default speed\n"));
     Status = SdhciSetClock (Device, 25000000);
