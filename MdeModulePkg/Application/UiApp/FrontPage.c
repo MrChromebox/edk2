@@ -570,10 +570,12 @@ UpdateFrontPageBannerStrings (
     if (Record->Type == SMBIOS_TYPE_SYSTEM_INFORMATION) {
       CHAR16  *ProductName;
       CHAR16  *Manufacturer;
+      CHAR16  *DeviceName;
       CHAR16  *TmpBuffer;
       UINT8   ProductIdx;
       UINT8   ManIdx;
       UINTN   BufferSize;
+      UINTN   DeviceNameBufferSize;
 
       Type1Record = (SMBIOS_TABLE_TYPE1 *)Record;
       ProductIdx  = Type1Record->ProductName;
@@ -582,18 +584,34 @@ UpdateFrontPageBannerStrings (
       GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type1Record + Type1Record->Hdr.Length), ProductIdx, &ProductName);
       GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type1Record + Type1Record->Hdr.Length), ManIdx, &Manufacturer);
 
-      // Allocate buffer: manufacturer + " " (1) + product + null
-      BufferSize = (StrLen (Manufacturer) + 1 + StrLen (ProductName) + 1) * sizeof (CHAR16);
-      TmpBuffer  = AllocateZeroPool (BufferSize);
+      // Check if we have a device name to show
+      // Allocate a buffer large enough for longest device name
+      DeviceNameBufferSize = 128 * sizeof (CHAR16);
+      DeviceName           = AllocateZeroPool (DeviceNameBufferSize);
+      GetDeviceNameFromProduct (ProductName, DeviceNameBufferSize, &DeviceName);
 
-      StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), Manufacturer);
-      StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), L" ");
-      StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), ProductName);
+      if (DeviceName[0] != 0) {
+        // Format: "DeviceName (ProductName)"
+        BufferSize = (StrLen (DeviceName) + StrLen (ProductName) + 4) * sizeof (CHAR16);
+        TmpBuffer  = AllocateZeroPool (BufferSize);
+        StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), DeviceName);
+        StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), L" (");
+        StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), ProductName);
+        StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), L")");
+      } else {
+        // Format: "Manufacturer ProductName"
+        BufferSize = (StrLen (Manufacturer) + StrLen (ProductName) + 2) * sizeof (CHAR16);
+        TmpBuffer  = AllocateZeroPool (BufferSize);
+        StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), Manufacturer);
+        StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), L" ");
+        StrCatS (TmpBuffer, BufferSize / sizeof (CHAR16), ProductName);
+      }
 
       HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_COMPUTER_MODEL), TmpBuffer, NULL);
 
       FreePool (ProductName);
       FreePool (Manufacturer);
+      FreePool (DeviceName);
       FreePool (TmpBuffer);
     }
 
