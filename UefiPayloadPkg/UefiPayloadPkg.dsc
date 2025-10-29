@@ -204,6 +204,28 @@
 [BuildOptions.AARCH64.EDKII.DXE_RUNTIME_DRIVER]
   GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x10000
 
+
+[BuildOptions.IA32.EDKII.UEFI_DRIVER, BuildOptions.X64.EDKII.UEFI_DRIVER]
+  GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
+
+[BuildOptions.IA32.EDKII.UEFI_APPLICATION, BuildOptions.X64.EDKII.UEFI_APPLICATION]
+  GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
+
+[BuildOptions.IA32.EDKII.SMM_CORE, BuildOptions.X64.EDKII.SMM_CORE]
+  GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
+
+[BuildOptions.IA32.EDKII.DXE_SMM_DRIVER, BuildOptions.X64.EDKII.DXE_SMM_DRIVER]
+  GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
+
+[BuildOptions.IA32.EDKII.SEC, BuildOptions.X64.EDKII.SEC]
+  GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
+
+[BuildOptions.IA32.EDKII.PEI_CORE, BuildOptions.X64.EDKII.PEI_CORE]
+  GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
+
+[BuildOptions.IA32.EDKII.PEIM, BuildOptions.X64.EDKII.PEIM]
+  GCC:*_*_*_DLINK_FLAGS      = -z common-page-size=0x1000
+
 ################################################################################
 #
 # SKU Identification section - list of all SKU IDs supported by this Platform.
