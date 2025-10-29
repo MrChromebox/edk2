@@ -312,10 +312,7 @@ INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
 !if $(UFS_ENABLE) == TRUE
 INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
 INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
-FILE DRIVER = 700A8874-D215-4ACC-9EF2-7A80128560E0 {
-  SECTION PE32 = UefiPayloadPkg/UfsPlatform/UfsPlatform.efi
-  SECTION UI = "UfsPlatform"
-}
+INF UefiPayloadPkg/UfsPlatformDxe/UfsPlatformDxe.inf
 !endif
 !if $(NVME_ENABLE) == TRUE
 INF MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf

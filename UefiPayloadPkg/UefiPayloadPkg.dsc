@@ -1059,6 +1059,7 @@
 !if $(UFS_ENABLE) == TRUE
   MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
   MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+  UefiPayloadPkg/UfsPlatformDxe/UfsPlatformDxe.inf
 !endif
 !if $(NVME_ENABLE) == TRUE
   MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
