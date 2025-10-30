@@ -44,7 +44,7 @@
   DEFINE USE_CBMEM_FOR_CONSOLE        = FALSE
   DEFINE BOOTSPLASH_IMAGE             = TRUE
   DEFINE NVME_ENABLE                  = TRUE
-  DEFINE UFS_ENABLE                   = FALSE
+  DEFINE UFS_ENABLE                   = TRUE
   DEFINE CAPSULE_SUPPORT              = FALSE
   DEFINE LOCKBOX_SUPPORT              = FALSE
   DEFINE LOAD_OPTION_ROMS             = FALSE
