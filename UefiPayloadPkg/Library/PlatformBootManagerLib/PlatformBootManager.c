@@ -419,9 +419,11 @@ PlatformBootManagerAfterConsole (
   EfiBootManagerRefreshAllBootOption ();
 
   //
-  // Register UEFI Shell
+  // Register UEFI Shell if present in FV
   //
-  PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+  if (BdsGetShellFvDevicePath () != NULL) {
+    PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+  }
 
   if (FixedPcdGetBool (PcdBootManagerEscape)) {
     BootLogoUpdateProgress (
