@@ -478,5 +478,21 @@ PlatformBootManagerUnableToBoot (
   VOID
   )
 {
-  return;
+  EFI_STATUS                    Status;
+  EFI_BOOT_MANAGER_LOAD_OPTION  BootManagerMenu;
+
+  //
+  // Get the Boot Manager Menu
+  //
+  Status = EfiBootManagerGetBootManagerMenu (&BootManagerMenu);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  //
+  // Boot to the Boot Manager Menu directly when no bootable option is found
+  //
+  for ( ; ;) {
+    EfiBootManagerBoot (&BootManagerMenu);
+  }
 }
