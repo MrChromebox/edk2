@@ -1863,6 +1863,7 @@ UfsEnableHostController (
   }
 
   if ((mUfsHcPlatform == NULL) ||
+      (mUfsHcPlatform->Version < 3) ||
       ((mUfsHcPlatform->Version >= 3) && !mUfsHcPlatform->SkipHceReenable))
   {
     //
