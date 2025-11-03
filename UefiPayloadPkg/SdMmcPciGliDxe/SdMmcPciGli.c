@@ -244,40 +244,7 @@ Gl975xInit (
   DEBUG ((DEBUG_VERBOSE, "SdMmcPciGli: GL CFG2 after  = 0x%08X\n", Value));
 
   //
-  // Step 4: Disable ASPM support for troubleshooting (optional)
-  // This can help with stability issues on some boards
-  //
-  if (Device->IsGL9750 || Device->IsGL9755) {
-    // Disable ASPM L0s and L1 support
-    Status = Device->PciIo->Pci.Read (
-                                  Device->PciIo,
-                                  EfiPciIoWidthUint32,
-                                  PCI_LINK_CONTROL_OFFSET,
-                                  1,
-                                  &Value
-                                  );
-    if (!EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "SdMmcPciGli: PCI Link Status before ASPM disable = 0x%08X\n", Value));
-
-      // Clear ASPM support bits
-      Value &= ~PCI_ASPM_L0S_L1_MASK;  // Clear L0s and L1 support
-
-      Status = Device->PciIo->Pci.Write (
-                                    Device->PciIo,
-                                    EfiPciIoWidthUint32,
-                                    PCI_LINK_CONTROL_OFFSET,
-                                    1,
-                                    &Value
-                                    );
-      if (!EFI_ERROR (Status)) {
-        Device->PciIo->Flush (Device->PciIo);
-        DEBUG ((DEBUG_INFO, "SdMmcPciGli: ASPM support disabled for troubleshooting\n"));
-      }
-    }
-  }
-
-  //
-  // Step 5: LOCK vendor config registers
+  // Step 4: LOCK vendor config registers
   //
   Status = GliVendorConfigLockUnlock (Device, TRUE);
   if (EFI_ERROR (Status)) {
