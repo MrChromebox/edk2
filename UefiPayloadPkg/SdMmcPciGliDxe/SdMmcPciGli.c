@@ -655,7 +655,8 @@ Gl9755DisableSscPll (
     return;
   }
 
-  Pll &= ~GL9755_PLLSSC_EN;
+  // Clear both DIR and SSC_EN to fully disable PLL (as Linux does)
+  Pll &= ~(GL9755_PLL_DIR | GL9755_PLLSSC_EN);
   Status = Device->PciIo->Pci.Write (
                                 Device->PciIo,
                                 EfiPciIoWidthUint32,
