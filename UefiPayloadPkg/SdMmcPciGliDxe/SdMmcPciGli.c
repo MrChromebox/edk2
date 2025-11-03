@@ -641,7 +641,6 @@ Gl9755DisableSscPll (
 {
   EFI_STATUS  Status;
   UINT32      Pll;
-  UINT32      Misc;
 
   Status = Device->PciIo->Pci.Read (
                                 Device->PciIo,
@@ -655,7 +654,8 @@ Gl9755DisableSscPll (
     return;
   }
 
-  // Clear both DIR and SSC_EN to fully disable PLL (as Linux does)
+  // Clear both DIR and SSC_EN to fully disable PLL
+  // Linux does NOT modify MISC register, only PLL
   Pll &= ~(GL9755_PLL_DIR | GL9755_PLLSSC_EN);
   Status = Device->PciIo->Pci.Write (
                                 Device->PciIo,
@@ -667,30 +667,6 @@ Gl9755DisableSscPll (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "SdMmcPciGli: Failed to disable GL9755 PLL SSC: %r\n", Status));
     return;
-  }
-
-  Status = Device->PciIo->Pci.Read (
-                                Device->PciIo,
-                                EfiPciIoWidthUint32,
-                                GL9755_MISC,
-                                1,
-                                &Misc
-                                );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "SdMmcPciGli: Failed to read GL9755 MISC: %r\n", Status));
-    return;
-  }
-
-  Misc |= GL9755_MISC_SSC_OFF;
-  Status = Device->PciIo->Pci.Write (
-                                Device->PciIo,
-                                EfiPciIoWidthUint32,
-                                GL9755_MISC,
-                                1,
-                                &Misc
-                                );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "SdMmcPciGli: Failed to set GL9755 MISC SSC off: %r\n", Status));
   }
 
   Device->PciIo->Flush (Device->PciIo);
