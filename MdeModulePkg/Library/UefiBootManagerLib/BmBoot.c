@@ -2279,6 +2279,7 @@ BmEnumerateBootOptions (
   UINTN                         Removable;
   UINTN                         Index;
   UINTN                         EmmcCount;
+  EFI_DEVICE_PATH_PROTOCOL      *DevicePath;
   CHAR16                        *Description;
 
   ASSERT (BootOptionCount != NULL);
@@ -2309,6 +2310,11 @@ BmEnumerateBootOptions (
         continue;
       }
 
+      DevicePath = DevicePathFromHandle (Handles[Index]);
+      if (DevicePath == NULL) {
+        continue;
+      }
+
       //
       // Skip the logical partitions
       //
@@ -2335,6 +2341,29 @@ BmEnumerateBootOptions (
       if ((BlkIo->Media->RemovableMedia == TRUE) &&
           (BlkIo->Media->MediaPresent == FALSE))
       {
+        continue;
+      }
+
+      //
+      // Skip non-bootable UFS logical units (only allow LUN 0)
+      //
+      EFI_DEVICE_PATH_PROTOCOL  *Node;
+      BOOLEAN                   SkipHandle;
+
+      SkipHandle = FALSE;
+      for (Node = DevicePath; !IsDevicePathEnd (Node); Node = NextDevicePathNode (Node)) {
+        if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) &&
+            (DevicePathSubType (Node) == MSG_UFS_DP))
+        {
+          if (((UFS_DEVICE_PATH *)Node)->Lun != 0) {
+            SkipHandle = TRUE;
+          }
+
+          break;
+        }
+      }
+
+      if (SkipHandle) {
         continue;
       }
 
