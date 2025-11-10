@@ -405,30 +405,30 @@ BmGetDescriptionFromDiskInfo (
                              &BufferSize
                              );
     if (!EFI_ERROR (Status)) {
-      Description = AllocateZeroPool ((VENDOR_IDENTIFICATION_LENGTH + PRODUCT_IDENTIFICATION_LENGTH + 2) * sizeof (CHAR16));
-      ASSERT (Description != NULL);
+      CHAR16  *Vendor;
+      UINTN   DescSize;
 
-      //
-      // Per SCSI spec, EFI_SCSI_INQUIRY_DATA.Reserved_5_95[3 - 10] save the Verdor identification
-      // EFI_SCSI_INQUIRY_DATA.Reserved_5_95[11 - 26] save the product identification,
-      // Here combine the vendor identification and product identification to the description.
-      //
+      Vendor = AllocateZeroPool ((VENDOR_IDENTIFICATION_LENGTH + 1) * sizeof (CHAR16));
+      ASSERT (Vendor != NULL);
+
       StrPtr                               = (CHAR8 *)(&InquiryData.Reserved_5_95[VENDOR_IDENTIFICATION_OFFSET]);
       Temp                                 = StrPtr[VENDOR_IDENTIFICATION_LENGTH];
       StrPtr[VENDOR_IDENTIFICATION_LENGTH] = '\0';
-      AsciiStrToUnicodeStrS (StrPtr, Description, VENDOR_IDENTIFICATION_LENGTH + 1);
+      AsciiStrToUnicodeStrS (StrPtr, Vendor, VENDOR_IDENTIFICATION_LENGTH + 1);
       StrPtr[VENDOR_IDENTIFICATION_LENGTH] = Temp;
 
-      //
-      // Add one space at the middle of vendor information and product information.
-      //
-      Description[VENDOR_IDENTIFICATION_LENGTH] = L' ';
+      BmEliminateExtraSpaces (Vendor);
+      if (Vendor[0] == L'\0') {
+        Description = AllocateCopyPool (StrSize (L"Internal UFS"), L"Internal UFS");
+        ASSERT (Description != NULL);
+      } else {
+        DescSize    = StrSize (Vendor) + sizeof (L"Internal UFS ()");
+        Description = AllocateZeroPool (DescSize);
+        ASSERT (Description != NULL);
+        UnicodeSPrint (Description, DescSize, L"Internal UFS (%s)", Vendor);
+      }
 
-      StrPtr                                = (CHAR8 *)(&InquiryData.Reserved_5_95[PRODUCT_IDENTIFICATION_OFFSET]);
-      StrPtr[PRODUCT_IDENTIFICATION_LENGTH] = '\0';
-      AsciiStrToUnicodeStrS (StrPtr, Description + VENDOR_IDENTIFICATION_LENGTH + 1, PRODUCT_IDENTIFICATION_LENGTH + 1);
-
-      BmEliminateExtraSpaces (Description);
+      FreePool (Vendor);
     }
   } else if (CompareGuid (&DiskInfo->Interface, &gEfiDiskInfoSdMmcInterfaceGuid)) {
     DevicePath = DevicePathFromHandle (Handle);
@@ -557,7 +557,7 @@ BmGetUsbDescription (
   if (Product != &NullChar) {
     FreePool (Product);
   }
- 
+
   BmEliminateExtraSpaces (Description);
 
   return Description;
