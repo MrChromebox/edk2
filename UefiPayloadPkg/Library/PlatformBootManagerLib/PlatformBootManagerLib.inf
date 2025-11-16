@@ -75,3 +75,5 @@
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape
+  gUefiPayloadPkgTokenSpaceGuid.PcdiPXEFile
+  gUefiPayloadPkgTokenSpaceGuid.PcdiPXEOptionName

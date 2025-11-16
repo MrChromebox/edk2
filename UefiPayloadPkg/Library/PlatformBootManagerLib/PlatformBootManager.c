@@ -444,6 +444,17 @@ PlatformBootManagerAfterConsole (
   //
   PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
 
+  //
+  // Register iPXE if the binary is present in the firmware volume.
+  //
+  if ((PcdGetPtr (PcdiPXEFile) != NULL) && (PcdGetPtr (PcdiPXEOptionName) != NULL)) {
+    PlatformRegisterFvBootOption (
+      (EFI_GUID *)PcdGetPtr (PcdiPXEFile),
+      (CHAR16 *)PcdGetPtr (PcdiPXEOptionName),
+      LOAD_OPTION_ACTIVE
+      );
+  }
+
   if (FixedPcdGetBool (PcdBootManagerEscape)) {
     BootLogoUpdateProgress (
       White,
