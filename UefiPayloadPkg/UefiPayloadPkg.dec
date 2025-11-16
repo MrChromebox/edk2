@@ -103,6 +103,10 @@ gUefiPayloadPkgTokenSpaceGuid.PcdPayloadFdMemSize|0|UINT32|0x10000002
 ## Save bootloader parameter
 gUefiPayloadPkgTokenSpaceGuid.PcdBootloaderParameter|0|UINT64|0x10000004
 
+## FFS filename to find the ipxe application.
+gUefiPayloadPkgTokenSpaceGuid.PcdiPXEFile|{ 0xC7, 0x53, 0x86, 0xB6, 0xA1, 0xEE, 0x35, 0x44, 0xA1, 0x99, 0xA4, 0x4F, 0x59, 0xE4, 0x47, 0x6C }|VOID*|0x10000032
+gUefiPayloadPkgTokenSpaceGuid.PcdiPXEOptionName|L"iPXE Network Boot"|VOID*|0x10000033
+
 ## Used to help reduce fragmentation in the EFI memory map
 gUefiPayloadPkgTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory|0x19|UINT32|0x10000012
 gUefiPayloadPkgTokenSpaceGuid.PcdMemoryTypeEfiACPIMemoryNVS|0x04|UINT32|0x10000013
