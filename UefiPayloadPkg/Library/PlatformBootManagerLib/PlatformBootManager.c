@@ -89,13 +89,16 @@ PlatformFindLoadOption (
 }
 
 /**
-  Get the FV device path for the shell file.
+  Get the FV device path for a file identified by FileGuid.
 
-  @return   A pointer to device path structure.
+  @param  FileGuid   The GUID of the file to locate.
+
+  @return   A newly allocated FV device path, or NULL when not found.
+            Caller is responsible for freeing the returned path.
 **/
 EFI_DEVICE_PATH_PROTOCOL *
-BdsGetShellFvDevicePath (
-  VOID
+BdsGetFvFileDevicePath (
+  IN EFI_GUID  *FileGuid
   )
 {
   UINTN                          FvHandleCount;
@@ -127,7 +130,7 @@ BdsGetShellFvDevicePath (
            );
     Status = Fv->ReadFile (
                    Fv,
-                   &gUefiShellFileGuid,
+                   FileGuid,
                    NULL,
                    &Size,
                    &FoundType,
@@ -150,7 +153,11 @@ BdsGetShellFvDevicePath (
     return NULL;
   }
 
-  DevicePath = DevicePathFromHandle (FvHandleBuffer[Index]);
+  //
+  // DevicePathFromHandle returns the protocol path on the handle; duplicate
+  // so the caller owns the buffer and may FreePool it (e.g. after Append).
+  //
+  DevicePath = DuplicateDevicePath (DevicePathFromHandle (FvHandleBuffer[Index]));
 
   if (FvHandleCount) {
     FreePool (FvHandleBuffer);
@@ -180,12 +187,22 @@ PlatformRegisterFvBootOption (
   UINTN                              BootOptionCount;
   MEDIA_FW_VOL_FILEPATH_DEVICE_PATH  FileNode;
   EFI_DEVICE_PATH_PROTOCOL           *DevicePath;
+  EFI_DEVICE_PATH_PROTOCOL           *FvDevicePath;
+
+  FvDevicePath = BdsGetFvFileDevicePath (FileGuid);
+  if (FvDevicePath == NULL) {
+    return;
+  }
 
   EfiInitializeFwVolDevicepathNode (&FileNode, FileGuid);
   DevicePath = AppendDevicePathNode (
-                 BdsGetShellFvDevicePath (),
+                 FvDevicePath,
                  (EFI_DEVICE_PATH_PROTOCOL *)&FileNode
                  );
+  FreePool (FvDevicePath);
+  if (DevicePath == NULL) {
+    return;
+  }
 
   Status = EfiBootManagerInitializeLoadOption (
              &NewOption,
@@ -197,6 +214,7 @@ PlatformRegisterFvBootOption (
              NULL,
              0
              );
+  FreePool (DevicePath);
   if (!EFI_ERROR (Status)) {
     BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
 
@@ -354,6 +372,17 @@ PlatformBootManagerAfterConsole (
   // Register UEFI Shell
   //
   PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+
+  //
+  // Register iPXE if the binary is present in the firmware volume.
+  //
+  if ((PcdGetPtr (PcdiPXEFile) != NULL) && (PcdGetPtr (PcdiPXEOptionName) != NULL)) {
+    PlatformRegisterFvBootOption (
+      (EFI_GUID *)PcdGetPtr (PcdiPXEFile),
+      (CHAR16 *)PcdGetPtr (PcdiPXEOptionName),
+      LOAD_OPTION_ACTIVE
+      );
+  }
 
   if (FixedPcdGetBool (PcdBootManagerEscape)) {
     if (FixedPcdGetBool (PcdSerialTerminalPrintEnabled)) {
