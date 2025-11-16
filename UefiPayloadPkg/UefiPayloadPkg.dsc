@@ -199,6 +199,7 @@
   DEFINE NETWORK_ASIX_USB3              = FALSE
   DEFINE NETWORK_ASIX_USB2              = FALSE
   DEFINE NETWORK_SNP_ENABLE             = FALSE
+  DEFINE NETWORK_IPXE                   = FALSE
 
 !if $(NETWORK_PXE_BOOT) == TRUE
   DEFINE NETWORK_ENABLE                 = TRUE
@@ -209,7 +210,11 @@
   DEFINE NETWORK_ASIX_USB3              = TRUE
   DEFINE NETWORK_ASIX_USB2              = TRUE
   DEFINE NETWORK_SNP_ENABLE             = TRUE
+!endif
 
+!if $(NETWORK_IPXE) == TRUE
+  DEFINE NETWORK_ENABLE                 = TRUE
+  DEFINE NETWORK_DRIVER_ENABLE          = TRUE
 !endif
 
 !include NetworkPkg/NetworkDefines.dsc.inc
