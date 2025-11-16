@@ -78,3 +78,5 @@
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape
   gUefiPayloadPkgTokenSpaceGuid.PcdSerialTerminalPrintEnabled
+  gUefiPayloadPkgTokenSpaceGuid.PcdiPXEFile
+  gUefiPayloadPkgTokenSpaceGuid.PcdiPXEOptionName
