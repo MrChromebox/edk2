@@ -190,6 +190,12 @@
   DEFINE NETWORK_IP6_ENABLE             = FALSE
   DEFINE NETWORK_HTTP_BOOT_ENABLE       = FALSE
   DEFINE NETWORK_ALLOW_HTTP_CONNECTIONS = TRUE
+  DEFINE NETWORK_IPXE                   = FALSE
+
+!if $(NETWORK_IPXE) == TRUE
+  DEFINE NETWORK_ENABLE                 = TRUE
+  DEFINE NETWORK_DRIVER_ENABLE          = TRUE
+!endif
 
 !include NetworkPkg/NetworkDefines.dsc.inc
 
