@@ -1,0 +1,57 @@
+/** @file
+  Time/Date Settings VFR file
+
+  This file defines the HII formset for configuring system time and date.
+
+  Copyright (c) 2024
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#include <Uefi/UefiMultiPhase.h>
+#include <Guid/HiiPlatformSetupFormset.h>
+#include <Guid/TimeDateSettingsHii.h>
+
+#define TIME_DATE_SETTINGS_FORM_ID  0x1000
+
+formset
+  guid      = TIME_DATE_SETTINGS_FORMSET_GUID,
+  title     = STRING_TOKEN(STR_TIME_DATE_FORMSET_TITLE),
+  help      = STRING_TOKEN(STR_TIME_DATE_FORMSET_HELP),
+  classguid = EFI_HII_PLATFORM_SETUP_FORMSET_GUID,
+
+  form formid = TIME_DATE_SETTINGS_FORM_ID,
+    title = STRING_TOKEN(STR_TIME_DATE_FORM_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_TIME_DATE_FORM_SUBTITLE);
+
+    //
+    // Add a blank line for spacing
+    //
+    subtitle text = STRING_TOKEN(STR_NULL_STRING);
+
+    //
+    // Date setting - uses STORAGE_TIME flag which makes Setup Browser
+    // automatically call gRT->GetTime() and gRT->SetTime()
+    //
+    date
+      prompt  = STRING_TOKEN(STR_DATE_PROMPT),
+      help    = STRING_TOKEN(STR_DATE_HELP),
+      flags   = STORAGE_TIME,
+    enddate;
+
+    //
+    // Time setting - uses STORAGE_TIME flag which makes Setup Browser
+    // automatically call gRT->GetTime() and gRT->SetTime()
+    //
+    time
+      prompt  = STRING_TOKEN(STR_TIME_PROMPT),
+      help    = STRING_TOKEN(STR_TIME_HELP),
+      flags   = STORAGE_TIME,
+    endtime;
+
+    subtitle text = STRING_TOKEN(STR_NULL_STRING);
+
+  endform;
+endformset;
+
