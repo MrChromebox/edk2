@@ -1,0 +1,24 @@
+/** @file
+  Time/Date Settings Unicode String File
+
+  Copyright (c) 2024
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_TIME_DATE_FORMSET_TITLE           #language en-US "Time and Date Settings"
+#string STR_TIME_DATE_FORMSET_HELP            #language en-US "Configure system time and date settings"
+
+#string STR_TIME_DATE_FORM_TITLE              #language en-US "System Time and Date"
+#string STR_TIME_DATE_FORM_SUBTITLE           #language en-US "Set the system date and time:"
+
+#string STR_DATE_PROMPT                       #language en-US "Date (MM/DD/YYYY)"
+#string STR_DATE_HELP                         #language en-US "Select the current date in month/day/year format"
+
+#string STR_TIME_PROMPT                       #language en-US "Time (HH:MM:SS)"
+#string STR_TIME_HELP                         #language en-US "Select the current time in hour:minute:second format"
+
+#string STR_NULL_STRING                       #language en-US ""
+
