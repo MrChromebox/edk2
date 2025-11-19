@@ -625,42 +625,37 @@ UpdateFrontPageBannerStrings (
       CHAR16  *TrimmedString;
       UINTN   BufferSize;
       Type4Record = (SMBIOS_TABLE_TYPE4 *)Record;
-      //
-      // The information in the record should be only valid when the CPU Socket is populated.
-      //
-      if ((Type4Record->Status & SMBIOS_TYPE4_CPU_SOCKET_POPULATED) == SMBIOS_TYPE4_CPU_SOCKET_POPULATED) {
-        StrIndex = Type4Record->ProcessorVersion;
-        GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type4Record + Type4Record->Hdr.Length), StrIndex, &OriginalString);
+      StrIndex = Type4Record->ProcessorVersion;
+      GetOptionalStringByIndex ((CHAR8 *)((UINT8 *)Type4Record + Type4Record->Hdr.Length), StrIndex, &OriginalString);
 
-        // Keep a pointer for trimming while preserving original for freeing
-        TrimmedString = OriginalString;
+      // Keep a pointer for trimming while preserving original for freeing
+      TrimmedString = OriginalString;
 
-        // Trim leading spaces
-        while (TrimmedString[0] == 0x20) {
-          TrimmedString = &TrimmedString[1];
-        }
-        // Drop speed information if present in string
-        // First check for " @ <speed>" pattern (e.g., "i7-1185G7 @ 3.00GHz")
-        CHAR16 *Truncate = StrStr(TrimmedString, L" @ ");
+      // Trim leading spaces
+      while (TrimmedString[0] == 0x20) {
+        TrimmedString = &TrimmedString[1];
+      }
+      // Drop speed information if present in string
+      // First check for " @ <speed>" pattern (e.g., "i7-1185G7 @ 3.00GHz")
+      CHAR16 *Truncate = StrStr(TrimmedString, L" @ ");
+      if (Truncate != NULL) {
+        *Truncate = L'\0';
+      } else {
+        // Also check for "CPU" pattern as fallback
+        Truncate = StrStr(TrimmedString, L"CPU");
         if (Truncate != NULL) {
           *Truncate = L'\0';
-        } else {
-          // Also check for "CPU" pattern as fallback
-          Truncate = StrStr(TrimmedString, L"CPU");
-          if (Truncate != NULL) {
-            *Truncate = L'\0';
-          }
         }
-        // Allocate buffer: "CPU: " (5) + trimmed string + null
-        BufferSize = (5 + StrLen (TrimmedString) + 1) * sizeof (CHAR16);
-        TmpBuffer  = AllocateZeroPool (BufferSize);
-        UnicodeSPrint (TmpBuffer, BufferSize, L"%s%s", L"CPU: ", TrimmedString);
-        HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL), TmpBuffer, NULL);
-        FreePool (OriginalString);
-        FreePool (TmpBuffer);
-
-        FoundCpu = TRUE;
       }
+      // Allocate buffer: "CPU: " (5) + trimmed string + null
+      BufferSize = (5 + StrLen (TrimmedString) + 1) * sizeof (CHAR16);
+      TmpBuffer  = AllocateZeroPool (BufferSize);
+      UnicodeSPrint (TmpBuffer, BufferSize, L"%s%s", L"CPU: ", TrimmedString);
+      HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_CPU_MODEL), TmpBuffer, NULL);
+      FreePool (OriginalString);
+      FreePool (TmpBuffer);
+
+      FoundCpu = TRUE;
     }
 
     if ( Record->Type == SMBIOS_TYPE_MEMORY_DEVICE ) {
