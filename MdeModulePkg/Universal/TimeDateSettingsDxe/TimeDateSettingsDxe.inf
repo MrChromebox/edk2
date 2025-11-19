@@ -1,0 +1,55 @@
+## @file
+#  Time/Date Settings DXE Driver
+#
+#  This driver provides a platform setup formset for configuring system time and date.
+#  It appears in the dynamically generated Platform Settings menu.
+#
+#  Copyright (c) 2024
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TimeDateSettingsDxe
+  FILE_GUID                      = 7A8B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = TimeDateSettingsDxeEntryPoint
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64 RISCV64 LOONGARCH64
+#
+
+[Sources]
+  TimeDateSettings.c
+  TimeDateSettingsForm.vfr
+  TimeDateSettings.uni
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  DevicePathLib
+  HiiLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiRuntimeServicesTableLib
+
+[Guids]
+  gEfiHiiPlatformSetupFormsetGuid               ## CONSUMES ## GUID (Class GUID for Platform Settings menu)
+  gTimeDateSettingsFormSetGuid                  ## CONSUMES
+
+[Protocols]
+  gEfiDevicePathProtocolGuid                    ## TO_START
+  gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
+
+[Depex]
+  gEfiHiiDatabaseProtocolGuid
+
