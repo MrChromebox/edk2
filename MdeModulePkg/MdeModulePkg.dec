@@ -610,6 +610,10 @@
   # Include/Protocol/MediaSanitize.h
   gMediaSanitizeProtocolGuid = { 0x0d799a99, 0x25af, 0x429e, {0x92, 0x72, 0xd0, 0xb2, 0x7d, 0x6d, 0x5f, 0x14 } }
 
+  ## Battery Status Protocol provides interface to retrieve battery information
+  # Include/Protocol/BatteryStatus.h
+  gEfiBatteryStatusProtocolGuid = { 0x8A3B2C1D, 0x4E5F, 0x6A7B, { 0x8C, 0x9D, 0x0E, 0x1F, 0x2A, 0x3B, 0x4C, 0x5D } }
+
   ## This protocol defines the generic memory test interfaces in Dxe phase.
   # Include/Protocol/GenericMemoryTest.h
   gEfiGenericMemTestProtocolGuid = { 0x309DE7F1, 0x7F5E, 0x4ACE, { 0xB4, 0x9C, 0x53, 0x1B, 0xE5, 0xAA, 0x95, 0xEF }}
@@ -825,6 +829,16 @@
   #   FALSE - Does not install Graphics Output Protocol on virtual handle created by ConsplitterDxe.<BR>
   # @Prompt Enable ConOut GOP support.
   gEfiMdeModulePkgTokenSpaceGuid.PcdConOutGopSupport|TRUE|BOOLEAN|0x00010042
+
+  ## Indicates if the UiApp front page draws the battery status string directly
+  #  to ConOut. Text-mode consoles need this because the battery banner line is
+  #  not repainted when its HII string changes. Set FALSE for graphical display
+  #  engines (e.g. LVGL) that repaint banner lines live, to avoid a stray text
+  #  overlay on top of the graphical UI.<BR><BR>
+  #   TRUE  - UiApp draws the battery status directly to ConOut.<BR>
+  #   FALSE - UiApp only updates the battery HII string.<BR>
+  # @Prompt Draw UiApp front-page battery status to ConOut.
+  gEfiMdeModulePkgTokenSpaceGuid.PcdUiAppFrontPageBatteryToConOut|TRUE|BOOLEAN|0x00010043
 
   ## Indicates PeiCore will first search TE section from the PEIM to load the image, or PE32 section, when PeiCore dispatches a PEI module.
   #  This PCD is used to tune PEI phase performance to reduce the search image time.

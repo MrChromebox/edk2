@@ -9,6 +9,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "FrontPage.h"
 #include "FrontPageCustomizedUi.h"
+#include <Protocol/BatteryStatus.h>
 
 #define MAX_STRING_LEN  200
 
@@ -16,8 +17,14 @@ EFI_GUID  mFrontPageGuid = FRONT_PAGE_FORMSET_GUID;
 
 BOOLEAN  mResetRequired = FALSE;
 
-EFI_FORM_BROWSER2_PROTOCOL  *gFormBrowser2;
-BOOLEAN                     mModeInitialized = FALSE;
+EFI_FORM_BROWSER2_PROTOCOL         *gFormBrowser2 = NULL;
+CHAR8                              *mLanguageString = NULL;
+BOOLEAN                             mModeInitialized = FALSE;
+EFI_EVENT                           mBatteryUpdateTimer = NULL;
+BOOLEAN                             mFrontPageActive = FALSE;
+STATIC EFI_BATTERY_STATUS_PROTOCOL *mBatteryStatusProtocol = NULL;
+STATIC UINT8                        mLastBatteryPercentage = 0xFF;
+STATIC BOOLEAN                      mLastBatteryCharging = FALSE;
 //
 // Boot video resolution and text mode.
 //
@@ -181,6 +188,13 @@ FrontPageCallback (
   OUT EFI_BROWSER_ACTION_REQUEST            *ActionRequest
   )
 {
+  // Track when front page form is open/closed
+  if (Action == EFI_BROWSER_ACTION_FORM_OPEN) {
+    mFrontPageActive = TRUE;
+  } else if (Action == EFI_BROWSER_ACTION_FORM_CLOSE) {
+    mFrontPageActive = FALSE;
+  }
+
   return UiFrontPageCallbackHandler (gFrontPagePrivate.HiiHandle, Action, QuestionId, Type, Value, ActionRequest);
 }
 
@@ -250,6 +264,238 @@ Exit:
 }
 
 /**
+  Get battery information from BatteryStatus protocol.
+
+  The unified EcAcpiBatteryStatusDxe driver handles EC detection internally,
+  so we can simply locate the protocol and use it directly.
+
+  @param[out] BatteryPercentage  Battery charge percentage (0-100). 0xFF indicates error/unknown.
+  @param[out] BatteryPresent     TRUE if battery is present, FALSE otherwise.
+  @param[out] BatteryCharging    TRUE if battery is charging, FALSE otherwise.
+
+  @retval EFI_SUCCESS            Battery information retrieved successfully.
+  @retval EFI_NOT_FOUND          No BatteryStatus protocol instance found.
+  @retval EFI_UNSUPPORTED        Battery not available or not supported.
+
+**/
+STATIC
+EFI_STATUS
+GetBatteryInfoFromProtocol (
+  OUT UINT8    *BatteryPercentage,
+  OUT BOOLEAN  *BatteryPresent,
+  OUT BOOLEAN  *BatteryCharging
+  )
+{
+  EFI_STATUS  Status;
+
+  if ((BatteryPercentage == NULL) || (BatteryPresent == NULL) || (BatteryCharging == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Try cached protocol instance first
+  if (mBatteryStatusProtocol != NULL) {
+    Status = mBatteryStatusProtocol->GetBatteryInfo (mBatteryStatusProtocol, BatteryPercentage, BatteryPresent, BatteryCharging);
+    if (!EFI_ERROR (Status)) {
+      return Status;
+    }
+    // If cached instance fails, clear it and locate again
+    mBatteryStatusProtocol = NULL;
+  }
+
+  // Locate BatteryStatus protocol instance
+  Status = gBS->LocateProtocol (
+                  &gEfiBatteryStatusProtocolGuid,
+                  NULL,
+                  (VOID **)&mBatteryStatusProtocol
+                  );
+
+  if (EFI_ERROR (Status) || (mBatteryStatusProtocol == NULL)) {
+    return EFI_NOT_FOUND;
+  }
+
+  // Get battery information
+  return mBatteryStatusProtocol->GetBatteryInfo (mBatteryStatusProtocol, BatteryPercentage, BatteryPresent, BatteryCharging);
+}
+
+/**
+  Update the battery level string with provided battery values.
+
+  @param[in] BatteryPercentage  Battery charge percentage (0-100). 0xFF indicates error/unknown.
+  @param[in] BatteryPresent      TRUE if battery is present, FALSE otherwise.
+  @param[in] BatteryCharging     TRUE if battery is charging, FALSE otherwise.
+
+**/
+STATIC
+VOID
+UpdateBatteryString (
+  IN UINT8    BatteryPercentage,
+  IN BOOLEAN  BatteryPresent,
+  IN BOOLEAN  BatteryCharging
+  )
+{
+  CHAR16  *BatteryString;
+  UINTN   BufferSize;
+
+  // Allocate buffer: "BAT: " (5) + percentage (3) + "%" (1) + charging status (11) + null
+  BufferSize = (5 + 3 + 1 + 11 + 1) * sizeof (CHAR16);
+  BatteryString = AllocateZeroPool (BufferSize);
+  if (BatteryString != NULL) {
+    UnicodeSPrint (
+      BatteryString,
+      BufferSize / sizeof (CHAR16),
+      L"BAT: %d",
+      BatteryPercentage
+      );
+    StrCatS (BatteryString, BufferSize / sizeof (CHAR16), L"%");
+    if (BatteryCharging) {
+      StrCatS (BatteryString, BufferSize / sizeof (CHAR16), L" (Charging)");
+    }
+    HiiSetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BATTERY_STATUS), BatteryString, NULL);
+    FreePool (BatteryString);
+  }
+}
+
+/**
+  Timer callback to update battery string at 1Hz and refresh display.
+
+  @param[in] Event     The timer event.
+  @param[in] Context   Event context (unused).
+
+**/
+STATIC
+VOID
+EFIAPI
+BatteryUpdateTimerCallback (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EFI_STATUS  Status;
+  UINT8       BatteryPercentage;
+  BOOLEAN     BatteryPresent;
+  BOOLEAN     BatteryCharging;
+  BOOLEAN     NeedsUpdate;
+
+  // Get current battery status
+  Status = GetBatteryInfoFromProtocol (&BatteryPercentage, &BatteryPresent, &BatteryCharging);
+  if (EFI_ERROR (Status)) {
+    // Battery Status Protocol not available or no battery present
+    return;
+  }
+
+  // Check if battery status has changed
+  NeedsUpdate = (BatteryPercentage != mLastBatteryPercentage) ||
+                (BatteryCharging != mLastBatteryCharging);
+
+  // If status hasn't changed, no need to update
+  if (!NeedsUpdate) {
+    return;
+  }
+
+  // Update the cache and HII string
+  mLastBatteryPercentage = BatteryPercentage;
+  mLastBatteryCharging   = BatteryCharging;
+  UpdateBatteryString (BatteryPercentage, BatteryPresent, BatteryCharging);
+
+  //
+  // The battery status is published as an HII string (the front-page battery
+  // banner line). A graphical display engine such as LVGL polls its banner
+  // labels and repaints this line in place as the string changes, so the
+  // graphical UI stays live without any direct console writes.
+  //
+  // Text-mode consoles do not repaint the banner line when the HII string
+  // changes, so when PcdUiAppFrontPageBatteryToConOut is TRUE we also draw the
+  // status directly to ConOut. This is disabled for graphical display engines,
+  // where a direct ConOut write would paint a stray text overlay on top of the
+  // graphical UI that can also disagree with the graphical banner value.
+  //
+  if (FeaturePcdGet (PcdUiAppFrontPageBatteryToConOut)) {
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *ConOut;
+    CHAR16                           *BatteryString;
+
+    // Only update screen if front page is currently active
+    if (!mFrontPageActive) {
+      return;
+    }
+
+    // Get the updated string and render it directly on screen
+    BatteryString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BATTERY_STATUS), NULL);
+    if (BatteryString != NULL) {
+      ConOut = gST->ConOut;
+      if (ConOut != NULL) {
+        // Get current cursor position to restore later
+        UINT32  SavedColumn = ConOut->Mode->CursorColumn;
+        UINT32  SavedRow    = ConOut->Mode->CursorRow;
+
+        // Set cursor to start of line 6 (left margin), clear the existing battery string
+        ConOut->SetCursorPosition (ConOut, 1, (UINT32)6);
+        ConOut->OutputString (ConOut, L"                                ");
+
+        // Print the battery string
+        ConOut->SetCursorPosition (ConOut, 1, (UINT32)6);
+        ConOut->OutputString (ConOut, BatteryString);
+
+        // Restore cursor position to avoid interfering with form browser
+        ConOut->SetCursorPosition (ConOut, SavedColumn, SavedRow);
+      }
+
+      FreePool (BatteryString);
+    }
+  }
+}
+
+/**
+  Create battery update timer if battery is present.
+
+  Checks if a battery is present and creates a periodic timer to update
+  the battery status display at 1Hz.
+
+**/
+STATIC
+VOID
+CreateBatteryUpdateTimer (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT8       BatteryPercentage;
+  BOOLEAN     BatteryPresent;
+  BOOLEAN     BatteryCharging;
+
+  // Check if battery is present before creating timer
+  Status = GetBatteryInfoFromProtocol (&BatteryPercentage, &BatteryPresent, &BatteryCharging);
+  if (!EFI_ERROR (Status) && BatteryPresent && (BatteryPercentage != 0xFF)) {
+    // Battery is present, create timer
+    Status = gBS->CreateEvent (
+                    EVT_TIMER | EVT_NOTIFY_SIGNAL,
+                    TPL_CALLBACK,
+                    BatteryUpdateTimerCallback,
+                    NULL,
+                    &mBatteryUpdateTimer
+                    );
+    if (!EFI_ERROR (Status) && (mBatteryUpdateTimer != NULL)) {
+      DEBUG ((DEBUG_INFO, "FrontPage: Battery present, creating update timer\n"));
+      Status = gBS->SetTimer (
+                      mBatteryUpdateTimer,
+                      TimerPeriodic,
+                      10000000  // 1 second in 100-nanosecond units
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_WARN, "FrontPage: Failed to set battery timer: %r\n", Status));
+        gBS->CloseEvent (mBatteryUpdateTimer);
+        mBatteryUpdateTimer = NULL;
+      } else {
+        DEBUG ((DEBUG_INFO, "FrontPage: Battery timer set to periodic 1Hz\n"));
+      }
+    } else {
+      DEBUG ((DEBUG_WARN, "FrontPage: Failed to create battery timer event: %r\n", Status));
+    }
+  } else {
+    DEBUG ((DEBUG_INFO, "FrontPage: No battery present, skipping timer creation\n"));
+  }
+}
+
+/**
   Initialize HII information for the FrontPage
 
 
@@ -308,6 +554,16 @@ InitializeFrontPage (
   //
   UpdateFrontPageForm ();
 
+  //
+  // Create timer event to update battery at 1Hz only if battery is present
+  //
+  CreateBatteryUpdateTimer ();
+
+  //
+  // Update battery status so it is displayed immediately when FrontPage is opened
+  //
+  BatteryUpdateTimerCallback (NULL, NULL);
+
   return Status;
 }
 
@@ -364,6 +620,15 @@ FreeFrontPage (
   )
 {
   EFI_STATUS  Status;
+
+  //
+  // Stop and close battery update timer
+  //
+  if (mBatteryUpdateTimer != NULL) {
+    gBS->SetTimer (mBatteryUpdateTimer, TimerCancel, 0);
+    gBS->CloseEvent (mBatteryUpdateTimer);
+    mBatteryUpdateTimer = NULL;
+  }
 
   Status = gBS->UninstallMultipleProtocolInterfaces (
                   gFrontPagePrivate.DriverHandle,
