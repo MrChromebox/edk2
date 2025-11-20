@@ -17,6 +17,7 @@
 #string STR_FRONT_PAGE_BIOS_VERSION    #language en-US  "<bios>"
 #string STR_FRONT_PAGE_CPU_MODEL       #language en-US  "<cpu>"
 #string STR_FRONT_PAGE_MEMORY_SIZE     #language en-US  ""
+#string STR_FRONT_PAGE_BATTERY_STATUS  #language en-US  ""
 #string STR_BOOT_DEFAULT_PROMPT        #language en-US  "Default Boot"
 #string STR_BOOT_DEFAULT_HELP          #language en-US  "Boot the Default Selection"
 #string STR_MISSING_STRING             #language en-US  "Missing String"

@@ -1,0 +1,50 @@
+## @file
+#  EC ACPI Battery DXE Driver
+#
+#  This driver communicates with Embedded Controllers (EC) via ACPI ports to
+#  retrieve battery information and exposes it through the Battery Status Protocol.
+#  Supports multiple EC types including ChromeOS EC and Merlin EC.
+#
+#  Copyright (c) 2025
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = EcAcpiBatteryStatusDxe
+  FILE_GUID                      = 3C4D5E6F-7A8B-9C0D-1E2F-3A4B5C6D7E8F
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = EcAcpiBatteryStatusDxeEntryPoint
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64 RISCV64 LOONGARCH64
+#
+
+[Sources]
+  EcAcpiBatteryStatusDxe.c
+  EcAcpiBatteryStatusDxe.h
+  ChromeEc.c
+  MerlinEc.c
+  ThinkPadEc.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  DebugLib
+  IoLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiBatteryStatusProtocolGuid                 ## PRODUCES
+
+[Depex]
+  TRUE
+
