@@ -300,6 +300,7 @@ INF MdeModulePkg/Universal/TimeDateSettingsDxe/TimeDateSettingsDxe.inf
 # INF MdeModulePkg/Universal/PlatformDriOverrideDxe/PlatformDriOverrideDxe.inf
 INF MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
 INF UefiPayloadPkg/BlSupportDxe/BlSupportDxe.inf
+INF UefiPayloadPkg/EcAcpiBatteryStatusDxe/EcAcpiBatteryStatusDxe.inf
 
 INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
 !if $(BOOTSPLASH_IMAGE)
