@@ -48,7 +48,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define FORMSET_CLASS_PLATFORM_SETUP  0x0001
 #define FORMSET_CLASS_FRONT_PAGE      0x0002
 
-#define FRONT_PAGE_HEADER_HEIGHT       6
+#define FRONT_PAGE_HEADER_HEIGHT       7
 #define NONE_FRONT_PAGE_HEADER_HEIGHT  3
 #define FOOTER_HEIGHT                  4
 #define STATUS_BAR_HEIGHT              1
@@ -56,7 +56,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 // Screen definitions
 //
-#define BANNER_HEIGHT              6
+#define BANNER_HEIGHT              7
 #define BANNER_COLUMNS             3
 #define BANNER_LEFT_COLUMN_INDENT  1
 
