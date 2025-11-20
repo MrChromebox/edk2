@@ -63,6 +63,7 @@
 [Protocols]
   gEfiSmbiosProtocolGuid                        ## CONSUMES
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
+  gEfiBatteryStatusProtocolGuid                 ## CONSUMES
 
 [FeaturePcd]
 
