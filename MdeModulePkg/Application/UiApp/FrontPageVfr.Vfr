@@ -43,6 +43,11 @@ formset
       line  5,
       align left;
 
+    banner
+      title = STRING_TOKEN(STR_FRONT_PAGE_BATTERY_STATUS),
+      line  6,
+      align left;
+
     subtitle text = STRING_TOKEN(STR_NULL_STRING);
 
     label LABEL_FRONTPAGE_INFORMATION;
