@@ -12,8 +12,8 @@
 #langdef   en-US "English"
 #langdef   fr-FR "Français"
 
-#string STR_EDKII_MENU_TITLE           #language en-US  "Advanced Configuration"
-                                       #language fr-FR  "Advanced Configuration"
+#string STR_EDKII_MENU_TITLE           #language en-US  "System Configuration"
+                                       #language fr-FR  "System Configuration"
 #string STR_EDKII_MENU_HELP            #language en-US  "This selection will take you to the Advanced Configuration"
                                        #language fr-FR  "This selection will take you to the Advanced Configuration"
 #string STR_DEVICES_LIST               #language en-US  "Menu List"
