@@ -18,6 +18,10 @@
 #string STR_SECURE_BOOT_STATE_HELP         #language en-US "Current Secure Boot state: enabled or disabled."
 #string STR_SECURE_BOOT_STATE_CONTENT      #language en-US " "
 
+#string STR_SECURE_BOOT_KEYS_PROMPT        #language en-US "Secure Boot Keys"
+#string STR_SECURE_BOOT_KEYS_HELP          #language en-US "Indicates whether the enrolled Secure Boot keys (PK, KEK, db, dbx) match the platform defaults or have been customized."
+#string STR_SECURE_BOOT_KEYS_CONTENT       #language en-US " "
+
 #string STR_SECURE_BOOT_PROMPT             #language en-US "Attempt Secure Boot"
 #string STR_SECURE_BOOT_HELP               #language en-US "Enable/Disable the Secure Boot feature after platform reset"
 
@@ -98,6 +102,12 @@
 #string STR_DELETE_PK                      #language en-US "Delete Pk"
 #string STR_DELETE_PK_HELP                 #language en-US "Choose to Delete PK, Otherwise keep the PK"
 
+#string STR_ENTER_SETUP_MODE               #language en-US "Enter Setup Mode"
+#string STR_ENTER_SETUP_MODE_HELP          #language en-US "Clear the Platform Key (PK) to enter UEFI Setup Mode. While in Setup Mode, Secure Boot keys and signature databases can be changed without authentication. A platform reset is recommended afterward."
+#string STR_ENTER_SETUP_MODE_POPUP         #language en-US "Entering Setup Mode clears the Platform Key (PK).\nSecure Boot enforcement is disabled and keys may be changed.\n\nAre you sure?"
+#string STR_ENTER_SETUP_MODE_FAIL_POPUP    #language en-US "Could not enter Setup Mode.\nPhysical presence is required to clear the PK."
+#string STR_ENTER_SETUP_MODE_DONE_POPUP    #language en-US "Setup Mode is now enabled.\nReset the platform for changes to take full effect."
+
 #string STR_ENROLL_PK_TITLE                #language en-US "Enroll PK"
 
 #string STR_ENROLL_KEK                     #language en-US "Enroll KEK"
@@ -140,3 +150,9 @@
 #string STR_SIGNATURE_DATA_HELP_FORMAT_TIME       #language en-US "Revocation Time:\n%s"
 
 #string STR_SIGNATURE_DELETE_ALL_CONFIRM          #language en-US "Press 'Y' to delete all signature List."
+
+//
+// Scratch string used by SecureBootPopup() to render CreatePopUp-style
+// messages through EFI_HII_POPUP_PROTOCOL. Its content is set at runtime.
+//
+#string STR_SECURE_BOOT_POPUP_SCRATCH             #language en-US ""
