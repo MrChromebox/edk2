@@ -27,10 +27,14 @@ formset
 
     subtitle text = STRING_TOKEN(STR_NULL);
 
+    grayoutif ideqval SECUREBOOT_CONFIGURATION.PhysicalPresent == 1 OR NOT ideqval SECUREBOOT_CONFIGURATION.PhysicalPresent == 1;
     text
       help   = STRING_TOKEN(STR_SECURE_BOOT_STATE_HELP),
       text   = STRING_TOKEN(STR_SECURE_BOOT_STATE_PROMPT),
-        text   = STRING_TOKEN(STR_SECURE_BOOT_STATE_CONTENT);
+      text   = STRING_TOKEN(STR_SECURE_BOOT_STATE_CONTENT);
+    endif;
+
+    subtitle text = STRING_TOKEN(STR_NULL);
 
     //
     // Display of Check Box: Attempt Secure Boot
