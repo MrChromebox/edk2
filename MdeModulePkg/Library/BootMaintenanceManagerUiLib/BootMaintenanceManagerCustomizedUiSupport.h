@@ -75,6 +75,19 @@ BmmCreateEmptyLine (
   );
 
 /**
+  Create Prioritize Internal Devices checkbox in the page.
+
+  @param[in]    HiiHandle           The hii handle for the Uiapp driver.
+  @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
+
+**/
+VOID
+BmmCreatePrioritizeInternalMenu (
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
+  );
+
+/**
   Create Time Out Menu in the page.
 
   @param[in]    HiiHandle           The hii handle for the Uiapp driver.

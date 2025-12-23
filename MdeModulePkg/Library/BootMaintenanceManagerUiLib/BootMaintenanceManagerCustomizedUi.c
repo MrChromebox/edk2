@@ -60,6 +60,16 @@ UiCustomizeBMMPage (
   BmmCreateBootFromFileMenu (HiiHandle, StartOpCodeHandle);
 
   //
+  // Create empty line.
+  //
+  BmmCreateEmptyLine (HiiHandle, StartOpCodeHandle);
+
+  //
+  // Create "Prioritize Internal Devices" checkbox.
+  //
+  BmmCreatePrioritizeInternalMenu (HiiHandle, StartOpCodeHandle);
+
+  //
   // Find third party drivers which need to be shown in the Bmm page.
   //
   BmmListThirdPartyDrivers (HiiHandle, &gEfiIfrBootMaintenanceGuid, NULL, StartOpCodeHandle);

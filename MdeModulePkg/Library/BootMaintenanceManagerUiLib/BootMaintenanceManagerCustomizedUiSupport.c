@@ -130,6 +130,62 @@ BmmCreateEmptyLine (
 }
 
 /**
+  Create Boot Device Priority selection in the page.
+
+  @param[in]    HiiHandle           The hii handle for the Uiapp driver.
+  @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
+
+**/
+VOID
+BmmCreatePrioritizeInternalMenu (
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
+  )
+{
+  VOID  *OptionsOpCodeHandle;
+
+  OptionsOpCodeHandle = HiiAllocateOpCodeHandle ();
+  ASSERT (OptionsOpCodeHandle != NULL);
+
+  //
+  // Create "External" option (value 0)
+  //
+  HiiCreateOneOfOptionOpCode (
+    OptionsOpCodeHandle,
+    STRING_TOKEN (STR_BOOT_DEVICE_PRIORITY_EXTERNAL),
+    0,
+    EFI_IFR_TYPE_NUM_SIZE_8,
+    0
+    );
+
+  //
+  // Create "Internal" option (value 1)
+  //
+  HiiCreateOneOfOptionOpCode (
+    OptionsOpCodeHandle,
+    STRING_TOKEN (STR_BOOT_DEVICE_PRIORITY_INTERNAL),
+    0,
+    EFI_IFR_TYPE_NUM_SIZE_8,
+    1
+    );
+
+  HiiCreateOneOfOpCode (
+    StartOpCodeHandle,
+    BOOT_DEVICE_PRIORITY_QUESTION_ID,
+    VARSTORE_ID_BOOT_MAINT,
+    BOOT_DEVICE_PRIORITY_VAR_OFFSET,
+    STRING_TOKEN (STR_BOOT_DEVICE_PRIORITY_PROMPT),
+    STRING_TOKEN (STR_BOOT_DEVICE_PRIORITY_HELP),
+    EFI_IFR_FLAG_CALLBACK,
+    EFI_IFR_NUMERIC_SIZE_1,
+    OptionsOpCodeHandle,
+    NULL
+    );
+
+  HiiFreeOpCodeHandle (OptionsOpCodeHandle);
+}
+
+/**
   Create Time Out Menu in the page.
 
   @param[in]    HiiHandle           The hii handle for the Uiapp driver.

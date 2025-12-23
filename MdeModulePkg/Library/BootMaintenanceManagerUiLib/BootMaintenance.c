@@ -897,6 +897,32 @@ BootMaintRouteConfig (
     Private->BmmOldFakeNVData.BootTimeOut = NewBmmData->BootTimeOut;
   }
 
+  DEBUG ((DEBUG_VERBOSE, "BMM: BootDevicePriority - New: %d, Old: %d\n", NewBmmData->BootDevicePriority, OldBmmData->BootDevicePriority));
+  if (CompareMem (&NewBmmData->BootDevicePriority, &OldBmmData->BootDevicePriority, sizeof (NewBmmData->BootDevicePriority)) != 0) {
+    UINT8  PrioritizeInternalValue;
+
+    // Store as legacy format: 0 = External, 1 = Internal
+    // Use Boot Maintenance Manager GUID instead of global variable GUID
+    // since PrioritizeInternal is not a standard UEFI variable
+    PrioritizeInternalValue = NewBmmData->BootDevicePriority;
+    DEBUG ((DEBUG_INFO, "BMM: Setting PrioritizeInternal to %d\n", PrioritizeInternalValue));
+    Status = gRT->SetVariable (
+                    L"PrioritizeInternal",
+                    &mBootMaintGuid,
+                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                    sizeof (UINT8),
+                    &PrioritizeInternalValue
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "BMM: Failed to set PrioritizeInternal variable: %r\n", Status));
+      Offset = OFFSET_OF (BMM_FAKE_NV_DATA, BootDevicePriority);
+      goto Exit;
+    }
+
+    Private->BmmOldFakeNVData.BootDevicePriority = NewBmmData->BootDevicePriority;
+    DEBUG ((DEBUG_INFO, "BMM: Successfully set PrioritizeInternal to %d\n", PrioritizeInternalValue));
+  }
+
   //
   // Check data which located in Driver Options Menu and save the settings if need
   //
@@ -1536,6 +1562,47 @@ InitializeBmmConfig (
 
       FreePool (TimeoutVar);
     }
+  }
+
+  //
+  // Initialize BootDevicePriority from runtime variable, fallback to PCD
+  // 0 = External (default), 1 = Internal
+  //
+  {
+    UINT8    *BootDevicePriorityVar;
+    UINTN    BootDevicePriorityVarSize;
+
+    // Default to External (0) unless PCD says otherwise
+    CallbackData->BmmFakeNvData.BootDevicePriority = PcdGetBool (PcdPrioritizeInternal) ? 1 : 0;
+    BootDevicePriorityVarSize = sizeof (UINT8);
+    // Read from Boot Maintenance Manager GUID namespace (not global variable GUID)
+    BootDevicePriorityVar = AllocatePool (BootDevicePriorityVarSize);
+    if (BootDevicePriorityVar != NULL) {
+      EFI_STATUS  Status;
+      UINTN       TempSize;
+
+      TempSize = BootDevicePriorityVarSize;
+      Status   = gRT->GetVariable (L"PrioritizeInternal", &mBootMaintGuid, NULL, &TempSize, BootDevicePriorityVar);
+      if (Status == EFI_BUFFER_TOO_SMALL) {
+        FreePool (BootDevicePriorityVar);
+        BootDevicePriorityVar = AllocatePool (TempSize);
+        if (BootDevicePriorityVar != NULL) {
+          Status = gRT->GetVariable (L"PrioritizeInternal", &mBootMaintGuid, NULL, &TempSize, BootDevicePriorityVar);
+        }
+      }
+
+      if (!EFI_ERROR (Status) && (TempSize == sizeof (UINT8))) {
+        // Legacy variable: 0 = External, non-zero = Internal
+        CallbackData->BmmFakeNvData.BootDevicePriority = (*BootDevicePriorityVar != 0) ? 1 : 0;
+      }
+
+      if (BootDevicePriorityVar != NULL) {
+        FreePool (BootDevicePriorityVar);
+      }
+    }
+
+    // Also initialize OldFakeNVData to match, so CompareMem works correctly
+    CallbackData->BmmOldFakeNVData.BootDevicePriority = CallbackData->BmmFakeNvData.BootDevicePriority;
   }
 
   //
