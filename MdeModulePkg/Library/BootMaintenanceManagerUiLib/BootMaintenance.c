@@ -1520,7 +1520,23 @@ InitializeBmmConfig (
     }
   }
 
-  CallbackData->BmmFakeNvData.BootTimeOut = PcdGet16 (PcdPlatformBootTimeOut);
+  //
+  // Initialize BootTimeOut from runtime variable, fallback to PCD
+  //
+  {
+    UINT16   *TimeoutVar;
+    UINTN    TimeoutVarSize;
+
+    CallbackData->BmmFakeNvData.BootTimeOut = PcdGet16 (PcdPlatformBootTimeOut);
+    TimeoutVarSize = sizeof (UINT16);
+    if (GetEfiGlobalVariable2 (L"Timeout", (VOID **)&TimeoutVar, &TimeoutVarSize) == EFI_SUCCESS) {
+      if (TimeoutVarSize == sizeof (UINT16)) {
+        CallbackData->BmmFakeNvData.BootTimeOut = *TimeoutVar;
+      }
+
+      FreePool (TimeoutVar);
+    }
+  }
 
   //
   // Initialize data which located in Boot Options Menu

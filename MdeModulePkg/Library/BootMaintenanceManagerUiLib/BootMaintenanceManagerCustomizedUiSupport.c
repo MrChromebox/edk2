@@ -130,6 +130,35 @@ BmmCreateEmptyLine (
 }
 
 /**
+  Create Time Out Menu in the page.
+
+  @param[in]    HiiHandle           The hii handle for the Uiapp driver.
+  @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
+
+**/
+VOID
+BmmCreateTimeOutMenu (
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
+  )
+{
+  HiiCreateNumericOpCode (
+    StartOpCodeHandle,
+    (EFI_QUESTION_ID)BOOT_TIME_OUT_QUESTION_ID,
+    VARSTORE_ID_BOOT_MAINT,
+    BOOT_TIME_OUT_VAR_OFFSET,
+    STRING_TOKEN (STR_NUM_AUTO_BOOT),
+    STRING_TOKEN (STR_HLP_AUTO_BOOT),
+    EFI_IFR_FLAG_CALLBACK,
+    EFI_IFR_NUMERIC_SIZE_2 | EFI_IFR_DISPLAY_UINT_DEC,
+    0,
+    65535,
+    0,
+    NULL
+    );
+}
+
+/**
   Extract device path for given HII handle and class guid.
 
   @param Handle          The HII handle.

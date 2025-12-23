@@ -68,6 +68,11 @@ UiCustomizeBMMPage (
   // Create empty line.
   //
   BmmCreateEmptyLine (HiiHandle, StartOpCodeHandle);
+
+  //
+  // Create "Time Out" menu.
+  //
+  BmmCreateTimeOutMenu (HiiHandle, StartOpCodeHandle);
 }
 
 /**
