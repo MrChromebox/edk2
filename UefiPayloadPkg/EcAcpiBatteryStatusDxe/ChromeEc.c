@@ -269,6 +269,13 @@ GetChromeOsBatteryInfo (
   // Check if battery is present
   *BatteryPresent = ((BatteryFlag & CHROMEOS_EC_BATT_FLAG_BATT_PRESENT) != 0);
 
+  if (!*BatteryPresent) {
+    *BatteryCharging   = FALSE;
+    *BatteryPercentage = 0xFF;
+    DEBUG ((DEBUG_INFO, "EcAcpiBattery: [ChromeOS] No battery present\n"));
+    return EFI_UNSUPPORTED;
+  }
+
   // Check if battery is charging
   *BatteryCharging = ((BatteryFlag & CHROMEOS_EC_BATT_FLAG_CHARGING) != 0);
 
