@@ -238,13 +238,15 @@ GetThinkPadBatteryInfo (
   // Check if battery is present
   *BatteryPresent = ((BatteryState & THINKPAD_B0PR) != 0);
 
-  // Check if battery is charging
-  *BatteryCharging = ((BatteryState & THINKPAD_B0CH) != 0);
-
   if (!*BatteryPresent) {
     *BatteryPercentage = 0xFF;
-    return EFI_SUCCESS;
+    *BatteryCharging   = FALSE;
+    DEBUG ((DEBUG_INFO, "EcAcpiBattery: [ThinkPad] No battery present\n"));
+    return EFI_UNSUPPORTED;
   }
+
+  // Check if battery is charging
+  *BatteryCharging = ((BatteryState & THINKPAD_B0CH) != 0);
 
   // Set PAGE register to 0x00 to access battery capacity information
   Status = ThinkPadEcWriteByte (THINKPAD_ECRAM_PAGE, 0x00);

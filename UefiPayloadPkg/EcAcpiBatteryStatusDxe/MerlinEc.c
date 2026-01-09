@@ -13,13 +13,12 @@
 //
 // Merlin EC RAM Battery Offsets
 //
-#define MERLIN_ECRAM_BATTERY_STATE             0x8c
+#define MERLIN_ECRAM_POWER_STATE               0x80  // Power state register
+  #define MERLIN_BATTERY_PRESENT               BIT1  // Battery is present
+  #define MERLIN_BATTERY_DETECTED              BIT2  // Battery is detected
+#define MERLIN_ECRAM_BATTERY_STATE             0x8c  // Battery state register
+  #define MERLIN_BATTERY_CHARGING              BIT1  // Battery is charging
 #define MERLIN_ECRAM_BATTERY_REL_STATE_OF_CHRG 0x93  // 2 bytes
-
-//
-// Merlin Battery State Bits
-//
-#define MERLIN_BATTERY_CHARGING  BIT1
 
 /**
   Read a byte from Merlin EC RAM.
@@ -150,6 +149,7 @@ GetMerlinBatteryInfo (
   )
 {
   EFI_STATUS  Status;
+  UINT8       PowerState;
   UINT8       BatteryState;
   UINT16      RelativeStateOfCharge;
 
@@ -157,7 +157,24 @@ GetMerlinBatteryInfo (
     return EFI_UNSUPPORTED;
   }
 
-  // Read battery state
+  // Read power state to determine battery presence
+  Status = MerlinEcReadByte (MERLIN_ECRAM_POWER_STATE, &PowerState);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "EcAcpiBattery: Failed to read power state at offset 0x%02x: %r\n", MERLIN_ECRAM_POWER_STATE, Status));
+    return Status;
+  }
+
+  // Check if battery is present and detected
+  *BatteryPresent = ((PowerState & MERLIN_BATTERY_PRESENT) != 0) && ((PowerState & MERLIN_BATTERY_DETECTED) != 0);
+
+  if (!*BatteryPresent) {
+    *BatteryCharging   = FALSE;
+    *BatteryPercentage = 0xFF;
+    DEBUG ((DEBUG_INFO, "EcAcpiBattery: [Merlin] No battery present (power_state=0x%02x)\n", PowerState));
+    return EFI_UNSUPPORTED;
+  }
+
+  // Read battery state for charging status
   Status = MerlinEcReadByte (MERLIN_ECRAM_BATTERY_STATE, &BatteryState);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "EcAcpiBattery: Failed to read battery state at offset 0x%02x: %r\n", MERLIN_ECRAM_BATTERY_STATE, Status));
@@ -171,12 +188,10 @@ GetMerlinBatteryInfo (
     return Status;
   }
 
-  // Determine battery presence: valid percentage (0-100) or state indicates battery
-  if ((RelativeStateOfCharge <= 100) || (BatteryState != 0xFF)) {
-    *BatteryPresent    = TRUE;
+  // Validate percentage value
+  if (RelativeStateOfCharge <= 100) {
     *BatteryPercentage = (UINT8)RelativeStateOfCharge;
   } else {
-    *BatteryPresent    = FALSE;
     *BatteryPercentage = 0xFF;
   }
 
@@ -185,13 +200,13 @@ GetMerlinBatteryInfo (
 
   DEBUG ((
     DEBUG_INFO,
-    "EcAcpiBattery: [Merlin] Battery %d%%, Present=%d, Charging=%d (state=0x%02x)\n",
+    "EcAcpiBattery: [Merlin] Battery %d%%, Present=%d, Charging=%d (power_state=0x%02x, battery_state=0x%02x)\n",
     *BatteryPercentage,
     *BatteryPresent,
     *BatteryCharging,
+    PowerState,
     BatteryState
     ));
 
   return EFI_SUCCESS;
 }
-
