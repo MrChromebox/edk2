@@ -285,7 +285,7 @@ GetThinkPadBatteryInfo (
   }
 
   DEBUG ((
-    DEBUG_INFO,
+    DEBUG_VERBOSE,
     "EcAcpiBattery: [ThinkPad] Battery %d%%, Present=%d, Charging=%d (remaining=%u, full=%u, state=0x%02x)\n",
     *BatteryPercentage,
     *BatteryPresent,
