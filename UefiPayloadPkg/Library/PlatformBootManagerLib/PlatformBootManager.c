@@ -495,23 +495,41 @@ PlatformBootManagerAfterConsole (
   }
 
   if (FixedPcdGetBool (PcdBootManagerEscape)) {
-    BootLogoUpdateProgress (
-      White,
-      Black,
-      L"Press ESC for Boot Options/Settings",
-      White,
-      0,
-      0
-      );
+    if (FixedPcdGetBool (PcdSerialTerminalPrintEnabled)) {
+      Print (
+        L"\n"
+        L"    Esc              to enter Setup Option Menu.\n"
+        L"    ENTER            to boot directly.\n"
+        L"\n"
+        );
+    } else {
+      BootLogoUpdateProgress (
+        White,
+        Black,
+        L"Press ESC for Boot Options/Settings",
+        White,
+        0,
+        0
+        );
+    }
   } else {
-    BootLogoUpdateProgress (
-      White,
-      Black,
-      L"Press F2 or Down for Boot Options/Settings",
-      White,
-      0,
-      0
-      );
+    if (FixedPcdGetBool (PcdSerialTerminalPrintEnabled)) {
+      Print (
+        L"\n"
+        L"    F2 or Down      to enter Setup Option Menu.\n"
+        L"    ENTER           to boot directly.\n"
+        L"\n"
+        );
+    } else {
+      BootLogoUpdateProgress (
+        White,
+        Black,
+        L"Press F2 or Down for Boot Options/Settings",
+        White,
+        0,
+        0
+        );
+    }
   }
 
   // invoke SMM handler to put BYT eMMC/SD devices into ACPI mode for OS
