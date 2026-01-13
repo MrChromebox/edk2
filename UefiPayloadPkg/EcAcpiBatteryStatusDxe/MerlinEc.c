@@ -199,7 +199,7 @@ GetMerlinBatteryInfo (
   *BatteryCharging = ((BatteryState & MERLIN_BATTERY_CHARGING) != 0);
 
   DEBUG ((
-    DEBUG_INFO,
+    DEBUG_VERBOSE,
     "EcAcpiBattery: [Merlin] Battery %d%%, Present=%d, Charging=%d (power_state=0x%02x, battery_state=0x%02x)\n",
     *BatteryPercentage,
     *BatteryPresent,

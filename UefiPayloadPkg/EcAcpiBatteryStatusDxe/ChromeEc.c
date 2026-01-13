@@ -314,7 +314,7 @@ GetChromeOsBatteryInfo (
   }
 
   DEBUG ((
-    DEBUG_INFO,
+    DEBUG_VERBOSE,
     "EcAcpiBattery: [ChromeOS] Battery %d%%, Present=%d, Charging=%d (cap=%u, lfcc=%u, flag=0x%02x)\n",
     *BatteryPercentage,
     *BatteryPresent,
