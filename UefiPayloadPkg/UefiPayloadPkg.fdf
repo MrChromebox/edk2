@@ -17,9 +17,13 @@ DEFINE FD_BLOCK_SIZE = 0x00001000
 DEFINE FD_SIZE     = 0x00850000
 DEFINE NUM_BLOCKS  = 0x850
 !else
-
+!if $(TARGET) == DEBUG
+DEFINE FD_SIZE     = 0x0900000
+DEFINE NUM_BLOCKS  = 0x900
+!else
 DEFINE FD_SIZE     = 0x0800000
 DEFINE NUM_BLOCKS  = 0x800
+!endif
 !endif
 
 ################################################################################
