@@ -26,6 +26,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/HiiLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PrintLib.h>
 #include <Library/Tpm2CommandLib.h>
 #include <Library/Tcg2PhysicalPresencePlatformLib.h>
@@ -962,4 +963,36 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
   Flush_PPI_Cache(FALSE); //Need to flush mPpi to RAM.
 
   return TCG_PP_SUBMIT_REQUEST_TO_PREOS_SUCCESS;
+}
+
+/**
+  Return TPM2 ManagementFlags set by PP interface.
+
+  @retval    ManagementFlags    TPM2 Management Flags.
+**/
+UINT32
+EFIAPI
+Tcg2PhysicalPresenceLibGetManagementFlags (
+  VOID
+  )
+{
+  EFI_STATUS                        Status;
+  EFI_TCG2_PHYSICAL_PRESENCE_FLAGS  PpiFlags;
+  UINTN                             DataSize;
+
+  DEBUG ((DEBUG_INFO, "[TPM2PP] GetManagementFlags\n"));
+
+  DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE_FLAGS);
+  Status   = gRT->GetVariable (
+                    TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
+                    &gEfiTcg2PhysicalPresenceGuid,
+                    NULL,
+                    &DataSize,
+                    &PpiFlags
+                    );
+  if (EFI_ERROR (Status)) {
+    PpiFlags.PPFlags = PcdGet32 (PcdTcg2PhysicalPresenceFlags);
+  }
+
+  return PpiFlags.PPFlags;
 }

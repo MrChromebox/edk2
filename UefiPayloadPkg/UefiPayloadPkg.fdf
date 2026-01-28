@@ -302,6 +302,11 @@ INF MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
 INF UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
 !endif
+!if $(OPAL_PASSWORD_ENABLE) == TRUE
+!if "X64" IN "$(ARCH)"
+INF SecurityPkg/Tcg/Opal/OpalPassword/OpalPasswordDxe.inf
+!endif
+!endif
 !if $(LVGL_ENABLE) == TRUE
 INF LvglPkg/LvglDisplayEngineDxe/LvglDisplayEngineDxe.inf
 INF LvglPkg/LvglSetupDxe/LvglSetupDxe.inf

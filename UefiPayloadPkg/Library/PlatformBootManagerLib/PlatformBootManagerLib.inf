@@ -30,6 +30,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  SecurityPkg/SecurityPkg.dec
   UefiPayloadPkg/UefiPayloadPkg.dec
   ShellPkg/ShellPkg.dec
   SecurityPkg/SecurityPkg.dec
@@ -47,12 +48,12 @@
   DevicePathLib
   HiiLib
   PrintLib
+  Tcg2PhysicalPresenceLib
   PlatformHookLib
   CapsuleLib
   HobLib
   IoLib
   TcgPhysicalPresenceLib
-  Tcg2PhysicalPresenceLib
 
 [Guids]
   gEfiEndOfDxeEventGroupGuid
