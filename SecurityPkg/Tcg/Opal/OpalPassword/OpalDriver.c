@@ -19,11 +19,107 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 EFI_GUID  mOpalDeviceLockBoxGuid = OPAL_DEVICE_LOCKBOX_GUID;
 
 BOOLEAN                mOpalEndOfDxe            = FALSE;
+STATIC BOOLEAN         mOpalS3LockBoxBuilt      = FALSE;
 OPAL_REQUEST_VARIABLE  *mOpalRequestVariable    = NULL;
 UINTN                  mOpalRequestVariableSize = 0;
 CHAR16                 mPopUpString[100];
 
 OPAL_DRIVER  mOpalDriver;
+
+STATIC EFI_DEVICE_PATH_PROTOCOL  *mS3InitDevicesCache      = NULL;
+STATIC UINTN                     mS3InitDevicesCacheLength = 0;
+
+STATIC
+VOID
+BuildOpalDeviceInfo (
+  VOID
+  );
+
+/**
+  Populate the cached base COMID for an OPAL device.
+
+  @param[in, out]  Dev  OPAL device to query and update.
+
+  @retval The cached base COMID after any refresh attempt.
+
+**/
+STATIC
+UINT16
+RefreshOpalBaseComId (
+  IN OUT OPAL_DRIVER_DEVICE  *Dev
+  )
+{
+  TCG_RESULT                   TcgResult;
+  OPAL_SESSION                 Session;
+  OPAL_DISK_SUPPORT_ATTRIBUTE  SupportedAttributes;
+  UINT16                       BaseComId;
+
+  ASSERT (Dev != NULL);
+
+  ZeroMem (&Session, sizeof (Session));
+  Session.Sscp    = Dev->Sscp;
+  Session.MediaId = Dev->MediaId;
+
+  BaseComId = Dev->OpalDisk.OpalBaseComId;
+  TcgResult = OpalGetSupportedAttributesInfo (&Session, &SupportedAttributes, &BaseComId);
+  if (TcgResult == TcgResultSuccess) {
+    Dev->OpalDisk.OpalBaseComId = BaseComId;
+  }
+
+  return Dev->OpalDisk.OpalBaseComId;
+}
+
+/**
+  Restore the S3 storage initialization device list from LockBox once per boot.
+
+  The cached copy is later reused when rebuilding the OPAL S3 LockBox state at
+  ReadyToBoot.
+
+**/
+STATIC
+VOID
+CacheS3InitDevicesFromLockBox (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT8       DummyData;
+  UINTN       S3InitDevicesLength;
+  VOID        *S3InitDevices;
+
+  if (mS3InitDevicesCache != NULL) {
+    return;
+  }
+
+  S3InitDevices       = NULL;
+  S3InitDevicesLength = sizeof (DummyData);
+  Status              = RestoreLockBox (
+                          &gS3StorageDeviceInitListGuid,
+                          &DummyData,
+                          &S3InitDevicesLength
+                          );
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    return;
+  }
+
+  S3InitDevices = AllocatePool (S3InitDevicesLength);
+  if (S3InitDevices == NULL) {
+    return;
+  }
+
+  Status = RestoreLockBox (
+             &gS3StorageDeviceInitListGuid,
+             S3InitDevices,
+             &S3InitDevicesLength
+             );
+  if (EFI_ERROR (Status)) {
+    FreePool (S3InitDevices);
+    return;
+  }
+
+  mS3InitDevicesCache       = S3InitDevices;
+  mS3InitDevicesCacheLength = S3InitDevicesLength;
+}
 
 //
 // Globals
@@ -195,6 +291,8 @@ OpalSupportUpdatePassword (
 {
   CopyMem (OpalDisk->Password, Password, PasswordLength);
   OpalDisk->PasswordLength = (UINT8)PasswordLength;
+
+  BuildOpalDeviceInfo ();
 }
 
 /**
@@ -296,8 +394,6 @@ BuildOpalDeviceInfo (
   UINTN                     TotalDevInfoLength;
   UINT32                    DevInfoLength;
   OPAL_DRIVER_DEVICE        *TmpDev;
-  UINT8                     DummyData;
-  BOOLEAN                   S3InitDevicesExist;
   UINTN                     S3InitDevicesLength;
   EFI_DEVICE_PATH_PROTOCOL  *S3InitDevices;
   EFI_DEVICE_PATH_PROTOCOL  *S3InitDevicesBak;
@@ -305,6 +401,8 @@ BuildOpalDeviceInfo (
   //
   // Build OPAL device info and save them to LockBox.
   //
+  DevInfo            = NULL;
+  S3InitDevices      = NULL;
   TotalDevInfoLength = 0;
   TmpDev             = mOpalDriver.DeviceList;
   while (TmpDev != NULL) {
@@ -321,38 +419,28 @@ BuildOpalDeviceInfo (
     return;
   }
 
-  S3InitDevicesLength = sizeof (DummyData);
-  Status              = RestoreLockBox (
-                          &gS3StorageDeviceInitListGuid,
-                          &DummyData,
-                          &S3InitDevicesLength
-                          );
-  ASSERT ((Status == EFI_NOT_FOUND) || (Status == EFI_BUFFER_TOO_SMALL));
-  if (Status == EFI_NOT_FOUND) {
-    S3InitDevices      = NULL;
-    S3InitDevicesExist = FALSE;
-  } else if (Status == EFI_BUFFER_TOO_SMALL) {
-    S3InitDevices = AllocatePool (S3InitDevicesLength);
-    ASSERT (S3InitDevices != NULL);
+  //
+  // Don't call RestoreLockBox() for gS3StorageDeviceInitListGuid here.
+  // That LockBox is typically marked RESTORE_IN_S3_ONLY by other drivers at
+  // EndOfDxe, and RestoreLockBox() may be denied later (e.g. ReadyToBoot),
+  // which would ASSERT and stop boot.
+  //
+  // Instead, take any cached list captured earlier and then overwrite/update
+  // the LockBox using SaveLockBox()/UpdateLockBox().
+  //
+  if (mS3InitDevicesCache != NULL) {
+    S3InitDevices = AllocateCopyPool (mS3InitDevicesCacheLength, mS3InitDevicesCache);
     if (S3InitDevices == NULL) {
-      return;
+      goto Cleanup;
     }
-
-    Status = RestoreLockBox (
-               &gS3StorageDeviceInitListGuid,
-               S3InitDevices,
-               &S3InitDevicesLength
-               );
-    ASSERT_EFI_ERROR (Status);
-    S3InitDevicesExist = TRUE;
   } else {
-    return;
+    S3InitDevices = NULL;
   }
 
   DevInfo = AllocateZeroPool (TotalDevInfoLength);
   ASSERT (DevInfo != NULL);
   if (DevInfo == NULL) {
-    return;
+    goto Cleanup;
   }
 
   TempDevInfo = DevInfo;
@@ -364,7 +452,7 @@ BuildOpalDeviceInfo (
       TempDevInfo
       );
     TempDevInfo->Length        = DevInfoLength;
-    TempDevInfo->OpalBaseComId = TmpDev->OpalDisk.OpalBaseComId;
+    TempDevInfo->OpalBaseComId = RefreshOpalBaseComId (TmpDev);
     CopyMem (
       TempDevInfo->Password,
       TmpDev->OpalDisk.Password,
@@ -383,53 +471,41 @@ BuildOpalDeviceInfo (
 
     ASSERT (S3InitDevices != NULL);
     if (S3InitDevices == NULL) {
-      return;
+      goto Cleanup;
     }
 
     TempDevInfo = (OPAL_DEVICE_LOCKBOX_DATA *)((UINTN)TempDevInfo + DevInfoLength);
     TmpDev      = TmpDev->Next;
   }
 
-  Status = SaveLockBox (
-             &mOpalDeviceLockBoxGuid,
-             DevInfo,
-             TotalDevInfoLength
-             );
-  ASSERT_EFI_ERROR (Status);
-
-  Status = SetLockBoxAttributes (
-             &mOpalDeviceLockBoxGuid,
-             LOCK_BOX_ATTRIBUTE_RESTORE_IN_S3_ONLY
-             );
-  ASSERT_EFI_ERROR (Status);
-
-  S3InitDevicesLength = GetDevicePathSize (S3InitDevices);
-  if (S3InitDevicesExist) {
-    Status = UpdateLockBox (
-               &gS3StorageDeviceInitListGuid,
-               0,
-               S3InitDevices,
-               S3InitDevicesLength
-               );
-    ASSERT_EFI_ERROR (Status);
-  } else {
-    Status = SaveLockBox (
-               &gS3StorageDeviceInitListGuid,
-               S3InitDevices,
-               S3InitDevicesLength
-               );
-    ASSERT_EFI_ERROR (Status);
-
-    Status = SetLockBoxAttributes (
-               &gS3StorageDeviceInitListGuid,
-               LOCK_BOX_ATTRIBUTE_RESTORE_IN_S3_ONLY
-               );
-    ASSERT_EFI_ERROR (Status);
+  Status = SaveLockBox (&mOpalDeviceLockBoxGuid, DevInfo, TotalDevInfoLength);
+  if (Status == EFI_ALREADY_STARTED) {
+    Status = UpdateLockBox (&mOpalDeviceLockBoxGuid, 0, DevInfo, TotalDevInfoLength);
   }
 
-  ZeroMem (DevInfo, TotalDevInfoLength);
-  FreePool (DevInfo);
-  FreePool (S3InitDevices);
+  if (!EFI_ERROR (Status)) {
+    Status = SetLockBoxAttributes (&mOpalDeviceLockBoxGuid, LOCK_BOX_ATTRIBUTE_RESTORE_IN_S3_ONLY);
+  }
+
+  S3InitDevicesLength = GetDevicePathSize (S3InitDevices);
+  Status              = SaveLockBox (&gS3StorageDeviceInitListGuid, S3InitDevices, S3InitDevicesLength);
+  if (Status == EFI_ALREADY_STARTED) {
+    Status = UpdateLockBox (&gS3StorageDeviceInitListGuid, 0, S3InitDevices, S3InitDevicesLength);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = SetLockBoxAttributes (&gS3StorageDeviceInitListGuid, LOCK_BOX_ATTRIBUTE_RESTORE_IN_S3_ONLY);
+  }
+
+Cleanup:
+  if (DevInfo != NULL) {
+    ZeroMem (DevInfo, TotalDevInfoLength);
+    FreePool (DevInfo);
+  }
+
+  if (S3InitDevices != NULL) {
+    FreePool (S3InitDevices);
+  }
 }
 
 /**
@@ -454,7 +530,7 @@ SendBlockSidCommand (
     //
     Itr = mOpalDriver.DeviceList;
     while (Itr != NULL) {
-      if (Itr->OpalDisk.SupportedAttributes.BlockSid) {
+      if (Itr->OpalDisk.SupportedAttributes.BlockSid && !Itr->OpalDisk.SentBlockSID) {
         ZeroMem (&Session, sizeof (Session));
         Session.Sscp          = Itr->OpalDisk.Sscp;
         Session.MediaId       = Itr->OpalDisk.MediaId;
@@ -494,20 +570,50 @@ OpalEndOfDxeEventNotify (
   VOID       *Context
   )
 {
-  OPAL_DRIVER_DEVICE  *TmpDev;
-
-  DEBUG ((DEBUG_INFO, "%a() - enter\n", __func__));
-
   mOpalEndOfDxe = TRUE;
 
-  if (mOpalRequestVariable != NULL) {
-    //
-    // Free the OPAL request variable buffer here
-    // as the OPAL requests should have been processed.
-    //
-    FreePool (mOpalRequestVariable);
-    mOpalRequestVariable     = NULL;
-    mOpalRequestVariableSize = 0;
+  CacheS3InitDevicesFromLockBox ();
+
+  //
+  // If no any device, return directly.
+  //
+  if (mOpalDriver.DeviceList == NULL) {
+    gBS->CloseEvent (Event);
+    return;
+  }
+
+  //
+  // Send BlockSid command if needed.
+  //
+  SendBlockSidCommand ();
+
+  gBS->CloseEvent (Event);
+}
+
+/**
+  Notification function of EFI_EVENT_GROUP_READY_TO_BOOT event group.
+
+  At ReadyToBoot, storage controllers are typically connected and any OPAL
+  password prompts have already occurred. Build the LockBox used for S3 resume
+  unlock at this point so passwords are available even if the device was
+  connected after EndOfDxe.
+
+  @param  Event        Event whose notification function is being invoked.
+  @param  Context      Pointer to the notification function's context.
+
+**/
+VOID
+EFIAPI
+OpalReadyToBootEventNotify (
+  EFI_EVENT  Event,
+  VOID       *Context
+  )
+{
+  OPAL_DRIVER_DEVICE  *TmpDev;
+
+  if (mOpalS3LockBoxBuilt) {
+    gBS->CloseEvent (Event);
+    return;
   }
 
   //
@@ -519,9 +625,10 @@ OpalEndOfDxeEventNotify (
   }
 
   BuildOpalDeviceInfo ();
+  mOpalS3LockBoxBuilt = TRUE;
 
   //
-  // Zero passsword.
+  // Zero password after saving to LockBox.
   //
   TmpDev = mOpalDriver.DeviceList;
   while (TmpDev != NULL) {
@@ -530,11 +637,21 @@ OpalEndOfDxeEventNotify (
   }
 
   //
-  // Send BlockSid command if needed.
+  // Free the OPAL request variable buffer after devices have had a chance to
+  // process requests during controller connection.
   //
-  SendBlockSidCommand ();
+  if (mOpalRequestVariable != NULL) {
+    FreePool (mOpalRequestVariable);
+    mOpalRequestVariable     = NULL;
+    mOpalRequestVariableSize = 0;
+  }
 
-  DEBUG ((DEBUG_INFO, "%a() - exit\n", __func__));
+  if (mS3InitDevicesCache != NULL) {
+    ZeroMem (mS3InitDevicesCache, mS3InitDevicesCacheLength);
+    FreePool (mS3InitDevicesCache);
+    mS3InitDevicesCache       = NULL;
+    mS3InitDevicesCacheLength = 0;
+  }
 
   gBS->CloseEvent (Event);
 }
@@ -2187,8 +2304,6 @@ ProcessOpalRequest (
   UINTN                     DevicePathSize;
   BOOLEAN                   KeepUserData;
 
-  DEBUG ((DEBUG_INFO, "%a() - enter\n", __func__));
-
   if (mOpalRequestVariable == NULL) {
     Status = GetVariable2 (
                OPAL_REQUEST_VARIABLE_NAME,
@@ -2283,7 +2398,6 @@ ProcessOpalRequest (
     TempVariable  = (OPAL_REQUEST_VARIABLE *)((UINTN)TempVariable + TempVariable->Length);
   }
 
-  DEBUG ((DEBUG_INFO, "%a() - exit\n", __func__));
 }
 
 /**
@@ -2608,6 +2722,7 @@ EfiDriverEntryPoint (
 {
   EFI_STATUS  Status;
   EFI_EVENT   EndOfDxeEvent;
+  EFI_EVENT   ReadyToBootEvent;
 
   Status = EfiLibInstallDriverBindingComponentName2 (
              ImageHandle,
@@ -2636,6 +2751,16 @@ EfiDriverEntryPoint (
                   NULL,
                   &gEfiEndOfDxeEventGroupGuid,
                   &EndOfDxeEvent
+                  );
+  ASSERT_EFI_ERROR (Status);
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  OpalReadyToBootEventNotify,
+                  NULL,
+                  &gEfiEventReadyToBootGuid,
+                  &ReadyToBootEvent
                   );
   ASSERT_EFI_ERROR (Status);
 
@@ -2681,10 +2806,6 @@ OpalEfiDriverBindingSupported (
 {
   EFI_STATUS                             Status;
   EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *SecurityCommand;
-
-  if (mOpalEndOfDxe) {
-    return EFI_UNSUPPORTED;
-  }
 
   //
   // Test EFI_STORAGE_SECURITY_COMMAND_PROTOCOL on controller Handle.
@@ -2875,6 +2996,13 @@ OpalEfiDriverBindingStart (
   // Process OPAL request from last boot.
   //
   ProcessOpalRequest (Dev);
+
+  //
+  // If this device was connected after EndOfDxe, ensure BlockSID is applied if enabled.
+  //
+  if (mOpalEndOfDxe) {
+    SendBlockSidCommand ();
+  }
 
   return EFI_SUCCESS;
 
