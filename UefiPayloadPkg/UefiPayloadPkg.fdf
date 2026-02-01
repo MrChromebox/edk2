@@ -470,11 +470,13 @@ INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
     }
   !endif
   #
-  # Realtek UNDI (RTL8168 etc.) for PXE - Acer CXI4
+  # Realtek UNDI (RTL8168 etc.) for PXE - Acer CXI4 (controlled by coreboot CONFIG_EDK2_RTKUNDI_DRIVER → RTKUNDI_ENABLE)
   #
+  !if $(RTKUNDI_ENABLE) == TRUE
   FILE DRIVER = 10EC8168-8168-4B9F-9A5E-9F8E7D6C5B4A {
     SECTION PE32 = UefiPayloadPkg/NetworkDrivers/RtkUndiDxe.efi
   }
+  !endif
   #
   # Rng Protocol producer
   #
