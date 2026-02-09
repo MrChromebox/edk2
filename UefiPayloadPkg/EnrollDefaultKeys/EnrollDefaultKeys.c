@@ -417,6 +417,22 @@ EnrollDefaultKeys (
     DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: already in User Mode\n"));
     return;
   }
+
+  //
+  // Only auto-enroll on a truly fresh setup (first boot). If KEK already exists,
+  // the user previously had keys and deleted PK to enter Setup Mode; do not
+  // re-enroll and overwrite their choice.
+  //
+  {
+    UINTN  KekSize = 0;
+    Status = gRT->GetVariable (EFI_KEY_EXCHANGE_KEY_NAME, &gEfiGlobalVariableGuid,
+                              NULL, &KekSize, NULL);
+    if (Status == EFI_BUFFER_TOO_SMALL && KekSize > 0) {
+      DEBUG ((DEBUG_INFO, "EnrollDefaultKeys: KEK present, skip (user entered Setup Mode)\n"));
+      return;
+    }
+  }
+
   PrintSettings (&Settings);
 
   if (Settings.CustomMode != CUSTOM_SECURE_BOOT_MODE) {
