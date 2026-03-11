@@ -2045,12 +2045,9 @@ ProcessCallBackFunction (
         SetQuestionValue (FormSet, Form, Statement, GetSetValueWithEditBuffer);
       }
     }
-
-    Link = GetFirstNode (&Form->StatementListHead);
-  } else {
-    Link = GetFirstNode (&Form->StatementListHead);
   }
 
+  Link = GetFirstNode (&Form->StatementListHead);
   while (!IsNull (&Form->StatementListHead, Link)) {
     Statement = FORM_BROWSER_STATEMENT_FROM_LINK (Link);
     Link      = GetNextNode (&Form->StatementListHead, Link);
@@ -2713,3 +2710,4 @@ Done:
                   );
   return Status;
 }
+
