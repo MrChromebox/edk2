@@ -567,6 +567,24 @@
   # @Prompt Skip Hdd Password prompt.
   gEfiSecurityPkgTokenSpaceGuid.PcdSkipHddPasswordPrompt|FALSE|BOOLEAN|0x00010021
 
+  ## Enables a simplified, consumer-oriented UI for TCG Storage / OPAL drive management.<BR><BR>
+  #   FALSE - Default/full UI with advanced options.<BR>
+  #   TRUE  - Simple UI exposing only password set/change/disable and an erase & reset action.<BR>
+  # @Prompt Enable simplified TCG Storage UI.
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcgStorageSimpleUi|FALSE|BOOLEAN|0x00010032
+
+  ## Enables a simplified, consumer-oriented UI for Secure Boot configuration.<BR><BR>
+  #   FALSE - Default/full UI with advanced options.<BR>
+  #   TRUE  - Simple UI exposing only Secure Boot enable/disable and restoring default keys, plus an Advanced page for mode/keys.<BR>
+  # @Prompt Enable simplified Secure Boot UI.
+  gEfiSecurityPkgTokenSpaceGuid.PcdSecureBootConfigSimpleUi|FALSE|BOOLEAN|0x00010033
+
+  ## Enables a simplified, consumer-oriented UI for TPM configuration.<BR><BR>
+  #   FALSE - Default/full UI with advanced options.<BR>
+  #   TRUE  - Simple UI exposing only TPM status and a Clear TPM action, with Advanced options hidden behind a submenu.<BR>
+  # @Prompt Enable simplified TPM UI.
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2ConfigSimpleUi|FALSE|BOOLEAN|0x00010034
+
 [PcdsDynamic, PcdsDynamicEx]
 
   ## This PCD indicates Hash mask for TPM 2.0. Bit definition strictly follows TCG Algorithm Registry.<BR><BR>

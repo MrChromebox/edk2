@@ -28,6 +28,7 @@
   Tcg2ConfigImpl.c
   Tcg2ConfigImpl.h
   Tcg2Config.vfr
+  Tcg2ConfigSimple.vfr
   Tcg2ConfigStrings.uni
   Tcg2ConfigNvData.h
   Tcg2Internal.h
@@ -77,6 +78,7 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTcgPhysicalPresenceInterfaceVer  ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev           ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType     ## CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2ConfigSimpleUi         ## CONSUMES
 
 [Depex]
   gEfiTcg2ProtocolGuid              AND

@@ -11,6 +11,14 @@
 #string STR_TCG2_TITLE                      #language en-US "TPM 2.0 Configuration"
 #string STR_TCG2_HELP                       #language en-US "Press <Enter> to select TPM Setup options."
 
+#string STR_TCG2_SIMPLE_TITLE               #language en-US "TPM"
+#string STR_TCG2_SIMPLE_HELP                #language en-US "Press <Enter> to configure TPM options."
+#string STR_TCG2_SIMPLE_ADVANCED_TITLE      #language en-US "TPM (Advanced)"
+#string STR_TCG2_SIMPLE_ADVANCED_PROMPT     #language en-US "Advanced Options"
+#string STR_TCG2_SIMPLE_ADVANCED_HELP       #language en-US "Configure TPM device, interface, and PCR bank settings."
+#string STR_TCG2_SIMPLE_CLEAR_PROMPT        #language en-US "Clear TPM"
+#string STR_TCG2_SIMPLE_CLEAR_HELP          #language en-US "Clears TPM state. This can affect disk encryption (e.g., BitLocker). Requires a reboot."
+
 #string STR_TCG2_DEVICE_STATE_PROMPT        #language en-US "Current TPM Device"
 #string STR_TCG2_DEVICE_STATE_HELP          #language en-US "Current TPM Device: Disable, TPM1.2, or TPM2.0"
 #string STR_TCG2_DEVICE_STATE_CONTENT       #language en-US ""

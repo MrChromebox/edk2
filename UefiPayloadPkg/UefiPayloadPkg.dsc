@@ -178,6 +178,7 @@
   # Security
   #
   DEFINE SECURE_BOOT_ENABLE       = FALSE
+  DEFINE SECURE_BOOT_SIMPLE_UI    = FALSE
 
   #
   # Flat DeviceTree handoff option:
@@ -226,6 +227,8 @@
   DEFINE TPM_ENABLE                     = TRUE
   DEFINE TPM2_ENABLE                    = TRUE
   DEFINE TPM1_ENABLE                    = TRUE
+  DEFINE TPM_SIMPLE_UI                  = FALSE
+  DEFINE TCG_STORAGE_SIMPLE_UI          = FALSE
 
 [BuildOptions]
   *_*_*_CC_FLAGS                 = -D DISABLE_NEW_DEPRECATED_INTERFACES
@@ -835,6 +838,18 @@
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
   ## User Authentication PCD
   gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
+!endif
+
+!if "$(SECURE_BOOT_SIMPLE_UI)" == "TRUE" || "$(SECURE_BOOT_SIMPLE_UI)" == "ON" || "$(SECURE_BOOT_SIMPLE_UI)" == "1"
+  gEfiSecurityPkgTokenSpaceGuid.PcdSecureBootConfigSimpleUi|TRUE
+!endif
+
+!if "$(TPM_SIMPLE_UI)" == "TRUE" || "$(TPM_SIMPLE_UI)" == "ON" || "$(TPM_SIMPLE_UI)" == "1"
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2ConfigSimpleUi|TRUE
+!endif
+
+!if "$(TCG_STORAGE_SIMPLE_UI)" == "TRUE" || "$(TCG_STORAGE_SIMPLE_UI)" == "ON" || "$(TCG_STORAGE_SIMPLE_UI)" == "1"
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcgStorageSimpleUi|TRUE
 !endif
 
 !if $(CRYPTO_PROTOCOL_SUPPORT) == TRUE

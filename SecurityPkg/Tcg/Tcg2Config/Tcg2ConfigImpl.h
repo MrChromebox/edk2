@@ -43,6 +43,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 // Tool generated IFR binary data and String package data
 //
 extern UINT8  Tcg2ConfigBin[];
+extern UINT8  Tcg2ConfigSimpleBin[];
 extern UINT8  Tcg2ConfigDxeStrings[];
 
 ///

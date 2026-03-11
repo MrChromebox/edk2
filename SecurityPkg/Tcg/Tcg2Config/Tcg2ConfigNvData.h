@@ -16,6 +16,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define TCG2_CONFIGURATION_INFO_VARSTORE_ID  0x0002
 #define TCG2_VERSION_VARSTORE_ID             0x0003
 #define TCG2_CONFIGURATION_FORM_ID           0x0001
+#define TCG2_ADVANCED_FORM_ID                0x0002
 
 #define KEY_TPM_DEVICE                0x2000
 #define KEY_TPM2_OPERATION            0x2001
@@ -28,6 +29,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define KEY_TPM_DEVICE_INTERFACE      0x2008
 #define KEY_TCG2_PPI_VERSION          0x2009
 #define KEY_TPM2_ACPI_REVISION        0x200A
+#define KEY_TCG2_ADVANCED             0x2010
+#define KEY_TCG2_CLEAR_TPM            0x2011
 
 #define TPM_DEVICE_NULL      0
 #define TPM_DEVICE_1_2       1

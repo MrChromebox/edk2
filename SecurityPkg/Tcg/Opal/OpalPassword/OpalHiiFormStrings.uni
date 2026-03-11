@@ -17,7 +17,7 @@
 #string STR_FORM_SET_HELP                        #language en-US "Select to manage"
 
 /////////////////////////////////   MULTIPLE FORMS   /////////////////////////////////
-#string STR_OPAL                                 #language en-US "TCG Drive Management"
+#string STR_OPAL                                 #language en-US "TCG Disk Encryption"
 
 /////////////////////////////////   MAIN MENU FORM   /////////////////////////////////
 #string STR_MAIN_PHY_DISKS_LBL                   #language en-US "Physical Disks:"
@@ -78,3 +78,20 @@
 #string STR_KEEP_USER_DATA_HELP                  #language en-US "Check to keep user data, otherwise data will be lost"
 
 #string STR_DISK_INFO_ENABLE_BLOCKSID_HELP       #language en-US "Change BlockSID actions, includes enable or disable BlockSID, Require or not require physical presence when remote enable or disable BlockSID"
+
+/////////////////////////////////   SIMPLE UI MODE   /////////////////////////////////
+#string STR_SIMPLE_FORM_SET_HELP                  #language en-US "Select to manage disk protection"
+#string STR_SIMPLE_DISK_PROTECTION                #language en-US "TCG Disk Encryption"
+#string STR_SIMPLE_MAIN_TITLE_LBL                 #language en-US "Choose a disk to manage its protection password."
+#string STR_SIMPLE_DISK_INFO_TITLE_LBL             #language en-US "Manage the disk protection password, or erase and reset the disk if the password is forgotten."
+#string STR_SIMPLE_ACTIONS_LBL                    #language en-US "Actions:"
+
+#string STR_SIMPLE_SET_DISK_ADMIN_PASSWORD        #language en-US "Set password"
+#string STR_SIMPLE_SET_DISK_ADMIN_PASSWORD_HELP   #language en-US "Set a new password. A reset is required for the request to be processed on next boot."
+#string STR_SIMPLE_CHANGE_DISK_ADMIN_PASSWORD     #language en-US "Change password"
+#string STR_SIMPLE_CHANGE_DISK_ADMIN_PASSWORD_HELP #language en-US "Change the password. Requires the current password. A reset is required for the request to be processed on next boot."
+#string STR_SIMPLE_DISABLE_DISK_ADMIN_PASSWORD    #language en-US "Remove password"
+#string STR_SIMPLE_DISABLE_DISK_ADMIN_PASSWORD_HELP #language en-US "Remove the password without erasing data. Requires the current password. A reset is required for the request to be processed on next boot."
+
+#string STR_SIMPLE_ERASE_AND_RESET                #language en-US "Erase and Reset (Forgotten password)"
+#string STR_SIMPLE_ERASE_AND_RESET_HELP           #language en-US "Erase all data and reset the disk security state. This does not require the current password, but requires strong confirmation and a reset key printed on the drive label. A reset is required for the request to be processed on next boot."

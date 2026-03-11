@@ -564,18 +564,21 @@ Tcg2Callback (
   CHAR8                     HidStr[16];
   CHAR16                    UnHidStr[16];
   TCG2_CONFIG_PRIVATE_DATA  *Private;
+  BOOLEAN                   SimpleUi;
+  EFI_INPUT_KEY             Key;
 
   if ((This == NULL) || (Value == NULL) || (ActionRequest == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   Private = TCG2_CONFIG_PRIVATE_DATA_FROM_THIS (This);
+  SimpleUi = PcdGetBool (PcdTcg2ConfigSimpleUi);
 
   if (Action == EFI_BROWSER_ACTION_FORM_OPEN) {
     //
     // Update TPM2 HID info
     //
-    if (QuestionId == KEY_TPM_DEVICE) {
+    if ((QuestionId == KEY_TPM_DEVICE) || (SimpleUi && (QuestionId == KEY_TCG2_ADVANCED))) {
       Status = GetTpm2HID (HidStr, 16);
 
       if (EFI_ERROR (Status)) {
@@ -593,6 +596,45 @@ Tcg2Callback (
   }
 
   if (Action == EFI_BROWSER_ACTION_CHANGING) {
+    if (SimpleUi && (QuestionId == KEY_TCG2_CLEAR_TPM)) {
+      CreatePopUp (
+        EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+        &Key,
+        L"Clear TPM?",
+        L"This can affect disk encryption (e.g., BitLocker).",
+        L"Press 'Y' to continue, 'N' to cancel.",
+        NULL
+        );
+      if ((Key.UnicodeChar == 'y') || (Key.UnicodeChar == 'Y')) {
+        do {
+            CreatePopUp (
+              EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+              &Key,
+              L"Reboot required to clear the TPM.",
+              L"Enter to continue, Esc to cancel.",
+              NULL
+              );
+          } while ((Key.UnicodeChar != CHAR_CARRIAGE_RETURN) && (Key.ScanCode != SCAN_ESC));
+
+        if (Key.UnicodeChar == CHAR_CARRIAGE_RETURN) {
+          Status = SaveTcg2PpRequest (TCG2_PHYSICAL_PRESENCE_CLEAR);
+          if (EFI_ERROR (Status)) {
+            CreatePopUp (
+              EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+              &Key,
+              L"Error: Failed to schedule Clear TPM.",
+              NULL
+              );
+            return Status;
+          }
+
+          gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+        }
+      }
+
+      return EFI_SUCCESS;
+    }
+
     if (QuestionId == KEY_TPM_DEVICE_INTERFACE) {
       Status = SetPtpInterface ((VOID *)(UINTN)PcdGet64 (PcdTpmBaseAddress), Value->u8);
       if (EFI_ERROR (Status)) {
@@ -849,6 +891,7 @@ InstallTcg2ConfigForm (
   EFI_HII_HANDLE                   HiiHandle;
   EFI_HANDLE                       DriverHandle;
   EFI_HII_CONFIG_ACCESS_PROTOCOL   *ConfigAccess;
+  VOID                             *FormBin;
   UINTN                            Index;
   TPML_PCR_SELECTION               Pcrs;
   CHAR16                           TempBuffer[1024];
@@ -873,6 +916,8 @@ InstallTcg2ConfigForm (
 
   PrivateData->DriverHandle = DriverHandle;
 
+  FormBin = PcdGetBool (PcdTcg2ConfigSimpleUi) ? (VOID *)Tcg2ConfigSimpleBin : (VOID *)Tcg2ConfigBin;
+
   //
   // Publish the HII package list
   //
@@ -880,7 +925,7 @@ InstallTcg2ConfigForm (
                 &gTcg2ConfigFormSetGuid,
                 DriverHandle,
                 Tcg2ConfigDxeStrings,
-                Tcg2ConfigBin,
+                FormBin,
                 NULL
                 );
   if (HiiHandle == NULL) {

@@ -18,6 +18,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 // create a packagelist (which contains Form packages, String packages, etc).
 //
 extern UINT8  OpalPasswordFormBin[];
+extern UINT8  OpalPasswordSimpleFormBin[];
 
 //
 // This is the generated String package Data for all .UNI files.
@@ -48,6 +49,7 @@ const EFI_GUID  gOpalSetupFormSetGuid = SETUP_FORMSET_GUID;
 // is rendered in the HII.
 //
 OPAL_HII_CONFIGURATION  gHiiConfiguration;
+STATIC BOOLEAN          mMainMenuPopulated      = FALSE;
 
 //
 // The device path containing the VENDOR_DEVICE_PATH and EFI_DEVICE_PATH_PROTOCOL
@@ -268,6 +270,77 @@ SaveOpalRequest (
   DEBUG ((DEBUG_INFO, "%a() - exit\n", __func__));
 }
 
+STATIC
+EFI_STATUS
+HiiConfirmResetNow (
+  VOID
+  )
+{
+  EFI_INPUT_KEY  Key;
+
+  do {
+    CreatePopUp (
+      EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+      &Key,
+      L"Enter to continue, Esc to cancel",
+      NULL
+      );
+  } while ((Key.UnicodeChar != CHAR_CARRIAGE_RETURN) && (Key.ScanCode != SCAN_ESC));
+
+  if (Key.ScanCode == SCAN_ESC) {
+    return EFI_ABORTED;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+HiiSimpleUiScheduleRequestAndReset (
+  IN UINT8  HiiKeyId
+  )
+{
+  EFI_STATUS    Status;
+  OPAL_DISK     *OpalDisk;
+  OPAL_REQUEST  OpalRequest;
+
+  OpalHiiGetBrowserData ();
+
+  OpalDisk = HiiGetOpalDiskCB (gHiiConfiguration.SelectedDiskIndex);
+  if (OpalDisk == NULL) {
+    return EFI_UNSUPPORTED;
+  }
+
+  ZeroMem (&OpalRequest, sizeof (OpalRequest));
+  switch (HiiKeyId) {
+    case HII_KEY_ID_ENABLE_FEATURE:
+      OpalRequest.EnableFeature = 1;
+      break;
+    case HII_KEY_ID_SET_ADMIN_PWD:
+      OpalRequest.SetAdminPwd = 1;
+      break;
+    case HII_KEY_ID_REVERT:
+      OpalRequest.Revert       = 1;
+      OpalRequest.KeepUserData = 1;
+      break;
+    case HII_KEY_ID_PSID_REVERT:
+      OpalRequest.PsidRevert = 1;
+      break;
+    default:
+      return EFI_UNSUPPORTED;
+  }
+
+  Status = HiiConfirmResetNow ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  SaveOpalRequest (OpalDisk, OpalRequest);
+
+  gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+  return EFI_SUCCESS;
+}
+
 /**
   Sets the current system state of global config variables.
 
@@ -401,8 +474,11 @@ OpalHiiAddPackages (
   )
 {
   EFI_HANDLE  DriverHandle;
+  VOID        *FormBin;
 
   DriverHandle = HiiGetDriverImageHandleCB ();
+
+  FormBin = TcgStorageIsSimpleUiEnabled () ? (VOID *)OpalPasswordSimpleFormBin : (VOID *)OpalPasswordFormBin;
 
   //
   // Publish the HII form and HII string packages
@@ -411,7 +487,7 @@ OpalHiiAddPackages (
                             &gHiiPackageListGuid,
                             DriverHandle,
                             OpalPasswordDxeStrings,
-                            OpalPasswordFormBin,
+                            FormBin,
                             (VOID *)NULL
                             );
 
@@ -463,6 +539,32 @@ HiiUninstall (
 }
 
 /**
+  Populate NumDisks and SupportedDisks in gHiiConfiguration.
+  Used by ExtractConfig so the main Settings page can read status before
+  the Opal form has been opened.
+
+**/
+STATIC
+VOID
+HiiPopulateConfigForExtract (
+  VOID
+  )
+{
+  UINT8      Index;
+  OPAL_DISK  *OpalDisk;
+
+  gHiiConfiguration.NumDisks       = GetDeviceCount ();
+  gHiiConfiguration.SupportedDisks = 0;
+
+  for (Index = 0; Index < gHiiConfiguration.NumDisks; Index++) {
+    OpalDisk = HiiGetOpalDiskCB (Index);
+    if ((OpalDisk != NULL) && OpalFeatureSupported (&OpalDisk->SupportedAttributes)) {
+      gHiiConfiguration.SupportedDisks |= (1 << Index);
+    }
+  }
+}
+
+/**
   Updates the main menu form.
 
   @retval  EFI_SUCCESS           update the main form success.
@@ -496,6 +598,7 @@ HiiPopulateMainMenuForm (
   }
 
   OpalHiiSetBrowserData ();
+  mMainMenuPopulated = TRUE;
   return EFI_SUCCESS;
 }
 
@@ -639,6 +742,7 @@ DriverCallback (
   HiiKeyId   = (UINT8)HiiKey.KeyBits.Id;
 
   if (Action == EFI_BROWSER_ACTION_RETRIEVE) {
+
     if ((HiiKeyId == HII_KEY_ID_VAR_SUPPORTED_DISKS) || (HiiKeyId == HII_KEY_ID_VAR_SELECTED_DISK_AVAILABLE_ACTIONS)) {
       //
       // Allocate space for creation of UpdateData Buffer
@@ -669,17 +773,22 @@ DriverCallback (
       switch (HiiKeyId) {
         case HII_KEY_ID_VAR_SUPPORTED_DISKS:
           DEBUG ((DEBUG_INFO, "HII_KEY_ID_VAR_SUPPORTED_DISKS\n"));
-          Status = HiiPopulateMainMenuForm ();
+          if (!mMainMenuPopulated) {
+            Status = HiiPopulateMainMenuForm ();
 
-          StartLabel->Number = OPAL_MAIN_MENU_LABEL_START;
-          EndLabel->Number   = OPAL_MAIN_MENU_LABEL_END;
-          HiiUpdateForm (
-            gHiiPackageListHandle,
-            (EFI_GUID *)&gOpalSetupFormSetGuid,
-            FORMID_VALUE_MAIN_MENU,
-            StartOpCodeHandle,
-            EndOpCodeHandle
-            );
+            StartLabel->Number = OPAL_MAIN_MENU_LABEL_START;
+            EndLabel->Number   = OPAL_MAIN_MENU_LABEL_END;
+            HiiUpdateForm (
+              gHiiPackageListHandle,
+              (EFI_GUID *)&gOpalSetupFormSetGuid,
+              FORMID_VALUE_MAIN_MENU,
+              StartOpCodeHandle,
+              EndOpCodeHandle
+              );
+          } else {
+            OpalHiiSetBrowserData ();
+            Status = EFI_SUCCESS;
+          }
           break;
 
         case HII_KEY_ID_VAR_SELECTED_DISK_AVAILABLE_ACTIONS:
@@ -708,11 +817,70 @@ DriverCallback (
       case HII_KEY_ID_GOTO_DISK_INFO:
         return HiiSelectDisk ((UINT8)HiiKey.KeyBits.Index);
 
+      case HII_KEY_ID_ENABLE_FEATURE:
+      case HII_KEY_ID_SET_ADMIN_PWD:
+        if (TcgStorageIsSimpleUiEnabled ()) {
+          return HiiSimpleUiScheduleRequestAndReset (HiiKeyId);
+        }
+
+        return EFI_SUCCESS;
+
       case HII_KEY_ID_REVERT:
+        OpalDisk = HiiGetOpalDiskCB (gHiiConfiguration.SelectedDiskIndex);
+        if (OpalDisk != NULL) {
+          Status = HiiConfirmDataRemovalAction (
+                     OpalDisk,
+                     TcgStorageIsSimpleUiEnabled () ? L"Remove disk admin password" : L"Revert"
+                     );
+          if (EFI_ERROR (Status)) {
+            return Status;
+          }
+
+          if (TcgStorageIsSimpleUiEnabled ()) {
+            return HiiSimpleUiScheduleRequestAndReset (HII_KEY_ID_REVERT);
+          }
+
+          return EFI_SUCCESS;
+        } else {
+          ASSERT (FALSE);
+          return EFI_SUCCESS;
+        }
+
       case HII_KEY_ID_PSID_REVERT:
         OpalDisk = HiiGetOpalDiskCB (gHiiConfiguration.SelectedDiskIndex);
         if (OpalDisk != NULL) {
-          return HiiConfirmDataRemovalAction (OpalDisk, L"Revert");
+          if (TcgStorageIsSimpleUiEnabled ()) {
+            EFI_INPUT_KEY  ConfirmKey;
+
+            do {
+              CreatePopUp (
+                EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+                &ConfirmKey,
+                L"WARNING: Erase & Reset will permanently delete all data on this disk.",
+                L"Press 'Y/y' to schedule, or 'N/n' to cancel.",
+                NULL
+                );
+            } while (((ConfirmKey.UnicodeChar | UPPER_LOWER_CASE_OFFSET) != (L'Y' | UPPER_LOWER_CASE_OFFSET)) &&
+                     ((ConfirmKey.UnicodeChar | UPPER_LOWER_CASE_OFFSET) != (L'N' | UPPER_LOWER_CASE_OFFSET)));
+
+            if ((ConfirmKey.UnicodeChar | UPPER_LOWER_CASE_OFFSET) == (L'N' | UPPER_LOWER_CASE_OFFSET)) {
+              return EFI_ABORTED;
+            }
+          }
+
+          Status = HiiConfirmDataRemovalAction (
+                     OpalDisk,
+                     TcgStorageIsSimpleUiEnabled () ? L"Erase & Reset" : L"PSID Revert"
+                     );
+          if (EFI_ERROR (Status)) {
+            return Status;
+          }
+
+          if (TcgStorageIsSimpleUiEnabled ()) {
+            return HiiSimpleUiScheduleRequestAndReset (HII_KEY_ID_PSID_REVERT);
+          }
+
+          return EFI_SUCCESS;
         } else {
           ASSERT (FALSE);
           return EFI_SUCCESS;
@@ -772,6 +940,14 @@ DriverCallback (
 
       case HII_KEY_ID_SET_ADMIN_PWD:
         DEBUG ((DEBUG_INFO, "HII_KEY_ID_SET_ADMIN_PWD\n"));
+        if (TcgStorageIsSimpleUiEnabled ()) {
+          return HiiSimpleUiScheduleRequestAndReset (HII_KEY_ID_SET_ADMIN_PWD);
+        }
+
+        if (Value == NULL) {
+          return EFI_INVALID_PARAMETER;
+        }
+
         gHiiConfiguration.OpalRequest.SetAdminPwd = Value->b;
         OpalDisk                                  = HiiGetOpalDiskCB (gHiiConfiguration.SelectedDiskIndex);
         if (OpalDisk != NULL) {
@@ -805,7 +981,18 @@ DriverCallback (
 
       case HII_KEY_ID_REVERT:
         DEBUG ((DEBUG_INFO, "HII_KEY_ID_REVERT\n"));
+        if (TcgStorageIsSimpleUiEnabled ()) {
+          return HiiSimpleUiScheduleRequestAndReset (HII_KEY_ID_REVERT);
+        }
+
+        if (Value == NULL) {
+          return EFI_INVALID_PARAMETER;
+        }
+
         gHiiConfiguration.OpalRequest.Revert = Value->b;
+        if (TcgStorageIsSimpleUiEnabled () && (Value->b != 0)) {
+          gHiiConfiguration.OpalRequest.KeepUserData = 1;
+        }
         OpalDisk                             = HiiGetOpalDiskCB (gHiiConfiguration.SelectedDiskIndex);
         if (OpalDisk != NULL) {
           SaveOpalRequest (OpalDisk, gHiiConfiguration.OpalRequest);
@@ -826,6 +1013,14 @@ DriverCallback (
 
       case HII_KEY_ID_PSID_REVERT:
         DEBUG ((DEBUG_INFO, "HII_KEY_ID_PSID_REVERT\n"));
+        if (TcgStorageIsSimpleUiEnabled ()) {
+          return HiiSimpleUiScheduleRequestAndReset (HII_KEY_ID_PSID_REVERT);
+        }
+
+        if (Value == NULL) {
+          return EFI_INVALID_PARAMETER;
+        }
+
         gHiiConfiguration.OpalRequest.PsidRevert = Value->b;
         OpalDisk                                 = HiiGetOpalDiskCB (gHiiConfiguration.SelectedDiskIndex);
         if (OpalDisk != NULL) {
@@ -848,6 +1043,14 @@ DriverCallback (
 
       case HII_KEY_ID_ENABLE_FEATURE:
         DEBUG ((DEBUG_INFO, "HII_KEY_ID_ENABLE_FEATURE\n"));
+        if (TcgStorageIsSimpleUiEnabled ()) {
+          return HiiSimpleUiScheduleRequestAndReset (HII_KEY_ID_ENABLE_FEATURE);
+        }
+
+        if (Value == NULL) {
+          return EFI_INVALID_PARAMETER;
+        }
+
         gHiiConfiguration.OpalRequest.EnableFeature = Value->b;
         OpalDisk                                    = HiiGetOpalDiskCB (gHiiConfiguration.SelectedDiskIndex);
         if (OpalDisk != NULL) {
@@ -1099,6 +1302,12 @@ ExtractConfig (
   {
     return EFI_NOT_FOUND;
   }
+
+  //
+  // Ensure gHiiConfiguration is populated so callers (e.g. main Settings page)
+  // can read NumDisks and SupportedDisks even before the Opal form is opened.
+  //
+  HiiPopulateConfigForExtract ();
 
   AllocatedRequest = FALSE;
   BufferSize       = sizeof (OPAL_HII_CONFIGURATION);

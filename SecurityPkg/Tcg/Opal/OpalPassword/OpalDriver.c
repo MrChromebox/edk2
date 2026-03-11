@@ -16,6 +16,11 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include "OpalDriver.h"
 #include "OpalHii.h"
 
+#include <Protocol/DiskInfo.h>
+#include <Protocol/NvmExpressPassthru.h>
+#include <IndustryStandard/Atapi.h>
+#include <IndustryStandard/Nvme.h>
+
 EFI_GUID  mOpalDeviceLockBoxGuid = OPAL_DEVICE_LOCKBOX_GUID;
 
 BOOLEAN                mOpalEndOfDxe            = FALSE;
@@ -119,6 +124,337 @@ CacheS3InitDevicesFromLockBox (
 
   mS3InitDevicesCache       = S3InitDevices;
   mS3InitDevicesCacheLength = S3InitDevicesLength;
+}
+
+STATIC
+VOID
+TrimAsciiStringInPlace (
+  IN OUT CHAR8  *Str
+  )
+{
+  UINTN  Start;
+  UINTN  End;
+  UINTN  Len;
+
+  if (Str == NULL) {
+    return;
+  }
+
+  Len = AsciiStrLen (Str);
+  if (Len == 0) {
+    return;
+  }
+
+  Start = 0;
+  while ((Start < Len) && (Str[Start] == ' ')) {
+    Start++;
+  }
+
+  End = Len;
+  while ((End > Start) && (Str[End - 1] == ' ')) {
+    End--;
+  }
+
+  if (Start != 0) {
+    CopyMem (Str, Str + Start, End - Start);
+  }
+
+  Str[End - Start] = '\0';
+}
+
+STATIC
+BOOLEAN
+AsciiStringHasAlphaNumeric (
+  IN CONST CHAR8  *Str
+  )
+{
+  UINTN  Index;
+  CHAR8  Ch;
+
+  if (Str == NULL) {
+    return FALSE;
+  }
+
+  for (Index = 0; Str[Index] != '\0'; Index++) {
+    Ch = Str[Index];
+    if (((Ch >= '0') && (Ch <= '9')) ||
+        ((Ch >= 'A') && (Ch <= 'Z')) ||
+        ((Ch >= 'a') && (Ch <= 'z')))
+    {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+STATIC
+VOID
+AsciiEliminateExtraSpacesInPlace (
+  IN OUT CHAR8  *Str
+  )
+{
+  UINTN  ReadIndex;
+  UINTN  WriteIndex;
+  CHAR8  Prev;
+  CHAR8  Ch;
+
+  if (Str == NULL) {
+    return;
+  }
+
+  TrimAsciiStringInPlace (Str);
+
+  Prev       = '\0';
+  ReadIndex  = 0;
+  WriteIndex = 0;
+  while ((Ch = Str[ReadIndex++]) != '\0') {
+    if ((Ch == ' ') && (Prev == ' ')) {
+      continue;
+    }
+
+    Str[WriteIndex++] = Ch;
+    Prev              = Ch;
+  }
+
+  Str[WriteIndex] = '\0';
+}
+
+STATIC
+VOID
+SanitizeAsciiFixedLenField (
+  OUT CHAR8        *Dest,
+  IN  UINTN        DestSize,
+  IN  CONST UINT8  *Src,
+  IN  UINTN        SrcLen
+  )
+{
+  UINTN  Index;
+  UINTN  OutLen;
+  CHAR8  Ch;
+
+  if ((Dest == NULL) || (DestSize == 0)) {
+    return;
+  }
+
+  Dest[0] = '\0';
+  if ((Src == NULL) || (SrcLen == 0)) {
+    return;
+  }
+
+  OutLen = MIN (SrcLen, DestSize - 1);
+  for (Index = 0; Index < OutLen; Index++) {
+    Ch = (CHAR8)Src[Index];
+    if (Ch == '\0') {
+      Dest[Index] = ' ';
+    } else if ((Ch < 0x20) || (Ch > 0x7E)) {
+      Dest[Index] = '?';
+    } else {
+      Dest[Index] = Ch;
+    }
+  }
+
+  Dest[OutLen] = '\0';
+  AsciiEliminateExtraSpacesInPlace (Dest);
+}
+
+STATIC
+VOID
+CopyAtaIdentifyString (
+  OUT CHAR8        *Dest,
+  IN  UINTN        DestSize,
+  IN  CONST CHAR8  *Src,
+  IN  UINTN        SrcLen
+  )
+{
+  UINTN  Index;
+  UINTN  OutLen;
+  CHAR8  Ch;
+
+  if ((Dest == NULL) || (DestSize == 0)) {
+    return;
+  }
+
+  //
+  // ATA IDENTIFY strings are word-swapped.
+  //
+  OutLen = MIN (SrcLen, DestSize - 1);
+  for (Index = 0; Index + 1 < OutLen; Index += 2) {
+    Ch = Src[Index + 1];
+    if (Ch == '\0') {
+      Dest[Index] = ' ';
+    } else if ((Ch < 0x20) || (Ch > 0x7E)) {
+      Dest[Index] = '?';
+    } else {
+      Dest[Index] = Ch;
+    }
+
+    Ch = Src[Index];
+    if (Ch == '\0') {
+      Dest[Index + 1] = ' ';
+    } else if ((Ch < 0x20) || (Ch > 0x7E)) {
+      Dest[Index + 1] = '?';
+    } else {
+      Dest[Index + 1] = Ch;
+    }
+  }
+
+  if ((OutLen & 1) != 0) {
+    Ch = Src[OutLen - 1];
+    if (Ch == '\0') {
+      Dest[OutLen - 1] = ' ';
+    } else if ((Ch < 0x20) || (Ch > 0x7E)) {
+      Dest[OutLen - 1] = '?';
+    } else {
+      Dest[OutLen - 1] = Ch;
+    }
+  }
+
+  Dest[OutLen] = '\0';
+  TrimAsciiStringInPlace (Dest);
+}
+
+STATIC
+BOOLEAN
+TryGetDiskModelSerial (
+  IN  EFI_HANDLE               Handle,
+  IN  EFI_DEVICE_PATH_PROTOCOL *DevicePath,
+  OUT CHAR8                    *Model,
+  IN  UINTN                    ModelSize,
+  OUT CHAR8                    *Serial,
+  IN  UINTN                    SerialSize
+  )
+{
+  EFI_STATUS              Status;
+  EFI_DISK_INFO_PROTOCOL  *DiskInfo;
+  UINT32                  IdentifyDataSize;
+  VOID                    *IdentifyData;
+
+  if ((Model == NULL) || (Serial == NULL) || (ModelSize == 0) || (SerialSize == 0)) {
+    return FALSE;
+  }
+
+  Model[0]  = '\0';
+  Serial[0] = '\0';
+
+  DiskInfo = NULL;
+  Status   = gBS->HandleProtocol (Handle, &gEfiDiskInfoProtocolGuid, (VOID **)&DiskInfo);
+  if (EFI_ERROR (Status) || (DiskInfo == NULL)) {
+    DiskInfo = NULL;
+  }
+
+  //
+  // 1) For AHCI/IDE, DiskInfo->Identify returns ATA_IDENTIFY_DATA which includes model/serial.
+  // 2) For NVMe, DiskInfo->Identify returns namespace data (not controller data), so use NVMe
+  //    PassThru + Identify Controller to fetch model/serial (same approach as Boot Manager).
+  //
+  if (DiskInfo != NULL) {
+    if (CompareGuid (&DiskInfo->Interface, &gEfiDiskInfoAhciInterfaceGuid) ||
+        CompareGuid (&DiskInfo->Interface, &gEfiDiskInfoIdeInterfaceGuid))
+    {
+      IdentifyDataSize = 0;
+      IdentifyData     = NULL;
+      Status           = DiskInfo->Identify (DiskInfo, IdentifyData, &IdentifyDataSize);
+      if (Status == EFI_BUFFER_TOO_SMALL) {
+        IdentifyData = AllocateZeroPool (IdentifyDataSize);
+        if (IdentifyData != NULL) {
+          Status = DiskInfo->Identify (DiskInfo, IdentifyData, &IdentifyDataSize);
+        }
+      }
+
+      if (!EFI_ERROR (Status) && (IdentifyData != NULL) && (IdentifyDataSize >= sizeof (ATA_IDENTIFY_DATA))) {
+        ATA_IDENTIFY_DATA  *AtaId;
+
+        AtaId = (ATA_IDENTIFY_DATA *)IdentifyData;
+        CopyAtaIdentifyString (Serial, SerialSize, AtaId->SerialNo, sizeof (AtaId->SerialNo));
+        CopyAtaIdentifyString (Model, ModelSize, AtaId->ModelName, sizeof (AtaId->ModelName));
+      }
+
+      if (IdentifyData != NULL) {
+        FreePool (IdentifyData);
+      }
+    }
+  }
+
+  if (AsciiStringHasAlphaNumeric (Model) || AsciiStringHasAlphaNumeric (Serial)) {
+    return TRUE;
+  }
+
+  //
+  // NVMe path: use NVMe PassThru Identify Controller to fetch model/serial.
+  //
+  if (DevicePath != NULL) {
+    EFI_DEVICE_PATH_PROTOCOL                   *Remaining;
+    EFI_DEVICE_PATH_PROTOCOL                   *PathToFree;
+    EFI_HANDLE                                NvmeControllerHandle;
+    EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL         *NvmePassThru;
+    EFI_NVM_EXPRESS_PASS_THRU_COMMAND_PACKET   CommandPacket;
+    EFI_NVM_EXPRESS_COMMAND                    Command;
+    EFI_NVM_EXPRESS_COMPLETION                 Completion;
+    NVME_ADMIN_CONTROLLER_DATA                 ControllerData;
+
+    PathToFree          = DuplicateDevicePath (DevicePath);
+    Remaining           = PathToFree;
+    NvmeControllerHandle = NULL;
+    if (PathToFree == NULL) {
+      return FALSE;
+    }
+
+    Status = gBS->LocateDevicePath (&gEfiNvmExpressPassThruProtocolGuid, &Remaining, &NvmeControllerHandle);
+    //
+    // LocateDevicePath modifies Remaining to point into the path; we must free
+    // the original allocation (PathToFree), not Remaining.
+    //
+    if (EFI_ERROR (Status) ||
+        (NvmeControllerHandle == NULL) ||
+        (DevicePathType (Remaining) != MESSAGING_DEVICE_PATH) ||
+        (DevicePathSubType (Remaining) != MSG_NVME_NAMESPACE_DP))
+    {
+      FreePool (PathToFree);
+    } else {
+      FreePool (PathToFree);
+
+      NvmePassThru = NULL;
+      Status       = gBS->HandleProtocol (NvmeControllerHandle, &gEfiNvmExpressPassThruProtocolGuid, (VOID **)&NvmePassThru);
+      if (!EFI_ERROR (Status) && (NvmePassThru != NULL)) {
+        ZeroMem (&CommandPacket, sizeof (CommandPacket));
+        ZeroMem (&Command, sizeof (Command));
+        ZeroMem (&Completion, sizeof (Completion));
+        ZeroMem (&ControllerData, sizeof (ControllerData));
+
+        Command.Cdw0.Opcode = NVME_ADMIN_IDENTIFY_CMD;
+        Command.Nsid        = 0;
+        //
+        // Identify Controller: CNS = 1
+        //
+        Command.Cdw10 = 1;
+        Command.Flags = CDW10_VALID;
+
+        CommandPacket.NvmeCmd        = &Command;
+        CommandPacket.NvmeCompletion = &Completion;
+        CommandPacket.TransferBuffer = &ControllerData;
+        CommandPacket.TransferLength = sizeof (ControllerData);
+        CommandPacket.CommandTimeout = EFI_TIMER_PERIOD_SECONDS (5);
+        CommandPacket.QueueType      = NVME_ADMIN_QUEUE;
+
+        Status = NvmePassThru->PassThru (NvmePassThru, 0, &CommandPacket, NULL);
+        if (!EFI_ERROR (Status)) {
+          SanitizeAsciiFixedLenField (Serial, SerialSize, ControllerData.Sn, sizeof (ControllerData.Sn));
+          SanitizeAsciiFixedLenField (Model, ModelSize, ControllerData.Mn, sizeof (ControllerData.Mn));
+        }
+      }
+    }
+  }
+
+  return AsciiStringHasAlphaNumeric (Model) || AsciiStringHasAlphaNumeric (Serial);
+}
+
+BOOLEAN
+TcgStorageIsSimpleUiEnabled (
+  VOID
+  )
+{
+  return PcdGetBool (PcdTcgStorageSimpleUi);
 }
 
 //
@@ -695,7 +1031,7 @@ OpalDriverPopUpPsidInput (
   InputLength = 0;
   while (TRUE) {
     Mask[InputLength] = L'_';
-    if (PopUpString2 == NULL) {
+    if ((PopUpString2 == NULL) && (PopUpString3 == NULL)) {
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &InputKey,
@@ -705,7 +1041,17 @@ OpalDriverPopUpPsidInput (
         NULL
         );
     } else {
-      if (PopUpString3 == NULL) {
+      if (PopUpString2 == NULL) {
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &InputKey,
+          PopUpString,
+          PopUpString3,
+          L"---------------------",
+          Mask,
+          NULL
+          );
+      } else if (PopUpString3 == NULL) {
         CreatePopUp (
           EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
           &InputKey,
@@ -847,7 +1193,7 @@ OpalDriverPopUpPasswordInput (
   InputLength = 0;
   while (TRUE) {
     Mask[InputLength] = L'_';
-    if (PopUpString2 == NULL) {
+    if ((PopUpString2 == NULL) && (PopUpString3 == NULL)) {
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &InputKey,
@@ -857,7 +1203,17 @@ OpalDriverPopUpPasswordInput (
         NULL
         );
     } else {
-      if (PopUpString3 == NULL) {
+      if (PopUpString2 == NULL) {
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &InputKey,
+          PopUpString1,
+          PopUpString3,
+          L"---------------------",
+          Mask,
+          NULL
+          );
+      } else if (PopUpString3 == NULL) {
         CreatePopUp (
           EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
           &InputKey,
@@ -956,6 +1312,273 @@ OpalDriverPopUpPasswordInput (
   ZeroMem (Unicode, sizeof (Unicode));
 
   return Ascii;
+}
+
+/**
+  Get visible text input from a popup window.
+
+  @param[in]  PopUpString1     Pop up string 1.
+  @param[in]  PopUpString2     Pop up string 2.
+  @param[in]  PopUpString3     Pop up string 3.
+  @param[in]  MaxInputLength   Maximum input characters.
+  @param[out] PressEsc         Whether user escaped by pressing ESC.
+
+  @retval Input string (ASCII) if success. NULL if failed or canceled.
+**/
+STATIC
+CHAR8 *
+OpalDriverPopUpVisibleInput (
+  IN CHAR16   *PopUpString1,
+  IN CHAR16   *PopUpString2,
+  IN CHAR16   *PopUpString3,
+  IN UINTN    MaxInputLength,
+  OUT BOOLEAN *PressEsc
+  )
+{
+  EFI_INPUT_KEY  InputKey;
+  UINTN          InputLength;
+  CHAR16         *Mask;
+  CHAR16         *Unicode;
+  CHAR8          *Ascii;
+
+  if ((PressEsc == NULL) || (MaxInputLength == 0)) {
+    return NULL;
+  }
+
+  *PressEsc = FALSE;
+  if ((gST == NULL) || (gST->ConIn == NULL) || (gST->ConOut == NULL)) {
+    *PressEsc = TRUE;
+    return NULL;
+  }
+
+  Unicode = AllocateZeroPool (sizeof (CHAR16) * (MaxInputLength + 1));
+  Mask    = AllocateZeroPool (sizeof (CHAR16) * (MaxInputLength + 1));
+  if ((Unicode == NULL) || (Mask == NULL)) {
+    if (Unicode != NULL) {
+      FreePool (Unicode);
+    }
+
+    if (Mask != NULL) {
+      FreePool (Mask);
+    }
+
+    return NULL;
+  }
+
+  gST->ConOut->ClearScreen (gST->ConOut);
+
+  InputLength = 0;
+  while (TRUE) {
+    Mask[InputLength] = L'_';
+    if ((PopUpString2 == NULL) && (PopUpString3 == NULL)) {
+      CreatePopUp (
+        EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+        &InputKey,
+        PopUpString1,
+        L"---------------------",
+        Mask,
+        NULL
+        );
+    } else {
+      if (PopUpString2 == NULL) {
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &InputKey,
+          PopUpString1,
+          PopUpString3,
+          L"---------------------",
+          Mask,
+          NULL
+          );
+      } else if (PopUpString3 == NULL) {
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &InputKey,
+          PopUpString1,
+          PopUpString2,
+          L"---------------------",
+          Mask,
+          NULL
+          );
+      } else {
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &InputKey,
+          PopUpString1,
+          PopUpString2,
+          PopUpString3,
+          L"---------------------",
+          Mask,
+          NULL
+          );
+      }
+    }
+
+    if (InputKey.ScanCode == SCAN_NULL) {
+      if (InputKey.UnicodeChar == CHAR_CARRIAGE_RETURN) {
+        Unicode[InputLength] = 0;
+        Mask[InputLength]    = 0;
+        break;
+      } else if ((InputKey.UnicodeChar == CHAR_NULL) ||
+                 (InputKey.UnicodeChar == CHAR_TAB) ||
+                 (InputKey.UnicodeChar == CHAR_LINEFEED))
+      {
+        continue;
+      } else {
+        if (InputKey.UnicodeChar == CHAR_BACKSPACE) {
+          if (InputLength > 0) {
+            Unicode[InputLength] = 0;
+            Mask[InputLength]    = 0;
+            InputLength--;
+          }
+        } else {
+          Unicode[InputLength] = InputKey.UnicodeChar;
+          Mask[InputLength]    = InputKey.UnicodeChar;
+          InputLength++;
+          if (InputLength == MaxInputLength) {
+            Unicode[InputLength] = 0;
+            Mask[InputLength]    = 0;
+            break;
+          }
+        }
+      }
+    }
+
+    if (InputKey.ScanCode == SCAN_ESC) {
+      *PressEsc = TRUE;
+      break;
+    }
+  }
+
+  gST->ConOut->ClearScreen (gST->ConOut);
+
+  if ((InputLength == 0) || (InputKey.ScanCode == SCAN_ESC)) {
+    ZeroMem (Unicode, sizeof (CHAR16) * (MaxInputLength + 1));
+    ZeroMem (Mask, sizeof (CHAR16) * (MaxInputLength + 1));
+    FreePool (Unicode);
+    FreePool (Mask);
+    return NULL;
+  }
+
+  Ascii = AllocateZeroPool (MaxInputLength + 1);
+  if (Ascii == NULL) {
+    ZeroMem (Unicode, sizeof (CHAR16) * (MaxInputLength + 1));
+    ZeroMem (Mask, sizeof (CHAR16) * (MaxInputLength + 1));
+    FreePool (Unicode);
+    FreePool (Mask);
+    return NULL;
+  }
+
+  UnicodeStrToAsciiStrS (Unicode, Ascii, MaxInputLength + 1);
+  ZeroMem (Unicode, sizeof (CHAR16) * (MaxInputLength + 1));
+  ZeroMem (Mask, sizeof (CHAR16) * (MaxInputLength + 1));
+  FreePool (Unicode);
+  FreePool (Mask);
+
+  return Ascii;
+}
+
+STATIC
+BOOLEAN
+OpalConfirmEraseAndReset (
+  IN CHAR16  *PopUpString
+  )
+{
+  EFI_INPUT_KEY  Key;
+  BOOLEAN        PressEsc;
+  CHAR8          *Confirm;
+  BOOLEAN        Confirmed;
+  UINTN          ConfirmLen;
+
+  if ((gST == NULL) || (gST->ConIn == NULL) || (gST->ConOut == NULL)) {
+    return FALSE;
+  }
+
+  //
+  // Strong confirmation requiring manual console input.
+  //
+  Confirmed = FALSE;
+
+  while (!Confirmed) {
+    Confirm = OpalDriverPopUpVisibleInput (
+                PopUpString,
+                L"WARNING: This will permanently delete all data on this disk.",
+                L"Type ERASE to continue, or press ESC to cancel.",
+                5,
+                &PressEsc
+                );
+    if (PressEsc) {
+      return FALSE;
+    }
+
+    if (Confirm == NULL) {
+      do {
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &Key,
+          L"Confirmation is required.",
+          L"Press ENTER to retry, or ESC to cancel.",
+          NULL
+          );
+      } while ((Key.ScanCode != SCAN_ESC) && (Key.UnicodeChar != CHAR_CARRIAGE_RETURN));
+
+      if (Key.ScanCode == SCAN_ESC) {
+        return FALSE;
+      }
+
+      continue;
+    }
+
+    ConfirmLen = AsciiStrLen (Confirm);
+    if ((ConfirmLen == AsciiStrLen ("ERASE")) && (AsciiStriCmp (Confirm, "ERASE") == 0)) {
+      Confirmed = TRUE;
+    } else {
+      ZeroMem (Confirm, ConfirmLen);
+      FreePool (Confirm);
+
+      do {
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &Key,
+          L"Confirmation does not match.",
+          L"Press ENTER to retry, or ESC to cancel.",
+          NULL
+          );
+      } while ((Key.ScanCode != SCAN_ESC) && (Key.UnicodeChar != CHAR_CARRIAGE_RETURN));
+
+      if (Key.ScanCode == SCAN_ESC) {
+        return FALSE;
+      }
+
+      continue;
+    }
+
+    if (Confirm != NULL) {
+      ZeroMem (Confirm, ConfirmLen);
+      FreePool (Confirm);
+    }
+  }
+
+  //
+  // Final confirmation.
+  //
+  do {
+    CreatePopUp (
+      EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+      &Key,
+      L"Final confirmation: Press 'Y/y' to erase and reset, or 'N/n' to cancel.",
+      NULL
+      );
+  } while ((Key.UnicodeChar != L'Y') &&
+           (Key.UnicodeChar != L'y') &&
+           (Key.UnicodeChar != L'N') &&
+           (Key.UnicodeChar != L'n'));
+
+  if ((Key.UnicodeChar == L'N') || (Key.UnicodeChar == L'n')) {
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 /**
@@ -1157,7 +1780,7 @@ OpalDriverRequestPassword (
         CreatePopUp (
           EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
           &Key,
-          L"Opal password retry count exceeds the limit. Must shutdown!",
+          TcgStorageIsSimpleUiEnabled () ? L"Disk password retry count exceeds the limit. Must shutdown!" : L"Opal password retry count exceeds the limit. Must shutdown!",
           L"Press ENTER to shutdown",
           NULL
           );
@@ -1308,7 +1931,7 @@ ProcessOpalRequestEnableFeature (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Opal password retry count exceeds the limit.",
+        TcgStorageIsSimpleUiEnabled () ? L"Disk password retry count exceeds the limit." : L"Opal password retry count exceeds the limit.",
         L"Press ENTER to skip the request and continue boot",
         NULL
         );
@@ -1422,7 +2045,7 @@ ProcessOpalRequestDisableUser (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Opal password retry count exceeds the limit.",
+        TcgStorageIsSimpleUiEnabled () ? L"Disk password retry count exceeds the limit." : L"Opal password retry count exceeds the limit.",
         L"Press ENTER to skip the request and continue boot",
         NULL
         );
@@ -1456,6 +2079,10 @@ ProcessOpalRequestPsidRevert (
   CHAR16         *PopUpString2;
   CHAR16         *PopUpString3;
   UINTN          BufferSize;
+  BOOLEAN        SimpleUi;
+  CHAR16         *InvalidKeyString;
+  CHAR16         *RetryLimitString;
+  CHAR16         *RetryKeyString;
 
   if (Dev == NULL) {
     return;
@@ -1463,22 +2090,54 @@ ProcessOpalRequestPsidRevert (
 
   DEBUG ((DEBUG_INFO, "%a()\n", __func__));
 
+  SimpleUi = TcgStorageIsSimpleUiEnabled ();
+
   PopUpString = OpalGetPopUpString (Dev, RequestString);
 
-  if (Dev->OpalDisk.EstimateTimeCost > MAX_ACCEPTABLE_REVERTING_TIME) {
-    BufferSize   = StrSize (L"Warning: Revert action will take about ####### seconds");
-    PopUpString2 = AllocateZeroPool (BufferSize);
-    ASSERT (PopUpString2 != NULL);
-    UnicodeSPrint (
-      PopUpString2,
-      BufferSize,
-      L"WARNING: Revert action will take about %d seconds",
-      Dev->OpalDisk.EstimateTimeCost
-      );
-    PopUpString3 = L"DO NOT power off system during the revert action!";
+  if (SimpleUi) {
+    if (!OpalConfirmEraseAndReset (PopUpString)) {
+      gST->ConOut->ClearScreen (gST->ConOut);
+      return;
+    }
+
+    if (Dev->OpalDisk.EstimateTimeCost > MAX_ACCEPTABLE_REVERTING_TIME) {
+      BufferSize   = StrSize (L"May take about ####### seconds. DO NOT power off.");
+      PopUpString2 = AllocateZeroPool (BufferSize);
+      ASSERT (PopUpString2 != NULL);
+      UnicodeSPrint (
+        PopUpString2,
+        BufferSize,
+        L"May take about %d seconds. DO NOT power off.",
+        Dev->OpalDisk.EstimateTimeCost
+        );
+    } else {
+      PopUpString2 = NULL;
+    }
+
+    PopUpString3     = L"Enter the 32-character reset key printed on the drive label.";
+    InvalidKeyString = L"Invalid reset key, request failed.";
+    RetryLimitString = L"Reset key retry count exceeds the limit.";
+    RetryKeyString   = L"Press ESC to input reset key again";
   } else {
-    PopUpString2 = NULL;
-    PopUpString3 = NULL;
+    if (Dev->OpalDisk.EstimateTimeCost > MAX_ACCEPTABLE_REVERTING_TIME) {
+      BufferSize   = StrSize (L"Warning: Revert action will take about ####### seconds");
+      PopUpString2 = AllocateZeroPool (BufferSize);
+      ASSERT (PopUpString2 != NULL);
+      UnicodeSPrint (
+        PopUpString2,
+        BufferSize,
+        L"WARNING: Revert action will take about %d seconds",
+        Dev->OpalDisk.EstimateTimeCost
+        );
+      PopUpString3 = L"DO NOT power off system during the revert action!";
+    } else {
+      PopUpString2 = NULL;
+      PopUpString3 = NULL;
+    }
+
+    InvalidKeyString = L"Invalid Psid, request failed.";
+    RetryLimitString = L"Opal Psid retry count exceeds the limit.";
+    RetryKeyString   = L"Press ESC to input Psid again";
   }
 
   Count = 0;
@@ -1496,7 +2155,7 @@ ProcessOpalRequestPsidRevert (
           EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
           &Key,
           L"Press ENTER to skip the request and continue boot,",
-          L"Press ESC to input Psid again",
+          RetryKeyString,
           NULL
           );
       } while ((Key.ScanCode != SCAN_ESC) && (Key.UnicodeChar != CHAR_CARRIAGE_RETURN));
@@ -1541,7 +2200,7 @@ ProcessOpalRequestPsidRevert (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Invalid Psid, request failed.",
+        InvalidKeyString,
         L"Press ENTER to retry",
         NULL
         );
@@ -1553,7 +2212,7 @@ ProcessOpalRequestPsidRevert (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Opal Psid retry count exceeds the limit.",
+        RetryLimitString,
         L"Press ENTER to skip the request and continue boot",
         NULL
         );
@@ -1723,7 +2382,7 @@ ProcessOpalRequestRevert (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Opal password retry count exceeds the limit.",
+        TcgStorageIsSimpleUiEnabled () ? L"Disk password retry count exceeds the limit." : L"Opal password retry count exceeds the limit.",
         L"Press ENTER to skip the request and continue boot",
         NULL
         );
@@ -1861,7 +2520,7 @@ ProcessOpalRequestSecureErase (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Opal password retry count exceeds the limit.",
+        TcgStorageIsSimpleUiEnabled () ? L"Disk password retry count exceeds the limit." : L"Opal password retry count exceeds the limit.",
         L"Press ENTER to skip the request and continue boot",
         NULL
         );
@@ -2072,7 +2731,7 @@ ProcessOpalRequestSetUserPwd (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Opal password retry count exceeds the limit.",
+        TcgStorageIsSimpleUiEnabled () ? L"Disk password retry count exceeds the limit." : L"Opal password retry count exceeds the limit.",
         L"Press ENTER to skip the request and continue boot",
         NULL
         );
@@ -2273,7 +2932,7 @@ ProcessOpalRequestSetAdminPwd (
       CreatePopUp (
         EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
         &Key,
-        L"Opal password retry count exceeds the limit.",
+        TcgStorageIsSimpleUiEnabled () ? L"Disk password retry count exceeds the limit." : L"Opal password retry count exceeds the limit.",
         L"Press ENTER to skip the request and continue boot",
         NULL
         );
@@ -2303,6 +2962,8 @@ ProcessOpalRequest (
   EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
   UINTN                     DevicePathSize;
   BOOLEAN                   KeepUserData;
+  BOOLEAN                   SimpleUi;
+  OPAL_REQUEST              OpalRequest;
 
   if (mOpalRequestVariable == NULL) {
     Status = GetVariable2 (
@@ -2352,37 +3013,75 @@ ProcessOpalRequest (
       //
       // Found the node for the OPAL device.
       //
-      if (TempVariable->OpalRequest.SetAdminPwd != 0) {
-        ProcessOpalRequestSetAdminPwd (Dev, L"Update Admin Pwd:");
-      }
+      SimpleUi = TcgStorageIsSimpleUiEnabled ();
+      CopyMem (&OpalRequest, &TempVariable->OpalRequest, sizeof (OPAL_REQUEST));
 
-      if (TempVariable->OpalRequest.SetUserPwd != 0) {
-        ProcessOpalRequestSetUserPwd (Dev, L"Set User Pwd:");
-      }
+      if (!SimpleUi) {
+        if (OpalRequest.SetAdminPwd != 0) {
+          ProcessOpalRequestSetAdminPwd (Dev, L"Update Admin Pwd:");
+        }
 
-      if (TempVariable->OpalRequest.SecureErase != 0) {
-        ProcessOpalRequestSecureErase (Dev, L"Secure Erase:");
-      }
+        if (OpalRequest.SetUserPwd != 0) {
+          ProcessOpalRequestSetUserPwd (Dev, L"Set User Pwd:");
+        }
 
-      if (TempVariable->OpalRequest.Revert != 0) {
-        KeepUserData = (BOOLEAN)TempVariable->OpalRequest.KeepUserData;
-        ProcessOpalRequestRevert (
-          Dev,
-          KeepUserData,
-          KeepUserData ? L"Admin Revert(keep):" : L"Admin Revert:"
-          );
-      }
+        if (OpalRequest.SecureErase != 0) {
+          ProcessOpalRequestSecureErase (Dev, L"Secure Erase:");
+        }
 
-      if (TempVariable->OpalRequest.PsidRevert != 0) {
-        ProcessOpalRequestPsidRevert (Dev, L"Psid Revert:");
-      }
+        if (OpalRequest.Revert != 0) {
+          KeepUserData = (BOOLEAN)OpalRequest.KeepUserData;
+          ProcessOpalRequestRevert (
+            Dev,
+            KeepUserData,
+            KeepUserData ? L"Admin Revert(keep):" : L"Admin Revert:"
+            );
+        }
 
-      if (TempVariable->OpalRequest.DisableUser != 0) {
-        ProcessOpalRequestDisableUser (Dev, L"Disable User:");
-      }
+        if (OpalRequest.PsidRevert != 0) {
+          ProcessOpalRequestPsidRevert (Dev, L"Psid Revert:");
+        }
 
-      if (TempVariable->OpalRequest.EnableFeature != 0) {
-        ProcessOpalRequestEnableFeature (Dev, L"Enable Feature:");
+        if (OpalRequest.DisableUser != 0) {
+          ProcessOpalRequestDisableUser (Dev, L"Disable User:");
+        }
+
+        if (OpalRequest.EnableFeature != 0) {
+          ProcessOpalRequestEnableFeature (Dev, L"Enable Feature:");
+        }
+      } else {
+        //
+        // Simple UI mode policy: allow only password set/change/remove and erase & reset.
+        //
+        if ((OpalRequest.SetUserPwd != 0) ||
+            (OpalRequest.SecureErase != 0) ||
+            (OpalRequest.DisableUser != 0) ||
+            (OpalRequest.DisableFeature != 0))
+        {
+          UINT16  RequestBits;
+          CopyMem (&RequestBits, &OpalRequest, sizeof (RequestBits));
+          DEBUG ((DEBUG_WARN, "OpalPassword: Simple UI enabled - ignoring advanced request bits (0x%x)\n", RequestBits));
+        }
+
+        if (OpalRequest.EnableFeature != 0) {
+          ProcessOpalRequestEnableFeature (Dev, L"Set Disk Admin Password:");
+        }
+
+        if (OpalRequest.SetAdminPwd != 0) {
+          ProcessOpalRequestSetAdminPwd (Dev, L"Change Disk Admin Password:");
+        }
+
+        if (OpalRequest.Revert != 0) {
+          //
+          // Enforce non-destructive behavior in simple mode.
+          //
+          KeepUserData = TRUE;
+          ProcessOpalRequestRevert (Dev, KeepUserData, L"Remove Disk Admin Password:");
+        }
+
+        if (OpalRequest.PsidRevert != 0) {
+          ProcessOpalRequestPsidRevert (Dev, L"Erase & Reset:");
+        }
       }
 
       //
@@ -2508,9 +3207,17 @@ OpalDriverStopDevice (
   )
 {
   //
-  // free each name
+  // free each name (both may be NULL if name resolution never succeeded)
   //
-  FreePool (Dev->Name16);
+  if (Dev->Name16 != NULL) {
+    FreePool (Dev->Name16);
+    Dev->Name16 = NULL;
+  }
+
+  if (Dev->NameZ != NULL) {
+    FreePool (Dev->NameZ);
+    Dev->NameZ = NULL;
+  }
 
   //
   // remove OPAL_DRIVER_DEVICE from the list
@@ -2589,6 +3296,39 @@ OpalDriverGetDriverDeviceName (
                     );
     if (!EFI_ERROR (Status)) {
       Dev->OpalDevicePath = DuplicateDevicePath (TmpDevPath);
+
+      //
+      // Prefer a stable, readable name for UI display: "Model (Serial)".
+      //
+      if (Dev->Name16 == NULL) {
+        CHAR8  Model[64];
+        CHAR8  Serial[64];
+        CHAR8  NameZ[140];
+
+        if (TryGetDiskModelSerial (Dev->Handle, Dev->OpalDevicePath, Model, sizeof (Model), Serial, sizeof (Serial))) {
+          if ((Model[0] != '\0') && (Serial[0] != '\0')) {
+            AsciiSPrint (NameZ, sizeof (NameZ), "%a (%a)", Model, Serial);
+          } else if (Model[0] != '\0') {
+            AsciiSPrint (NameZ, sizeof (NameZ), "%a", Model);
+          } else {
+            AsciiSPrint (NameZ, sizeof (NameZ), "%a", Serial);
+          }
+
+          AsciiEliminateExtraSpacesInPlace (NameZ);
+
+          StrLength   = AsciiStrLen (NameZ) + 1;
+          Dev->NameZ  = (CHAR8 *)AllocateZeroPool (StrLength);
+          Dev->Name16 = (CHAR16 *)AllocateZeroPool (StrLength * sizeof (CHAR16));
+          ASSERT ((Dev->NameZ != NULL) && (Dev->Name16 != NULL));
+
+          AsciiStrCpyS (Dev->NameZ, StrLength, NameZ);
+          AsciiStrToUnicodeStrS (NameZ, Dev->Name16, StrLength);
+
+          DEBUG ((DEBUG_INFO, " Dev Name (DiskInfo): %a\n", NameZ));
+          return TRUE;
+        }
+      }
+
       TmpDevPath2         = DuplicateDevicePath (TmpDevPath);
       TmpDevPath          = TmpDevPath2;
       while (!IsDevicePathEnd (TmpDevPath)) {
@@ -2673,9 +3413,18 @@ OpalDriverGetDriverDeviceName (
                       StrCpyS (Dev->Name16, StrLength, DevName);
                       Dev->NameZ = (CHAR8 *)AllocateZeroPool (StrLength);
                       UnicodeStrToAsciiStrS (DevName, Dev->NameZ, StrLength);
-                      FreePool (OpenInfo);
-                      FreePool (ProtocolGuidArray);
-                      FreePool (TmpDevPath2);
+                      if (OpenInfo != NULL) {
+                        FreePool (OpenInfo);
+                      }
+
+                      if (ProtocolGuidArray != NULL) {
+                        FreePool (ProtocolGuidArray);
+                      }
+
+                      if (TmpDevPath2 != NULL) {
+                        FreePool (TmpDevPath2);
+                      }
+
                       DEBUG ((DEBUG_INFO, " Dev Name: %s\n", DevName));
                       return TRUE;
                     }
