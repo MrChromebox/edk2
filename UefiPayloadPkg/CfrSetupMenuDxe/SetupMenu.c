@@ -9,7 +9,9 @@
 #include "SetupMenu.h"
 #include <Library/DebugLib.h>
 #include <Library/HiiLib.h>
+#include <Library/HobLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Guid/CfrSetupMenuGuid.h>
 #include <Guid/VariableFormat.h>
 
 EDKII_VARIABLE_POLICY_PROTOCOL  *mVariablePolicy = NULL;
@@ -26,6 +28,13 @@ CfrSetupMenuEntryPoint (
   )
 {
   EFI_STATUS  Status;
+
+  //
+  // If the bootloader did not provide any CFR forms, do not register the menu.
+  //
+  if (GetFirstGuidHob (&gEfiCfrSetupMenuFormGuid) == NULL) {
+    return EFI_SUCCESS;
+  }
 
   Status = gBS->LocateProtocol (&gEdkiiVariablePolicyProtocolGuid, NULL, (VOID **)&mVariablePolicy);
   if (EFI_ERROR (Status)) {
