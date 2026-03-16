@@ -13,3 +13,8 @@
                             #language fr-FR  ""
 #string STR_INVALID_STRING  #language en-US  "INVALID"
                             #language fr-FR  "INVALID"
+
+#string STR_BOOL_ENABLED    #language en-US  "Enabled"
+                            #language fr-FR  "Enabled"
+#string STR_BOOL_DISABLED   #language en-US  "Disabled"
+                            #language fr-FR  "Disabled"

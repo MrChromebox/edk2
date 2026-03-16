@@ -612,8 +612,28 @@ CfrProcessNumericOption (
                       );
     ASSERT (TempHiiBuffer != NULL);
   } else if (Option->tag == CB_TAG_CFR_OPTION_BOOL) {
-    // TODO: Or use ONE_OF instead?
-    TempHiiBuffer = HiiCreateCheckBoxOpCode (
+    OptionOpCodeHandle = HiiAllocateOpCodeHandle ();
+    ASSERT (OptionOpCodeHandle != NULL);
+
+    TempHiiBuffer = HiiCreateOneOfOptionOpCode (
+                      OptionOpCodeHandle,
+                      STRING_TOKEN (STR_BOOL_ENABLED),
+                      0,
+                      EFI_IFR_TYPE_NUM_SIZE_32,
+                      1
+                      );
+    ASSERT (TempHiiBuffer != NULL);
+
+    TempHiiBuffer = HiiCreateOneOfOptionOpCode (
+                      OptionOpCodeHandle,
+                      STRING_TOKEN (STR_BOOL_DISABLED),
+                      0,
+                      EFI_IFR_TYPE_NUM_SIZE_32,
+                      0
+                      );
+    ASSERT (TempHiiBuffer != NULL);
+
+    TempHiiBuffer = HiiCreateOneOfOpCode (
                       StartOpCodeHandle,
                       QuestionIdVarStoreId,
                       QuestionIdVarStoreId,
@@ -621,7 +641,8 @@ CfrProcessNumericOption (
                       HiiDisplayStringId,
                       HiiHelpTextId,
                       QuestionFlags,
-                      0,
+                      EFI_IFR_NUMERIC_SIZE_4,
+                      OptionOpCodeHandle,
                       DefaultOpCodeHandle
                       );
     ASSERT (TempHiiBuffer != NULL);
