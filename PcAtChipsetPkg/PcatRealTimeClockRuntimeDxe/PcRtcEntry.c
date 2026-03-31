@@ -256,7 +256,14 @@ InitializePcRtc (
   mMaximalValidYear = PcdGet16 (PcdMaximalValidYear);
 
   Status = PcRtcInit (&mModuleGlobal);
-  ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    //
+    // On some platforms (or with a dead/absent RTC battery), the legacy RTC may
+    // report invalid status or never complete an update cycle. Don't stop DXE
+    // with an ASSERT; continue boot without a functional hardware RTC.
+    //
+    DEBUG ((DEBUG_WARN, "PcRtc: RTC init failed: %r\n", Status));
+  }
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
