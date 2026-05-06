@@ -70,7 +70,7 @@ ParseMemoryInfo (
 /**
   Acquire SMBIOS table from bootloader.
 
-  @param  SmbiosTable           Pointer to the system table info
+  @param  SmBiosEntryPoint          Pointer to the SMBIOS structure.
 
   @retval RETURN_SUCCESS            Successfully find out the tables.
   @retval RETURN_NOT_FOUND          Failed to find the tables.
@@ -79,7 +79,7 @@ ParseMemoryInfo (
 RETURN_STATUS
 EFIAPI
 ParseSmbiosTable (
-  OUT UNIVERSAL_PAYLOAD_SMBIOS_TABLE  *SmbiosTable
+  OUT UINT64 *SmBiosEntryPoint
   );
 
 /**
