@@ -609,6 +609,7 @@ OpalUtilRevert (
 {
   UINT8       MethodStatus;
   TCG_RESULT  Ret;
+  TCG_RESULT  SetSidRet;
   UINT32      RemovalTimeOut;
 
   NULL_CHECK (Session);
@@ -616,6 +617,7 @@ OpalUtilRevert (
   NULL_CHECK (Password);
   NULL_CHECK (PasswordFailed);
 
+  MethodStatus  = TCG_METHOD_STATUS_CODE_SUCCESS;
   RemovalTimeOut = GetRevertTimeOut (Session);
   DEBUG ((DEBUG_INFO, "OpalUtilRevert: Timeout value = %d\n", RemovalTimeOut));
 
@@ -646,9 +648,16 @@ OpalUtilRevert (
     //
     DEBUG ((DEBUG_INFO, "OpalAdminRevert as admin failed\n"));
     OpalEndSession (Session);
+    goto done;
   }
 
-  Ret = OpalUtilSetSIDtoMSID (Session, Password, PasswordLength, Msid, MsidLength);
+  SetSidRet = OpalUtilSetSIDtoMSID (Session, Password, PasswordLength, Msid, MsidLength);
+  if (SetSidRet != TcgResultSuccess) {
+    DEBUG ((DEBUG_WARN, "OpalUtilSetSIDtoMSID failed after revert: Ret=%d\n", SetSidRet));
+  }
+
+  Ret          = TcgResultSuccess;
+  MethodStatus = TCG_METHOD_STATUS_CODE_SUCCESS;
 
 done:
   if (MethodStatus != TCG_METHOD_STATUS_CODE_SUCCESS) {
