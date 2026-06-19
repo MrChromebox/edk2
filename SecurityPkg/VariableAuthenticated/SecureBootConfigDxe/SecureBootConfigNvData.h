@@ -73,6 +73,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define KEY_SECURE_BOOT_DELETE_ALL_LIST     0x110f
 #define KEY_SECURE_BOOT_DELETE_ALL_DATA     0x1110
 #define KEY_SECURE_BOOT_DELETE_CHECK_DATA   0x1111
+#define KEY_ENTER_SETUP_MODE                0x1112
 
 #define LABEL_KEK_DELETE              0x1200
 #define LABEL_DB_DELETE               0x1201

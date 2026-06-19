@@ -64,6 +64,16 @@ formset
     // Display of 'Current Secure Boot Mode'
     //
     suppressif questionref(SecureBootMode) == SECURE_BOOT_MODE_STANDARD;
+    grayoutif ideqval SECUREBOOT_CONFIGURATION.HasPk == 0 OR NOT ideqval SECUREBOOT_CONFIGURATION.PhysicalPresent == 1;
+    text
+      help   = STRING_TOKEN(STR_ENTER_SETUP_MODE_HELP),
+      text   = STRING_TOKEN(STR_ENTER_SETUP_MODE),
+      flags  = INTERACTIVE,
+      key    = KEY_ENTER_SETUP_MODE;
+    endif;
+
+    subtitle text = STRING_TOKEN(STR_NULL);
+
     grayoutif NOT ideqval SECUREBOOT_CONFIGURATION.PhysicalPresent == 1;
     goto FORMID_SECURE_BOOT_OPTION_FORM,
          prompt = STRING_TOKEN(STR_SECURE_BOOT_OPTION),

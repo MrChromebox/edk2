@@ -4494,6 +4494,65 @@ error:
 }
 
 /**
+  Clear PK after user confirmation to enter UEFI Setup Mode.
+
+  @param[in]  Private     Module private data.
+  @param[in]  IfrNvData   Current form configuration.
+
+  @retval EFI_SUCCESS       PK cleared and Setup Mode entered.
+  @retval EFI_ABORTED       User cancelled the operation.
+  @retval EFI_DEVICE_ERROR  PK could not be cleared.
+**/
+STATIC
+EFI_STATUS
+ConfirmEnterSetupMode (
+  IN SECUREBOOT_CONFIG_PRIVATE_DATA  *Private,
+  IN SECUREBOOT_CONFIGURATION        *IfrNvData
+  )
+{
+  EFI_INPUT_KEY  Key;
+  EFI_STATUS     Status;
+
+  CreatePopUp (
+    EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+    &Key,
+    L"Entering Setup Mode clears the Platform Key (PK).",
+    L"Secure Boot enforcement is disabled and keys may be changed.",
+    L"Press 'Y' to continue or any other key to cancel.",
+    NULL
+    );
+  if ((Key.UnicodeChar != L'y') && (Key.UnicodeChar != L'Y')) {
+    return EFI_ABORTED;
+  }
+
+  Status = DeletePlatformKey ();
+  if (EFI_ERROR (Status)) {
+    CreatePopUp (
+      EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+      &Key,
+      L"Could not enter Setup Mode.",
+      L"Physical presence is required to clear PK.",
+      NULL
+      );
+    return Status;
+  }
+
+  SecureBootExtractConfigFromVariable (Private, IfrNvData);
+  IfrNvData->HasPk    = FALSE;
+  IfrNvData->DeletePk = FALSE;
+
+  CreatePopUp (
+    EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+    &Key,
+    L"Setup Mode is now enabled.",
+    L"Reset the platform for changes to take full effect.",
+    NULL
+    );
+
+  return EFI_SUCCESS;
+}
+
+/**
   This function is called to provide results data to the driver.
 
   @param[in]  This               Points to the EFI_HII_CONFIG_ACCESS_PROTOCOL.
@@ -5123,6 +5182,15 @@ SecureBootCallback (
 
         if (SetupMode != NULL) {
           FreePool (SetupMode);
+        }
+
+        break;
+      case KEY_ENTER_SETUP_MODE:
+        Status = ConfirmEnterSetupMode (Private, IfrNvData);
+        if (!EFI_ERROR (Status)) {
+          *ActionRequest = EFI_BROWSER_ACTION_REQUEST_SUBMIT;
+        } else if (Status != EFI_ABORTED) {
+          Status = EFI_SUCCESS;
         }
 
         break;
