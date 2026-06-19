@@ -397,8 +397,8 @@ EnrollDefaultKeys (
   UINTN KekMicrosoft2011Size;
   UINT8 *KekMicrosoft2023 = 0;
   UINTN KekMicrosoft2023Size;
-  UINT8 *KekMicrosoftUefi2023 = 0;
-  UINTN KekMicrosoftUefi2023Size;
+  UINT8 *DbMicrosoftOpRomUefi2023 = 0;
+  UINTN DbMicrosoftOpRomUefi2023Size;
   UINT8 *PkMicrosoftOem2023 = 0;
   UINTN PkMicrosoftOem2023Size;
 
@@ -462,7 +462,7 @@ EnrollDefaultKeys (
   ASSERT_EFI_ERROR(Status);
   Status = GetSectionFromAnyFv(&gMicrosoftKek2023Guid, EFI_SECTION_RAW, 0, (void **)&KekMicrosoft2023, &KekMicrosoft2023Size);
   ASSERT_EFI_ERROR(Status);
-  Status = GetSectionFromAnyFv(&gMicrosoftKekUefi2023Guid, EFI_SECTION_RAW, 0, (void **)&KekMicrosoftUefi2023, &KekMicrosoftUefi2023Size);
+  Status = GetSectionFromAnyFv(&gMicrosoftDbOpRomUefi2023Guid, EFI_SECTION_RAW, 0, (void **)&DbMicrosoftOpRomUefi2023, &DbMicrosoftOpRomUefi2023Size);
   ASSERT_EFI_ERROR(Status);
   Status = GetSectionFromAnyFv(&gMicrosoftPkOem2023Guid, EFI_SECTION_RAW, 0, (void **)&PkMicrosoftOem2023, &PkMicrosoftOem2023Size);
   ASSERT_EFI_ERROR(Status);
@@ -479,10 +479,11 @@ EnrollDefaultKeys (
     EFI_IMAGE_SECURITY_DATABASE,
     &gEfiImageSecurityDatabaseGuid,
     &gEfiCertX509Guid,
-    DbMicrosoftUefi2011,    DbMicrosoftUefi2011Size,    &gMicrosoftVendorGuid,
-    DbMicrosoftUefi2023,    DbMicrosoftUefi2023Size,    &gMicrosoftVendorGuid,
-    DbMicrosoftWin2011,     DbMicrosoftWin2011Size,     &gMicrosoftVendorGuid,
-    DbMicrosoftWinuefi2023, DbMicrosoftWinuefi2023Size, &gMicrosoftVendorGuid,
+    DbMicrosoftUefi2011,      DbMicrosoftUefi2011Size,      &gMicrosoftVendorGuid,
+    DbMicrosoftUefi2023,      DbMicrosoftUefi2023Size,      &gMicrosoftVendorGuid,
+    DbMicrosoftWin2011,       DbMicrosoftWin2011Size,       &gMicrosoftVendorGuid,
+    DbMicrosoftWinuefi2023,   DbMicrosoftWinuefi2023Size,   &gMicrosoftVendorGuid,
+    DbMicrosoftOpRomUefi2023, DbMicrosoftOpRomUefi2023Size, &gMicrosoftVendorGuid,
     NULL);
   ASSERT_EFI_ERROR (Status);
 
@@ -492,7 +493,6 @@ EnrollDefaultKeys (
     &gEfiCertX509Guid,
     KekMicrosoft2011, KekMicrosoft2011Size, &gMicrosoftVendorGuid,
     KekMicrosoft2023, KekMicrosoft2023Size, &gMicrosoftVendorGuid,
-    KekMicrosoftUefi2023, KekMicrosoftUefi2023Size, &gMicrosoftVendorGuid,
     NULL);
   ASSERT_EFI_ERROR (Status);
 
@@ -511,7 +511,7 @@ EnrollDefaultKeys (
   FreePool(DbxMicrosoftUpdate);
   FreePool(KekMicrosoft2011);
   FreePool(KekMicrosoft2023);
-  FreePool(KekMicrosoftUefi2023);
+  FreePool(DbMicrosoftOpRomUefi2023);
   FreePool(PkMicrosoftOem2023);
 
   Settings.CustomMode = STANDARD_SECURE_BOOT_MODE;

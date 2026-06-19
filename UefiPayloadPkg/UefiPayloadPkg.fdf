@@ -268,6 +268,11 @@ INF MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
       SECTION UI = "Microsoft Corporation DB Windows UEFI 2023"
     }
 
+    FILE FREEFORM = f5a81b7b-419a-4a92-8212-1c369bcbe2cb {
+      SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/db_microsoft_oprom_uefi_2023.der
+      SECTION UI = "Microsoft Corporation DB Option ROM UEFI 2023"
+    }
+
     FILE FREEFORM = 73f89874-b2ec-4c28-a7e3-7d8030134e0b {
       SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/kek_microsoft_2011.der
       SECTION UI = "Microsoft Corporation KEK CA 2011"
@@ -275,12 +280,7 @@ INF MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
 
     FILE FREEFORM = cce7d8e7-aae8-4697-b5c0-ef35a92a059f {
       SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/kek_microsoft_2023.der
-      SECTION UI = "Microsoft Corporation KEK CA 2023"
-    }
-
-    FILE FREEFORM = f5a81b7b-419a-4a92-8212-1c369bcbe2cb {
-      SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/kek_microsoft_uefi_2023.der
-      SECTION UI = "Microsoft Corporation UEFI KEK CA 2023"
+      SECTION UI = "Microsoft Corporation KEK 2K CA 2023"
     }
 
     FILE FREEFORM = 701649dd-8739-40b9-bbdb-9ca434fdcd3b {
@@ -581,6 +581,11 @@ FILE FREEFORM = 4ac66f32-6895-46fc-ad00-f1c81d06c668 {
   SECTION UI = "Microsoft Corporation DB Windows UEFI 2023"
 }
 
+FILE FREEFORM = f5a81b7b-419a-4a92-8212-1c369bcbe2cb {
+  SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/db_microsoft_oprom_uefi_2023.der
+  SECTION UI = "Microsoft Corporation DB Option ROM UEFI 2023"
+}
+
 FILE FREEFORM = 73f89874-b2ec-4c28-a7e3-7d8030134e0b {
   SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/kek_microsoft_2011.der
   SECTION UI = "Microsoft Corporation KEK CA 2011"
@@ -588,12 +593,7 @@ FILE FREEFORM = 73f89874-b2ec-4c28-a7e3-7d8030134e0b {
 
 FILE FREEFORM = cce7d8e7-aae8-4697-b5c0-ef35a92a059f {
   SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/kek_microsoft_2023.der
-  SECTION UI = "Microsoft Corporation KEK CA 2023"
-}
-
-FILE FREEFORM = f5a81b7b-419a-4a92-8212-1c369bcbe2cb {
-  SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/kek_microsoft_uefi_2023.der
-  SECTION UI = "Microsoft Corporation UEFI KEK CA 2023"
+  SECTION UI = "Microsoft Corporation KEK 2K CA 2023"
 }
 
 FILE FREEFORM = 701649dd-8739-40b9-bbdb-9ca434fdcd3b {
