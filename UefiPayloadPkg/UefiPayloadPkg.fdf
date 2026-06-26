@@ -21,7 +21,7 @@ DEFINE NUM_BLOCKS  = 0x850
 DEFINE FD_SIZE     = 0x0900000
 DEFINE NUM_BLOCKS  = 0x900
 !else
-!  # RELEASE: default 8 MiB; grow when RtkUndiDxe is included (~173 KiB driver)
+# RELEASE: default 8 MiB; grow when RtkUndiDxe is included (~173 KiB driver)
 !if $(RTKUNDI_ENABLE) == TRUE
 DEFINE FD_SIZE     = 0x00850000
 DEFINE NUM_BLOCKS  = 0x850
