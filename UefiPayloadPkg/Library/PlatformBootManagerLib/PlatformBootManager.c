@@ -227,6 +227,7 @@ PlatformRegisterFvBootOption (
 
 EFI_HANDLE BootManagerEntryNotifyHandle1;
 EFI_HANDLE BootManagerEntryNotifyHandle2;
+EFI_HANDLE BootManagerContinueNotifyHandle;
 
 VOID
 PlatformUnregisterBootManagerEntryNotifyCallback (
@@ -244,7 +245,23 @@ PlatformUnregisterBootManagerEntryNotifyCallback (
   if (!EFI_ERROR (Status)) {
     Status = SimpleEx->UnregisterKeyNotify (SimpleEx, BootManagerEntryNotifyHandle1);
     Status = SimpleEx->UnregisterKeyNotify (SimpleEx, BootManagerEntryNotifyHandle2);
+    Status = SimpleEx->UnregisterKeyNotify (SimpleEx, BootManagerContinueNotifyHandle);
   }
+}
+
+EFI_STATUS
+EFIAPI
+BootManagerContinueNotifyCallback (
+  EFI_KEY_DATA *KeyData
+  )
+{
+  //
+  // The user chose to boot directly, so clear the boot prompt text just like
+  // when entering the Boot Manager Menu.
+  //
+  BootLogoClearProgress ();
+
+  return EFI_SUCCESS;
 }
 
 EFI_STATUS
@@ -323,6 +340,21 @@ PlatformRegisterBootManagerEntryNotifyCallback (
                          &KeyData,
                          BootManagerEntryNotifyCallback,
                          &BootManagerEntryNotifyHandle2
+                         );
+  }
+
+  //
+  // Clear the boot prompt text when the user presses ENTER to boot directly.
+  //
+  KeyData.Key.ScanCode    = SCAN_NULL;
+  KeyData.Key.UnicodeChar = CHAR_CARRIAGE_RETURN;
+
+  if (!EFI_ERROR (Status)) {
+    Status = SimpleEx->RegisterKeyNotify (
+                         SimpleEx,
+                         &KeyData,
+                         BootManagerContinueNotifyCallback,
+                         &BootManagerContinueNotifyHandle
                          );
   }
 }
