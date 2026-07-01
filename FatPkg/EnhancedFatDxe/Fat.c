@@ -292,8 +292,9 @@ FatDriverBindingSupported (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS            Status;
-  EFI_DISK_IO_PROTOCOL  *DiskIo;
+  EFI_STATUS             Status;
+  EFI_DISK_IO_PROTOCOL   *DiskIo;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
 
   //
   // Open the IO Abstraction(s) needed to perform the supported test
@@ -308,6 +309,20 @@ FatDriverBindingSupported (
                   );
 
   if (EFI_ERROR (Status)) {
+    if (!EFI_ERROR (
+          gBS->OpenProtocol (
+                 ControllerHandle,
+                 &gEfiBlockIoProtocolGuid,
+                 (VOID **)&BlockIo,
+                 This->DriverBindingHandle,
+                 ControllerHandle,
+                 EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                 )
+          ) && (BlockIo->Media != NULL) && BlockIo->Media->LogicalPartition)
+    {
+      FatDebugLogVolume (__func__, ControllerHandle, BlockIo, "Supported DiskIo open failed", Status);
+    }
+
     return Status;
   }
 
@@ -393,6 +408,7 @@ FatDriverBindingStart (
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
+    FatDebugLogVolume (__func__, ControllerHandle, NULL, "BlockIo open failed", Status);
     goto Exit;
   }
 
@@ -405,6 +421,7 @@ FatDriverBindingStart (
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
   if (EFI_ERROR (Status)) {
+    FatDebugLogVolume (__func__, ControllerHandle, BlockIo, "DiskIo open failed", Status);
     goto Exit;
   }
 
@@ -432,6 +449,7 @@ FatDriverBindingStart (
   // Start() successfully. We should leave the device open when this happen.
   //
   if (EFI_ERROR (Status)) {
+    FatDebugLogVolume (__func__, ControllerHandle, BlockIo, "FatAllocateVolume failed", Status);
     Status = gBS->OpenProtocol (
                     ControllerHandle,
                     &gEfiSimpleFileSystemProtocolGuid,

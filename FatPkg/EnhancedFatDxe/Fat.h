@@ -22,6 +22,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Library/PcdLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DevicePathLib.h>
 #include <Library/UefiLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -980,7 +981,25 @@ FatComputeFreeInfo (
 //
 
 /**
+  Log FAT mount diagnostics at DEBUG_INIT for firmware console capture.
 
+  @param[in] Where    Caller context label.
+  @param[in] Handle   Controller handle being mounted.
+  @param[in] BlockIo  Optional BlockIo for media details.
+  @param[in] Message  Short description of the event.
+  @param[in] Status   Associated status code.
+
+**/
+VOID
+FatDebugLogVolume (
+  IN CONST CHAR8            *Where,
+  IN EFI_HANDLE             Handle,
+  IN EFI_BLOCK_IO_PROTOCOL  *BlockIo  OPTIONAL,
+  IN CONST CHAR8            *Message,
+  IN EFI_STATUS             Status
+  );
+
+/**
   Allocates volume structure, detects FAT file system, installs protocol,
   and initialize cache.
 

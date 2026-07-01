@@ -9,6 +9,62 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include "Fat.h"
 
 /**
+  Log FAT mount diagnostics at DEBUG_INIT for firmware console capture.
+
+  @param[in] Where    Caller context label.
+  @param[in] Handle   Controller handle being mounted.
+  @param[in] BlockIo  Optional BlockIo for media details.
+  @param[in] Message  Short description of the event.
+  @param[in] Status   Associated status code.
+
+**/
+VOID
+FatDebugLogVolume (
+  IN CONST CHAR8            *Where,
+  IN EFI_HANDLE             Handle,
+  IN EFI_BLOCK_IO_PROTOCOL  *BlockIo  OPTIONAL,
+  IN CONST CHAR8            *Message,
+  IN EFI_STATUS             Status
+  )
+{
+  CHAR16                    *DevicePathStr;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+
+  DevicePathStr = NULL;
+  DevicePath    = DevicePathFromHandle (Handle);
+  if (DevicePath != NULL) {
+    DevicePathStr = ConvertDevicePathToText (DevicePath, FALSE, FALSE);
+  }
+
+  DEBUG ((
+    DEBUG_INIT,
+    "FAT: %a [%a] Status=%r Handle=%p Path=%s\n",
+    Where,
+    Message,
+    Status,
+    Handle,
+    (DevicePathStr != NULL) ? DevicePathStr : L"<null>"
+    ));
+
+  if (DevicePathStr != NULL) {
+    FreePool (DevicePathStr);
+  }
+
+  if ((BlockIo != NULL) && (BlockIo->Media != NULL)) {
+    DEBUG ((
+      DEBUG_INIT,
+      "FAT: %a BlockSize=%u LastBlock=%lx LogicalPartition=%u ReadOnly=%u MediaId=%u\n",
+      Where,
+      BlockIo->Media->BlockSize,
+      BlockIo->Media->LastBlock,
+      BlockIo->Media->LogicalPartition,
+      BlockIo->Media->ReadOnly,
+      BlockIo->Media->MediaId
+      ));
+  }
+}
+
+/**
 
   Allocates volume structure, detects FAT file system, installs protocol,
   and initialize cache.
@@ -87,11 +143,14 @@ FatAllocateVolume (
     goto Done;
   }
 
+  FatDebugLogVolume (__func__, Handle, BlockIo, "mount attempt", EFI_SUCCESS);
+
   //
   // Check to see if there's a file system on the volume
   //
   Status = FatOpenDevice (Volume);
   if (EFI_ERROR (Status)) {
+    FatDebugLogVolume (__func__, Handle, BlockIo, "FatOpenDevice failed", Status);
     goto Done;
   }
 
@@ -100,6 +159,7 @@ FatAllocateVolume (
   //
   Status = FatInitializeDiskCache (Volume);
   if (EFI_ERROR (Status)) {
+    FatDebugLogVolume (__func__, Handle, BlockIo, "FatInitializeDiskCache failed", Status);
     goto Done;
   }
 
@@ -113,6 +173,7 @@ FatAllocateVolume (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
+    FatDebugLogVolume (__func__, Handle, BlockIo, "SimpleFileSystem install failed", Status);
     goto Done;
   }
 
@@ -120,6 +181,7 @@ FatAllocateVolume (
   // Volume installed
   //
   DEBUG ((DEBUG_INIT, "Installed Fat filesystem on %p\n", Handle));
+  FatDebugLogVolume (__func__, Handle, BlockIo, "mount success", EFI_SUCCESS);
   Volume->Valid = TRUE;
 
 Done:
@@ -128,6 +190,40 @@ Done:
   }
 
   return Status;
+}
+
+/**
+  Log boot-sector details when FAT mount validation fails.
+
+**/
+STATIC
+VOID
+FatDebugLogBootSector (
+  IN FAT_VOLUME       *Volume,
+  IN CONST CHAR8      *Reason,
+  IN EFI_STATUS       Status,
+  IN FAT_BOOT_SECTOR  *FatBs
+  )
+{
+  FatDebugLogVolume (__func__, Volume->Handle, Volume->BlockIo, Reason, Status);
+  DEBUG ((
+    DEBUG_INIT,
+    "FAT: FatOpenDevice BPB Reserved=%u NumFats=%u Sectors=%lu SectorSize=%u SPC=%u Media=%02x\n",
+    FatBs->FatBsb.ReservedSectors,
+    FatBs->FatBsb.NumFats,
+    (UINT64)((FatBs->FatBsb.Sectors != 0) ? FatBs->FatBsb.Sectors : FatBs->FatBsb.LargeSectors),
+    FatBs->FatBsb.SectorSize,
+    FatBs->FatBsb.SectorsPerCluster,
+    FatBs->FatBsb.Media
+    ));
+  DEBUG ((
+    DEBUG_INIT,
+    "FAT: FatOpenDevice BPB first bytes %02x %02x %02x %02x\n",
+    ((UINT8 *)FatBs)[0],
+    ((UINT8 *)FatBs)[1],
+    ((UINT8 *)FatBs)[2],
+    ((UINT8 *)FatBs)[3]
+    ));
 }
 
 /**
@@ -247,7 +343,7 @@ FatOpenDevice (
   Status = DiskIo->ReadDisk (DiskIo, Volume->MediaId, 0, sizeof (FatBs), &FatBs);
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_VERBOSE, "%a: read of part_lba failed %r\n", __func__, Status));
+    FatDebugLogVolume (__func__, Volume->Handle, Volume->BlockIo, "boot sector read failed", Status);
     return Status;
   }
 
@@ -274,24 +370,29 @@ FatOpenDevice (
   // the volume size)
   //
   if ((FatBs.FatBsb.ReservedSectors == 0) || (FatBs.FatBsb.NumFats == 0) || (Sectors == 0)) {
+    FatDebugLogBootSector (Volume, "invalid BPB header fields", EFI_UNSUPPORTED, &FatBs);
     return EFI_UNSUPPORTED;
   }
 
   if ((FatBs.FatBsb.SectorSize & (FatBs.FatBsb.SectorSize - 1)) != 0) {
+    FatDebugLogBootSector (Volume, "sector size not power of two", EFI_UNSUPPORTED, &FatBs);
     return EFI_UNSUPPORTED;
   }
 
   BlockAlignment = (UINT8)HighBitSet32 (FatBs.FatBsb.SectorSize);
   if ((BlockAlignment > MAX_BLOCK_ALIGNMENT) || (BlockAlignment < MIN_BLOCK_ALIGNMENT)) {
+    FatDebugLogBootSector (Volume, "sector size out of range", EFI_UNSUPPORTED, &FatBs);
     return EFI_UNSUPPORTED;
   }
 
   if ((FatBs.FatBsb.SectorsPerCluster & (FatBs.FatBsb.SectorsPerCluster - 1)) != 0) {
+    FatDebugLogBootSector (Volume, "sectors per cluster not power of two", EFI_UNSUPPORTED, &FatBs);
     return EFI_UNSUPPORTED;
   }
 
   SectorsPerClusterAlignment = (UINT8)HighBitSet32 (FatBs.FatBsb.SectorsPerCluster);
   if (SectorsPerClusterAlignment > MAX_SECTORS_PER_CLUSTER_ALIGNMENT) {
+    FatDebugLogBootSector (Volume, "sectors per cluster too large", EFI_UNSUPPORTED, &FatBs);
     return EFI_UNSUPPORTED;
   }
 
@@ -301,6 +402,7 @@ FatOpenDevice (
       (FatBs.FatBsb.Media != 0x01)
       )
   {
+    FatDebugLogBootSector (Volume, "invalid media descriptor", EFI_UNSUPPORTED, &FatBs);
     return EFI_UNSUPPORTED;
   }
 
@@ -309,6 +411,7 @@ FatOpenDevice (
   //
   if (FatType != Fat32) {
     if (FatBs.FatBsb.RootEntries == 0) {
+      FatDebugLogBootSector (Volume, "FAT12/16 root entries is zero", EFI_UNSUPPORTED, &FatBs);
       return EFI_UNSUPPORTED;
     }
 
@@ -321,6 +424,14 @@ FatOpenDevice (
     // If this is fat32, refuse to mount mirror-disabled volumes
     //
     if (((SectorsPerFat == 0) || (FatBs.FatBse.Fat32Bse.FsVersion != 0)) || (FatBs.FatBse.Fat32Bse.ExtendedFlags & 0x80)) {
+      DEBUG ((
+        DEBUG_INIT,
+        "FAT: FatOpenDevice FAT32 rejected SectorsPerFat=%lu FsVersion=%04x ExtendedFlags=%02x\n",
+        (UINT64)SectorsPerFat,
+        FatBs.FatBse.Fat32Bse.FsVersion,
+        FatBs.FatBse.Fat32Bse.ExtendedFlags
+        ));
+      FatDebugLogBootSector (Volume, "FAT32 mirror disabled or bad version", EFI_UNSUPPORTED, &FatBs);
       return EFI_UNSUPPORTED;
     }
 
@@ -356,6 +467,12 @@ FatOpenDevice (
   //
   if (FatType != Fat32) {
     if (Volume->MaxCluster >= FAT_MAX_FAT16_CLUSTER) {
+      DEBUG ((
+        DEBUG_INIT,
+        "FAT: FatOpenDevice FAT12/16 MaxCluster=%lu exceeds FAT16 limit\n",
+        (UINT64)Volume->MaxCluster
+        ));
+      FatDebugLogBootSector (Volume, "FAT12/16 cluster count too large", EFI_VOLUME_CORRUPTED, &FatBs);
       return EFI_VOLUME_CORRUPTED;
     }
 
@@ -367,6 +484,12 @@ FatOpenDevice (
     DirtyMask            = FAT16_DIRTY_MASK;
   } else {
     if (Volume->MaxCluster < FAT_MAX_FAT16_CLUSTER) {
+      DEBUG ((
+        DEBUG_INIT,
+        "FAT: FatOpenDevice FAT32 MaxCluster=%lu below FAT32 minimum\n",
+        (UINT64)Volume->MaxCluster
+        ));
+      FatDebugLogBootSector (Volume, "FAT32 cluster count too small", EFI_VOLUME_CORRUPTED, &FatBs);
       return EFI_VOLUME_CORRUPTED;
     }
 
@@ -385,6 +508,7 @@ FatOpenDevice (
   if (FatType != Fat12) {
     Status = FatAccessVolumeDirty (Volume, ReadDisk, &Volume->NotDirtyValue);
     if (EFI_ERROR (Status)) {
+      FatDebugLogVolume (__func__, Volume->Handle, Volume->BlockIo, "dirty FAT read failed", Status);
       return Status;
     }
 
