@@ -686,25 +686,49 @@ InitializeUsbMouseDevice (
     DivU64x32 (UsbMouseAbsolutePointerDev->Mode.AbsoluteMaxY + UsbMouseAbsolutePointerDev->Mode.AbsoluteMinY, 2);
 
   //
-  // Set boot protocol for the USB mouse.
-  // This driver only supports boot protocol.
+  // Select HID protocol from the parsed report layout.  Boot protocol is only
+  // used when the descriptor matches the classic 8-bit boot mouse format.
+  // Devices with Report IDs or 16-bit axes (e.g. many wireless dongles) must
+  // stay on report protocol so interrupt packets match ReportLayout.
   //
-  UsbGetProtocolRequest (
-    UsbIo,
-    UsbMouseAbsolutePointerDev->InterfaceDescriptor.InterfaceNumber,
-    &Protocol
-    );
-  if (Protocol != BOOT_PROTOCOL) {
-    Status = UsbSetProtocolRequest (
-               UsbIo,
-               UsbMouseAbsolutePointerDev->InterfaceDescriptor.InterfaceNumber,
-               BOOT_PROTOCOL
-               );
+  {
+    UINT8  DesiredProtocol;
 
-    if (EFI_ERROR (Status)) {
-      FreePool (Buf);
-      FreePool (ReportDesc);
-      return Status;
+    DesiredProtocol = MouseReportLayoutIsBootCompatible (&UsbMouseAbsolutePointerDev->ReportLayout)
+                      ? BOOT_PROTOCOL
+                      : REPORT_PROTOCOL;
+
+    UsbGetProtocolRequest (
+      UsbIo,
+      UsbMouseAbsolutePointerDev->InterfaceDescriptor.InterfaceNumber,
+      &Protocol
+      );
+    if (Protocol != DesiredProtocol) {
+      Status = UsbSetProtocolRequest (
+                 UsbIo,
+                 UsbMouseAbsolutePointerDev->InterfaceDescriptor.InterfaceNumber,
+                 DesiredProtocol
+                 );
+      if (EFI_ERROR (Status) && (DesiredProtocol == REPORT_PROTOCOL)) {
+        //
+        // Fall back to boot protocol and the matching layout if the device
+        // rejects report protocol.
+        //
+        Status = UsbSetProtocolRequest (
+                   UsbIo,
+                   UsbMouseAbsolutePointerDev->InterfaceDescriptor.InterfaceNumber,
+                   BOOT_PROTOCOL
+                   );
+        if (!EFI_ERROR (Status)) {
+          InitializeDefaultBootMouseLayout (&UsbMouseAbsolutePointerDev->ReportLayout);
+        }
+      }
+
+      if (EFI_ERROR (Status)) {
+        FreePool (Buf);
+        FreePool (ReportDesc);
+        return Status;
+      }
     }
   }
 
@@ -728,6 +752,80 @@ InitializeUsbMouseDevice (
          );
 
   return EFI_SUCCESS;
+}
+
+/**
+  Extract a little-endian bitfield from a HID report payload.
+
+  @param  Data        Report payload bytes.
+  @param  DataLength  Payload length in bytes.
+  @param  BitOffset   Field bit offset from start of payload.
+  @param  BitSize     Field width in bits (1..32).
+
+  @return Zero-extended field value.
+
+**/
+STATIC
+UINT32
+ExtractHidReportBits (
+  IN CONST UINT8  *Data,
+  IN UINTN        DataLength,
+  IN UINT16       BitOffset,
+  IN UINT8        BitSize
+  )
+{
+  UINTN   ByteOffset;
+  UINT8   Shift;
+  UINT64  Window;
+  UINT32  Mask;
+  UINTN   Index;
+
+  if ((BitSize == 0) || (BitSize > 32) || (Data == NULL) || (DataLength == 0)) {
+    return 0;
+  }
+
+  ByteOffset = BitOffset / 8;
+  Shift      = (UINT8)(BitOffset % 8);
+  Window     = 0;
+
+  for (Index = 0; Index < 5; Index++) {
+    if ((ByteOffset + Index) >= DataLength) {
+      break;
+    }
+
+    Window |= (UINT64)Data[ByteOffset + Index] << (Index * 8);
+  }
+
+  Window >>= Shift;
+  if (BitSize == 32) {
+    return (UINT32)Window;
+  }
+
+  Mask = (1u << BitSize) - 1;
+  return (UINT32)Window & Mask;
+}
+
+/**
+  Sign-extend a BitSize-wide unsigned value to INT32.
+
+  @param  Value    Zero-extended field value.
+  @param  BitSize  Original field width.
+
+  @return Signed value.
+
+**/
+STATIC
+INT32
+SignExtendHidValue (
+  IN UINT32  Value,
+  IN UINT8   BitSize
+  )
+{
+  if ((BitSize > 0) && (BitSize < 32) && ((Value & (1u << (BitSize - 1))) != 0)) {
+    Value |= ~((1u << BitSize) - 1);
+  }
+
+  return (INT32)Value;
 }
 
 /**
@@ -760,9 +858,17 @@ OnMouseInterruptComplete (
   EFI_USB_IO_PROTOCOL             *UsbIo;
   UINT8                           EndpointAddr;
   UINT32                          UsbResult;
+  USB_MOUSE_REPORT_LAYOUT         *Layout;
+  UINT8                           *Payload;
+  UINTN                           PayloadLength;
+  UINT32                          ButtonMask;
+  INT32                           DeltaX;
+  INT32                           DeltaY;
+  INT32                           DeltaZ;
 
   UsbMouseAbsolutePointerDevice = (USB_MOUSE_ABSOLUTE_POINTER_DEV *)Context;
   UsbIo                         = UsbMouseAbsolutePointerDevice->UsbIo;
+  Layout                        = &UsbMouseAbsolutePointerDevice->ReportLayout;
 
   if (Result != EFI_USB_NOERROR) {
     //
@@ -815,30 +921,71 @@ OnMouseInterruptComplete (
     return EFI_SUCCESS;
   }
 
+  Payload       = (UINT8 *)Data;
+  PayloadLength = DataLength;
+
   //
-  // Check mouse Data
-  // USB HID Specification specifies following data format:
-  // Byte    Bits    Description
-  // 0       0       Button 1
-  //         1       Button 2
-  //         2       Button 3
-  //         4 to 7  Device-specific
-  // 1       0 to 7  X displacement
-  // 2       0 to 7  Y displacement
-  // 3 to n  0 to 7  Device specific (optional)
+  // Reports with a Report ID prefix may share the interrupt endpoint with
+  // non-pointer reports (system control, consumer, vendor).  Ignore those.
   //
-  if (DataLength < 3) {
+  if (Layout->HasReportId) {
+    if (PayloadLength < 1) {
+      return EFI_SUCCESS;
+    }
+
+    if (Payload[0] != Layout->ReportId) {
+      return EFI_SUCCESS;
+    }
+
+    Payload++;
+    PayloadLength--;
+  }
+
+  if (DataLength < Layout->MinPacketBytes) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  if (PayloadLength * 8 < (UINTN)Layout->YBitOffset + Layout->YBitSize) {
     return EFI_DEVICE_ERROR;
   }
 
   UsbMouseAbsolutePointerDevice->StateChanged = TRUE;
 
-  UsbMouseAbsolutePointerDevice->State.ActiveButtons = *(UINT8 *)Data & (BIT0 | BIT1 | BIT2);
+  ButtonMask = 0;
+  if (Layout->ButtonBitCount > 0) {
+    ButtonMask = ExtractHidReportBits (
+                   Payload,
+                   PayloadLength,
+                   Layout->ButtonBitOffset,
+                   Layout->ButtonBitCount
+                   );
+  }
+
+  UsbMouseAbsolutePointerDevice->State.ActiveButtons = (UINT8)(ButtonMask & (BIT0 | BIT1 | BIT2));
+
+  DeltaX = SignExtendHidValue (
+             ExtractHidReportBits (
+               Payload,
+               PayloadLength,
+               Layout->XBitOffset,
+               Layout->XBitSize
+               ),
+             Layout->XBitSize
+             );
+  DeltaY = SignExtendHidValue (
+             ExtractHidReportBits (
+               Payload,
+               PayloadLength,
+               Layout->YBitOffset,
+               Layout->YBitSize
+               ),
+             Layout->YBitSize
+             );
 
   UsbMouseAbsolutePointerDevice->State.CurrentX =
     MIN (
       MAX (
-        (INT64)UsbMouseAbsolutePointerDevice->State.CurrentX + *((INT8 *)Data + 1),
+        (INT64)UsbMouseAbsolutePointerDevice->State.CurrentX + DeltaX,
         (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinX
         ),
       (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxX
@@ -846,16 +993,29 @@ OnMouseInterruptComplete (
   UsbMouseAbsolutePointerDevice->State.CurrentY =
     MIN (
       MAX (
-        (INT64)UsbMouseAbsolutePointerDevice->State.CurrentY + *((INT8 *)Data + 2),
+        (INT64)UsbMouseAbsolutePointerDevice->State.CurrentY + DeltaY,
         (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinY
         ),
       (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxY
       );
-  if (DataLength > 3) {
+
+  if ((Layout->WheelBitOffset != USB_MOUSE_REPORT_FIELD_ABSENT) &&
+      (Layout->WheelBitSize > 0) &&
+      (PayloadLength * 8 >= (UINTN)Layout->WheelBitOffset + Layout->WheelBitSize))
+  {
+    DeltaZ = SignExtendHidValue (
+               ExtractHidReportBits (
+                 Payload,
+                 PayloadLength,
+                 Layout->WheelBitOffset,
+                 Layout->WheelBitSize
+                 ),
+               Layout->WheelBitSize
+               );
     UsbMouseAbsolutePointerDevice->State.CurrentZ =
       MIN (
         MAX (
-          (INT64)UsbMouseAbsolutePointerDevice->State.CurrentZ + *((INT8 *)Data + 3),
+          (INT64)UsbMouseAbsolutePointerDevice->State.CurrentZ + DeltaZ,
           (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinZ
           ),
         (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxZ

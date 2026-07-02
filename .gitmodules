@@ -41,3 +41,6 @@
 [submodule "MdePkg/Library/ArmTransferListLib/libtl"]
 	path = MdePkg/Library/ArmTransferListLib/libtl
 	url = https://github.com/TF-Shared/transfer-list-library.git
+[submodule "LvglPkg"]
+	path = LvglPkg
+	url = https://github.com/MrChromebox/LvglPkg.git
