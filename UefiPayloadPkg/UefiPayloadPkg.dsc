@@ -731,6 +731,15 @@
   ## Whether capsules are allowed to persist across reset.
   gEfiMdeModulePkgTokenSpaceGuid.PcdSupportUpdateCapsuleReset|$(CAPSULE_SUPPORT)
 
+!if $(DISABLE_SERIAL_TERMINAL) == TRUE
+  #
+  # Graphical (LVGL) builds repaint the front-page battery banner live, so the
+  # UiApp must not also draw it to ConOut (that would leave a stray text overlay
+  # on top of the graphical UI). Text-mode builds keep the default (TRUE).
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdUiAppFrontPageBatteryToConOut|FALSE
+!endif
+
 [PcdsFeatureFlag.X64]
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeIplSwitchToLongMode|TRUE
   gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmEnableBspElection|FALSE

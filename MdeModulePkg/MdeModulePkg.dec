@@ -827,6 +827,16 @@
   # @Prompt Enable ConOut GOP support.
   gEfiMdeModulePkgTokenSpaceGuid.PcdConOutGopSupport|TRUE|BOOLEAN|0x00010042
 
+  ## Indicates if the UiApp front page draws the battery status string directly
+  #  to ConOut. Text-mode consoles need this because the battery banner line is
+  #  not repainted when its HII string changes. Set FALSE for graphical display
+  #  engines (e.g. LVGL) that repaint banner lines live, to avoid a stray text
+  #  overlay on top of the graphical UI.<BR><BR>
+  #   TRUE  - UiApp draws the battery status directly to ConOut.<BR>
+  #   FALSE - UiApp only updates the battery HII string.<BR>
+  # @Prompt Draw UiApp front-page battery status to ConOut.
+  gEfiMdeModulePkgTokenSpaceGuid.PcdUiAppFrontPageBatteryToConOut|TRUE|BOOLEAN|0x00010080
+
   ## Indicates PeiCore will first search TE section from the PEIM to load the image, or PE32 section, when PeiCore dispatches a PEI module.
   #  This PCD is used to tune PEI phase performance to reduce the search image time.
   #  It can be set according to the generated image section type.<BR><BR>

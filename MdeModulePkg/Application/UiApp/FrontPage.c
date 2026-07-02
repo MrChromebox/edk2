@@ -361,13 +361,11 @@ BatteryUpdateTimerCallback (
   IN VOID       *Context
   )
 {
-  EFI_STATUS                      Status;
-  UINT8                           BatteryPercentage;
-  BOOLEAN                         BatteryPresent;
-  BOOLEAN                         BatteryCharging;
-  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *ConOut;
-  CHAR16                          *BatteryString;
-  BOOLEAN                         NeedsUpdate;
+  EFI_STATUS  Status;
+  UINT8       BatteryPercentage;
+  BOOLEAN     BatteryPresent;
+  BOOLEAN     BatteryCharging;
+  BOOLEAN     NeedsUpdate;
 
   // Get current battery status
   Status = GetBatteryInfoFromProtocol (&BatteryPercentage, &BatteryPresent, &BatteryCharging);
@@ -390,33 +388,50 @@ BatteryUpdateTimerCallback (
   mLastBatteryCharging   = BatteryCharging;
   UpdateBatteryString (BatteryPercentage, BatteryPresent, BatteryCharging);
 
-  // Only update screen if front page is currently active
-  if (!mFrontPageActive) {
-    return;
-  }
+  //
+  // The battery status is published as an HII string (the front-page battery
+  // banner line). A graphical display engine such as LVGL polls its banner
+  // labels and repaints this line in place as the string changes, so the
+  // graphical UI stays live without any direct console writes.
+  //
+  // Text-mode consoles do not repaint the banner line when the HII string
+  // changes, so when PcdUiAppFrontPageBatteryToConOut is TRUE we also draw the
+  // status directly to ConOut. This is disabled for graphical display engines,
+  // where a direct ConOut write would paint a stray text overlay on top of the
+  // graphical UI that can also disagree with the graphical banner value.
+  //
+  if (FeaturePcdGet (PcdUiAppFrontPageBatteryToConOut)) {
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *ConOut;
+    CHAR16                           *BatteryString;
 
-  // Get the updated string and render it directly on screen
-  BatteryString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BATTERY_STATUS), NULL);
-  if (BatteryString != NULL) {
-    ConOut = gST->ConOut;
-    if (ConOut != NULL) {
-      // Get current cursor position to restore later
-      UINT32  SavedColumn = ConOut->Mode->CursorColumn;
-      UINT32  SavedRow    = ConOut->Mode->CursorRow;
-
-      // Set cursor to start of line 6 (left margin), clear the existing battery string
-      ConOut->SetCursorPosition (ConOut, 1, (UINT32)6);
-      ConOut->OutputString (ConOut, L"                                ");
-
-      // Print the battery string
-      ConOut->SetCursorPosition (ConOut, 1, (UINT32)6);
-      ConOut->OutputString (ConOut, BatteryString);
-
-      // Restore cursor position to avoid interfering with form browser
-      ConOut->SetCursorPosition (ConOut, SavedColumn, SavedRow);
+    // Only update screen if front page is currently active
+    if (!mFrontPageActive) {
+      return;
     }
 
-    FreePool (BatteryString);
+    // Get the updated string and render it directly on screen
+    BatteryString = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_FRONT_PAGE_BATTERY_STATUS), NULL);
+    if (BatteryString != NULL) {
+      ConOut = gST->ConOut;
+      if (ConOut != NULL) {
+        // Get current cursor position to restore later
+        UINT32  SavedColumn = ConOut->Mode->CursorColumn;
+        UINT32  SavedRow    = ConOut->Mode->CursorRow;
+
+        // Set cursor to start of line 6 (left margin), clear the existing battery string
+        ConOut->SetCursorPosition (ConOut, 1, (UINT32)6);
+        ConOut->OutputString (ConOut, L"                                ");
+
+        // Print the battery string
+        ConOut->SetCursorPosition (ConOut, 1, (UINT32)6);
+        ConOut->OutputString (ConOut, BatteryString);
+
+        // Restore cursor position to avoid interfering with form browser
+        ConOut->SetCursorPosition (ConOut, SavedColumn, SavedRow);
+      }
+
+      FreePool (BatteryString);
+    }
   }
 }
 
