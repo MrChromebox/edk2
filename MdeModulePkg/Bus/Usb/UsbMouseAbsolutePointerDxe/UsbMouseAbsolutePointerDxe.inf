@@ -50,6 +50,8 @@
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   BaseMemoryLib
+  BaseLib
+  DebugLib
   ReportStatusCodeLib
   UefiUsbLib
 

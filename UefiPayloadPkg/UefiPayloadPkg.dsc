@@ -115,6 +115,9 @@
   # Enabling the serial terminal will slow down the boot menu redering!
   DEFINE DISABLE_SERIAL_TERMINAL      = FALSE
 
+  # Use the LVGL graphical renderer as the HII display engine
+  DEFINE LVGL_ENABLE                  = FALSE
+
   #
   #  typedef struct {
   #    UINT16  VendorId;          ///< Vendor ID to match the PCI device.  The value 0xFFFF terminates the list of entries.
@@ -234,6 +237,12 @@
 !endif
   *_*_*_CC_FLAGS                 = $(APPEND_CC_FLAGS)
 
+!if $(LVGL_ENABLE) == TRUE
+  # Upstream LVGL sources (LvglLib) trip GCC's -Wformat; suppress to build clean.
+  GCC:*_*_*_CC_FLAGS             = -Wno-format
+  MSFT:*_*_*_CC_FLAGS            = /wd4244 /wd4204 /wd4389 /wd4221 /wd4800 /wd4267 /wd4018 /wd4047 /wd4245 /wd4003 /wd4702 /wd4718 /wd4706 /wd4819 /wd4028 /wd5287 /GL-
+!endif
+
 [BuildOptions.AARCH64]
   GCC:*_*_*_CC_FLAGS         = -mstrict-align
   GCC:*_GCC_*_CC_FLAGS         = -mcmodel=tiny
@@ -282,6 +291,9 @@
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
   UefiPayloadPkg/UserAuthPkg/UserAuthPkg.dec
 !endif
+!if $(LVGL_ENABLE) == TRUE
+  LvglPkg/LvglPkg.dec
+!endif
 
 [LibraryClasses]
   GptLib|MdeModulePkg/Library/GptLib/GptLib.inf
@@ -292,6 +304,16 @@
   DxeCoreEntryPoint|MdePkg/Library/DxeCoreEntryPoint/DxeCoreEntryPoint.inf
   UefiDriverEntryPoint|MdePkg/Library/UefiDriverEntryPoint/UefiDriverEntryPoint.inf
   UefiApplicationEntryPoint|MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
+
+  #
+  # LVGL-based display engine (replaces MdeModulePkg DisplayEngineDxe when
+  # LVGL_ENABLE == TRUE)
+  #
+!if $(LVGL_ENABLE) == TRUE
+  LvglLib|LvglPkg/Library/LvglLib/LvglLib.inf
+  LvglThemeLib|LvglPkg/Library/LvglThemeLib/LvglThemeLib.inf
+  LvglUiConfigLib|LvglPkg/Library/LvglUiConfigLib/LvglUiConfigLib.inf
+!endif
 
   #
   # Basic
@@ -735,6 +757,14 @@
   ## Whether capsules are allowed to persist across reset.
   gEfiMdeModulePkgTokenSpaceGuid.PcdSupportUpdateCapsuleReset|$(CAPSULE_SUPPORT)
 
+
+  #
+  # Graphical (LVGL) builds repaint the front-page battery banner live, so the
+  # UiApp must not also draw it to ConOut (that would leave a stray text overlay
+  # on top of the graphical UI). Text-mode builds keep the default (TRUE).
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdUiAppFrontPageBatteryToConOut|!$(LVGL_ENABLE)
+
 [PcdsFeatureFlag.X64]
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeIplSwitchToLongMode|TRUE
   gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmEnableBspElection|FALSE
@@ -754,6 +784,20 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseMemory|FALSE
   gEfiMdeModulePkgTokenSpaceGuid.PcdUse1GPageTable|TRUE
   gUefiPayloadPkgTokenSpaceGuid.PcdHandOffFdtEnable|$(HAND_OFF_FDT_ENABLE)
+
+!if $(LVGL_ENABLE) == TRUE
+  #
+  # LvglDisplayEngineDxe chrome overrides.
+  #
+  gLvglPkgTokenSpaceGuid.PcdLvglHelpPaneWidthPct|25
+  gLvglPkgTokenSpaceGuid.PcdLvglAptioHeaderTitle|"Firmware Setup"
+  gLvglPkgTokenSpaceGuid.PcdLvglAptioHeaderVendor|""
+  gLvglPkgTokenSpaceGuid.PcdLvglCenteredFrameEnabled|TRUE
+  gLvglPkgTokenSpaceGuid.PcdLvglCenteredFrameHeightPct|90
+  gLvglPkgTokenSpaceGuid.PcdLvglCenteredFrameAspectNum|16
+  gLvglPkgTokenSpaceGuid.PcdLvglCenteredFrameAspectDen|9
+  gLvglPkgTokenSpaceGuid.PcdLvglAptioSubtitleShowsDeviceModel|TRUE
+!endif
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdBootManagerMenuFile|{ 0x21, 0xaa, 0x2c, 0x46, 0x14, 0x76, 0x03, 0x45, 0x83, 0x6e, 0x8a, 0xb6, 0xf4, 0x66, 0x23, 0x31 }
   gUefiPayloadPkgTokenSpaceGuid.PcdPcdDriverFile|{ 0x57, 0x72, 0xcf, 0x80, 0xab, 0x87, 0xf9, 0x47, 0xa3, 0xfe, 0xD5, 0x0B, 0x76, 0xd8, 0x95, 0x41 }
@@ -1240,7 +1284,12 @@
 !endif
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
   MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
+!if $(LVGL_ENABLE) == TRUE
+  LvglPkg/LvglDisplayEngineDxe/LvglDisplayEngineDxe.inf
+  LvglPkg/LvglSetupDxe/LvglSetupDxe.inf
+!else
   MdeModulePkg/Universal/DisplayEngineDxe/DisplayEngineDxe.inf
+!endif
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
   UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
 !endif
@@ -1331,7 +1380,11 @@
   MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
   MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
   MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
+!if $(LVGL_ENABLE) == TRUE
+  MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
+!else
   MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf
+!endif
 
   #
   # ISA Support
