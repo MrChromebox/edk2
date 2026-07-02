@@ -31,6 +31,7 @@
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/AcpiTable.h>
 #include <Protocol/AcpiSystemDescriptionTable.h>
+#include <Protocol/HiiPopup.h>
 #include <Guid/MdeModuleHii.h>
 #include <Guid/RamDiskHii.h>
 #include <Guid/FileInfo.h>

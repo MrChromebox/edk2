@@ -39,3 +39,9 @@
 #string STR_CREATE_AND_EXIT_PROMPT     #language en-US "Create & Exit"
 #string STR_DISCARD_AND_EXIT_HELP      #language en-US "Discard and exit."
 #string STR_DISCARD_AND_EXIT_PROMPT    #language en-US "Discard & Exit"
+
+#string STR_RAM_DISK_FILE_INFO_ERROR   #language en-US "Not enough memory to get the file information!"
+#string STR_RAM_DISK_SIZE_TOO_LARGE    #language en-US "The given RAM disk size is too large!"
+#string STR_RAM_DISK_OUT_OF_MEMORY     #language en-US "Not enough memory to create the RAM disk!"
+#string STR_RAM_DISK_FILE_READ_ERROR   #language en-US "File content read error!"
+#string STR_RAM_DISK_REGISTER_ERROR    #language en-US "Failed to register the newly created RAM disk!"

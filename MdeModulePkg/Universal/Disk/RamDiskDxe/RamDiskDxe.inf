@@ -65,6 +65,7 @@
   gEfiBlockIo2ProtocolGuid                       ## PRODUCES
   gEfiAcpiTableProtocolGuid                      ## SOMETIMES_CONSUMES
   gEfiAcpiSdtProtocolGuid                        ## SOMETIMES_CONSUMES
+  gEfiHiiPopupProtocolGuid                       ## CONSUMES
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId            ## SOMETIMES_CONSUMES

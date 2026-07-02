@@ -8,6 +8,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "BootManager.h"
 #include <Protocol/LoadedImage.h>
+#include <Protocol/HiiPopup.h>
 
 UINT16    mKeyInput;
 EFI_GUID  mBootManagerGuid = BOOT_MANAGER_FORMSET_GUID;
@@ -305,11 +306,10 @@ BmSetupResetReminder (
   VOID
   )
 {
-  EFI_INPUT_KEY                           Key;
-  CHAR16                                  *StringBuffer1;
-  CHAR16                                  *StringBuffer2;
   EFI_STATUS                              Status;
   EDKII_FORM_BROWSER_EXTENSION2_PROTOCOL  *FormBrowserEx2;
+  EFI_HII_POPUP_PROTOCOL                  *HiiPopup;
+  EFI_HII_POPUP_SELECTION                 UserSelection;
 
   //
   // Use BrowserEx2 protocol to check whether reset is required.
@@ -319,21 +319,22 @@ BmSetupResetReminder (
   // check any reset required change is applied? if yes, reset system
   //
   if (!EFI_ERROR (Status) && FormBrowserEx2->IsResetRequired ()) {
-    StringBuffer1 = AllocateZeroPool (MAX_STRING_LEN * sizeof (CHAR16));
-    ASSERT (StringBuffer1 != NULL);
-    StringBuffer2 = AllocateZeroPool (MAX_STRING_LEN * sizeof (CHAR16));
-    ASSERT (StringBuffer2 != NULL);
-    StrCpyS (StringBuffer1, MAX_STRING_LEN, L"Configuration changed. Reset to apply it Now.");
-    StrCpyS (StringBuffer2, MAX_STRING_LEN, L"Press ENTER to reset");
     //
-    // Popup a menu to notice user
+    // Notice the user via the active display engine's popup (a graphical dialog
+    // under a graphical display engine, the standard HII popup in text mode)
+    // instead of the legacy console CreatePopUp overlay, then reset.
     //
-    do {
-      CreatePopUp (EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE, &Key, StringBuffer1, StringBuffer2, NULL);
-    } while (Key.UnicodeChar != CHAR_CARRIAGE_RETURN);
-
-    FreePool (StringBuffer1);
-    FreePool (StringBuffer2);
+    Status = gBS->LocateProtocol (&gEfiHiiPopupProtocolGuid, NULL, (VOID **)&HiiPopup);
+    if (!EFI_ERROR (Status)) {
+      HiiPopup->CreatePopup (
+                  HiiPopup,
+                  EfiHiiPopupStyleInfo,
+                  EfiHiiPopupTypeOk,
+                  gBootManagerPrivate.HiiHandle,
+                  STRING_TOKEN (STR_RESET_REMINDER_POPUP),
+                  &UserSelection
+                  );
+    }
 
     gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   }

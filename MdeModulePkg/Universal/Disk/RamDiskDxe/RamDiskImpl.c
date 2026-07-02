@@ -274,6 +274,42 @@ RamDiskRouteConfig (
 }
 
 /**
+  Display a modal message through the active display engine's HII popup
+  protocol. This renders as a graphical dialog under a graphical display
+  engine and as the standard HII popup in text mode, instead of the legacy
+  console CreatePopUp overlay.
+
+  @param[in] HiiHandle  The HII handle that owns the message string.
+  @param[in] StringId   The HII string token for the popup message.
+
+**/
+STATIC
+VOID
+RamDiskShowPopup (
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN EFI_STRING_ID   StringId
+  )
+{
+  EFI_STATUS               Status;
+  EFI_HII_POPUP_PROTOCOL   *HiiPopup;
+  EFI_HII_POPUP_SELECTION  UserSelection;
+
+  Status = gBS->LocateProtocol (&gEfiHiiPopupProtocolGuid, NULL, (VOID **)&HiiPopup);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  HiiPopup->CreatePopup (
+              HiiPopup,
+              EfiHiiPopupStyleError,
+              EfiHiiPopupTypeOk,
+              HiiHandle,
+              StringId,
+              &UserSelection
+              );
+}
+
+/**
   Allocate memory and register the RAM disk created within RamDiskDxe
   driver HII.
 
@@ -282,6 +318,7 @@ RamDiskRouteConfig (
   @param[in] FileHandle      If creating raw, NULL. If creating from file, the
                              file handle.
   @param[in] MemoryType      Type of memory to be used to create RAM Disk.
+  @param[in] HiiHandle       The HII handle used to display error popups.
 
   @retval EFI_SUCCESS             RAM disk is created and registered.
   @retval EFI_OUT_OF_RESOURCES    Not enough storage is available to match the
@@ -292,13 +329,13 @@ EFI_STATUS
 HiiCreateRamDisk (
   IN UINT64           Size,
   IN EFI_FILE_HANDLE  FileHandle,
-  IN UINT8            MemoryType
+  IN UINT8            MemoryType,
+  IN EFI_HII_HANDLE   HiiHandle
   )
 {
   EFI_STATUS                Status;
   UINTN                     BufferSize;
   UINT64                    *StartingAddr;
-  EFI_INPUT_KEY             Key;
   EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
   RAM_DISK_PRIVATE_DATA     *PrivateData;
   EFI_FILE_INFO             *FileInformation;
@@ -312,17 +349,7 @@ HiiCreateRamDisk (
     //
     FileInformation = FileInfo (FileHandle);
     if (NULL == FileInformation) {
-      do {
-        CreatePopUp (
-          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-          &Key,
-          L"",
-          L"Not enough memory to get the file information!",
-          L"Press ENTER to continue ...",
-          L"",
-          NULL
-          );
-      } while (Key.UnicodeChar != CHAR_CARRIAGE_RETURN);
+      RamDiskShowPopup (HiiHandle, STRING_TOKEN (STR_RAM_DISK_FILE_INFO_ERROR));
 
       return EFI_OUT_OF_RESOURCES;
     }
@@ -334,17 +361,7 @@ HiiCreateRamDisk (
   }
 
   if (Size > (UINTN)-1) {
-    do {
-      CreatePopUp (
-        EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-        &Key,
-        L"",
-        L"The given RAM disk size is too large!",
-        L"Press ENTER to continue ...",
-        L"",
-        NULL
-        );
-    } while (Key.UnicodeChar != CHAR_CARRIAGE_RETURN);
+    RamDiskShowPopup (HiiHandle, STRING_TOKEN (STR_RAM_DISK_SIZE_TOO_LARGE));
 
     return EFI_OUT_OF_RESOURCES;
   }
@@ -366,17 +383,7 @@ HiiCreateRamDisk (
   }
 
   if ((StartingAddr == NULL) || EFI_ERROR (Status)) {
-    do {
-      CreatePopUp (
-        EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-        &Key,
-        L"",
-        L"Not enough memory to create the RAM disk!",
-        L"Press ENTER to continue ...",
-        L"",
-        NULL
-        );
-    } while (Key.UnicodeChar != CHAR_CARRIAGE_RETURN);
+    RamDiskShowPopup (HiiHandle, STRING_TOKEN (STR_RAM_DISK_OUT_OF_MEMORY));
 
     return EFI_OUT_OF_RESOURCES;
   }
@@ -392,17 +399,7 @@ HiiCreateRamDisk (
                   (VOID *)(UINTN)StartingAddr
                   );
     if (BufferSize != FileInformation->FileSize) {
-      do {
-        CreatePopUp (
-          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-          &Key,
-          L"",
-          L"File content read error!",
-          L"Press ENTER to continue ...",
-          L"",
-          NULL
-          );
-      } while (Key.UnicodeChar != CHAR_CARRIAGE_RETURN);
+      RamDiskShowPopup (HiiHandle, STRING_TOKEN (STR_RAM_DISK_FILE_READ_ERROR));
 
       Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
@@ -420,17 +417,7 @@ HiiCreateRamDisk (
              &DevicePath
              );
   if (EFI_ERROR (Status)) {
-    do {
-      CreatePopUp (
-        EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-        &Key,
-        L"",
-        L"Fail to register the newly created RAM disk!",
-        L"Press ENTER to continue ...",
-        L"",
-        NULL
-        );
-    } while (Key.UnicodeChar != CHAR_CARRIAGE_RETURN);
+    RamDiskShowPopup (HiiHandle, STRING_TOKEN (STR_RAM_DISK_REGISTER_ERROR));
 
     goto ErrorExit;
   }
@@ -676,7 +663,8 @@ RamDiskCallback (
           Status = HiiCreateRamDisk (
                      0,
                      FileHandle,
-                     ConfigPrivate->ConfigStore.MemType
+                     ConfigPrivate->ConfigStore.MemType,
+                     ConfigPrivate->HiiHandle
                      );
           if (EFI_ERROR (Status)) {
             break;
@@ -728,7 +716,8 @@ RamDiskCallback (
         Status = HiiCreateRamDisk (
                    ConfigPrivate->ConfigStore.Size,
                    NULL,
-                   ConfigPrivate->ConfigStore.MemType
+                   ConfigPrivate->ConfigStore.MemType,
+                   ConfigPrivate->HiiHandle
                    );
         if (EFI_ERROR (Status)) {
           break;
