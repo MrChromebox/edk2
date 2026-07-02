@@ -18,6 +18,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <IndustryStandard/TpmPtp.h>
 
+#include <Protocol/HiiPopup.h>
+
 #define EFI_TCG2_EVENT_LOG_FORMAT_ALL  (EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2 | EFI_TCG2_EVENT_LOG_FORMAT_TCG_2)
 
 TPM_INSTANCE_ID  mTpmInstanceId[TPM_DEVICE_MAX + 1] = TPM_INSTANCE_ID_LIST;
@@ -428,6 +430,42 @@ GetTpm2HID (
 }
 
 /**
+  Display a modal message through the active display engine's HII popup
+  protocol. This renders as a graphical dialog under a graphical display
+  engine and as the standard HII popup in text mode, instead of the legacy
+  console CreatePopUp overlay.
+
+  @param[in] Style     The popup style (info, warning, or error).
+  @param[in] StringId  The HII string token for the popup message.
+
+**/
+STATIC
+VOID
+Tcg2ShowPopup (
+  IN EFI_HII_POPUP_STYLE  Style,
+  IN EFI_STRING_ID        StringId
+  )
+{
+  EFI_STATUS               Status;
+  EFI_HII_POPUP_PROTOCOL   *HiiPopup;
+  EFI_HII_POPUP_SELECTION  UserSelection;
+
+  Status = gBS->LocateProtocol (&gEfiHiiPopupProtocolGuid, NULL, (VOID **)&HiiPopup);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  HiiPopup->CreatePopup (
+              HiiPopup,
+              Style,
+              EfiHiiPopupTypeOk,
+              mTcg2ConfigPrivateData->HiiHandle,
+              StringId,
+              &UserSelection
+              );
+}
+
+/**
   This function processes the results of changes in configuration
   for TCG2 version information.
 
@@ -451,9 +489,8 @@ Tcg2VersionInfoCallback (
   IN EFI_IFR_TYPE_VALUE  *Value
   )
 {
-  EFI_INPUT_KEY  Key;
-  UINT64         PcdTcg2PpiVersion;
-  UINT8          PcdTpm2AcpiTableRev;
+  UINT64  PcdTcg2PpiVersion;
+  UINT8   PcdTpm2AcpiTableRev;
 
   ASSERT (Action == EFI_BROWSER_ACTION_SUBMITTED);
 
@@ -471,13 +508,7 @@ Tcg2VersionInfoCallback (
       AsciiStrSize ((CHAR8 *)PcdGetPtr (PcdTcgPhysicalPresenceInterfaceVer))
       );
     if (PcdTcg2PpiVersion != Value->u64) {
-      CreatePopUp (
-        EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-        &Key,
-        L"WARNING: PcdTcgPhysicalPresenceInterfaceVer is not DynamicHii type and does not map to this option!",
-        L"The version configuring by this setup option will not work!",
-        NULL
-        );
+      Tcg2ShowPopup (EfiHiiPopupStyleWarning, STRING_TOKEN (STR_TCG2_PPI_VERSION_WARNING));
     }
   } else if (QuestionId == KEY_TPM2_ACPI_REVISION) {
     //
@@ -489,13 +520,7 @@ Tcg2VersionInfoCallback (
     PcdTpm2AcpiTableRev = PcdGet8 (PcdTpm2AcpiTableRev);
 
     if (PcdTpm2AcpiTableRev != Value->u8) {
-      CreatePopUp (
-        EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-        &Key,
-        L"WARNING: PcdTpm2AcpiTableRev is not DynamicHii type and does not map to this option!",
-        L"The Revision configuring by this setup option will not work!",
-        NULL
-        );
+      Tcg2ShowPopup (EfiHiiPopupStyleWarning, STRING_TOKEN (STR_TCG2_ACPI_REV_WARNING));
     }
   }
 
@@ -536,7 +561,6 @@ Tcg2Callback (
   )
 {
   EFI_STATUS                Status;
-  EFI_INPUT_KEY             Key;
   CHAR8                     HidStr[16];
   CHAR16                    UnHidStr[16];
   TCG2_CONFIG_PRIVATE_DATA  *Private;
@@ -572,12 +596,7 @@ Tcg2Callback (
     if (QuestionId == KEY_TPM_DEVICE_INTERFACE) {
       Status = SetPtpInterface ((VOID *)(UINTN)PcdGet64 (PcdTpmBaseAddress), Value->u8);
       if (EFI_ERROR (Status)) {
-        CreatePopUp (
-          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-          &Key,
-          L"Error: Fail to set PTP interface!",
-          NULL
-          );
+        Tcg2ShowPopup (EfiHiiPopupStyleError, STRING_TOKEN (STR_TCG2_PTP_INTERFACE_ERROR));
         return EFI_DEVICE_ERROR;
       }
     }

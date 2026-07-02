@@ -287,6 +287,8 @@
                                        #language en-US  "Hardware"
 #string STR_NONE_FLOW_CONTROL          #language fr-FR  "None"
                                        #language en-US  "None"
+#string STR_RESET_REMINDER_POPUP       #language fr-FR  "Configuration changed. Reset to apply it now."
+                                       #language en-US  "Configuration changed. Reset to apply it now."
 //
 // BugBug : need someone to translate these strings to french
 //
