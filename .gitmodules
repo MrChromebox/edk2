@@ -35,3 +35,6 @@
 [submodule "SecurityPkg/DeviceSecurity/SpdmLib/libspdm"]
 	path = SecurityPkg/DeviceSecurity/SpdmLib/libspdm
 	url = https://github.com/DMTF/libspdm.git
+[submodule "LvglPkg"]
+	path = LvglPkg
+	url = https://github.com/MrChromebox/LvglPkg.git
