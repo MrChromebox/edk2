@@ -55,6 +55,32 @@ typedef struct {
   UINT8      Reserved;
 } USB_MOUSE_BUTTON_DATA;
 
+#define USB_MOUSE_REPORT_FIELD_ABSENT  0xFFFF
+
+///
+/// Decoded HID mouse input report layout.
+///
+/// Bit offsets are relative to the start of the report payload after any
+/// leading Report ID byte.  A classic boot-protocol mouse is:
+///   buttons @ bit 0 (3+ bits), X @ bit 8 (8-bit), Y @ bit 16 (8-bit).
+///
+typedef struct {
+  BOOLEAN    Valid;              ///< TRUE once X and Y fields were located.
+  BOOLEAN    HasReportId;        ///< Report begins with a Report ID byte.
+  UINT8      ReportId;           ///< Expected Report ID when HasReportId.
+  UINT16     ButtonBitOffset;
+  UINT8      ButtonBitCount;
+  UINT16     XBitOffset;
+  UINT8      XBitSize;
+  BOOLEAN    XRelative;
+  UINT16     YBitOffset;
+  UINT8      YBitSize;
+  BOOLEAN    YRelative;
+  UINT16     WheelBitOffset;     ///< USB_MOUSE_REPORT_FIELD_ABSENT if none.
+  UINT8      WheelBitSize;
+  UINT16     MinPacketBytes;     ///< Minimum interrupt packet length.
+} USB_MOUSE_REPORT_LAYOUT;
+
 ///
 /// Device instance of USB mouse.
 ///
@@ -75,6 +101,7 @@ typedef struct {
   EFI_ABSOLUTE_POINTER_MODE        Mode;
   BOOLEAN                          StateChanged;
   USB_MOUSE_BUTTON_DATA            PrivateData;
+  USB_MOUSE_REPORT_LAYOUT          ReportLayout;
   EFI_UNICODE_STRING_TABLE         *ControllerNameTable;
 } USB_MOUSE_ABSOLUTE_POINTER_DEV;
 
@@ -374,10 +401,9 @@ IsUsbMouse (
 /**
   Initialize the USB mouse device.
 
-  This function retrieves and parses HID report descriptor, and
-  initializes state of USB_MOUSE_ABSOLUTE_POINTER_DEV. Then it sets indefinite idle
-  rate for the device. Finally it creates event for delayed recovery,
-  which deals with device error.
+  This function retrieves and parses HID report descriptor, initializes
+  ReportLayout, and selects boot or report protocol accordingly. Then it
+  creates event for delayed recovery, which deals with device error.
 
   @param  UsbMouseAbsolutePointerDev   Device instance to be initialized.
 
@@ -443,7 +469,8 @@ USBMouseRecoveryHandler (
   According to USB HID Specification, report descriptors are
   composed of pieces of information. Each piece of information
   is called an Item. This function retrieves each item from
-  the report descriptor and updates USB_MOUSE_ABSOLUTE_POINTER_DEV.
+  the report descriptor and updates USB_MOUSE_ABSOLUTE_POINTER_DEV,
+  including ReportLayout used to decode interrupt packets.
 
   @param  UsbMouseAbsolutePointer  The instance of USB_MOUSE_ABSOLUTE_POINTER_DEV
   @param  ReportDescriptor         Report descriptor to parse
@@ -458,4 +485,29 @@ ParseMouseReportDescriptor (
   OUT USB_MOUSE_ABSOLUTE_POINTER_DEV  *UsbMouseAbsolutePointer,
   IN  UINT8                           *ReportDescriptor,
   IN  UINTN                           ReportSize
+  );
+
+/**
+  Initialize ReportLayout to the classic HID boot-protocol mouse format.
+
+  @param  Layout  Layout to initialize.
+
+**/
+VOID
+InitializeDefaultBootMouseLayout (
+  OUT USB_MOUSE_REPORT_LAYOUT  *Layout
+  );
+
+/**
+  Return TRUE if Layout matches a boot-protocol mouse report.
+
+  @param  Layout  Parsed layout.
+
+  @retval TRUE   Boot protocol is appropriate.
+  @retval FALSE  Report protocol must be used.
+
+**/
+BOOLEAN
+MouseReportLayoutIsBootCompatible (
+  IN CONST USB_MOUSE_REPORT_LAYOUT  *Layout
   );
