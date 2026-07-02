@@ -4510,30 +4510,44 @@ ConfirmEnterSetupMode (
   IN SECUREBOOT_CONFIGURATION        *IfrNvData
   )
 {
-  EFI_INPUT_KEY  Key;
-  EFI_STATUS     Status;
+  EFI_STATUS               Status;
+  EFI_HII_POPUP_PROTOCOL   *HiiPopup;
+  EFI_HII_POPUP_SELECTION  UserSelection;
 
-  CreatePopUp (
-    EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-    &Key,
-    L"Entering Setup Mode clears the Platform Key (PK).",
-    L"Secure Boot enforcement is disabled and keys may be changed.",
-    L"Press 'Y' to continue or any other key to cancel.",
-    NULL
-    );
-  if ((Key.UnicodeChar != L'y') && (Key.UnicodeChar != L'Y')) {
+  //
+  // Use EFI_HII_POPUP_PROTOCOL (produced by the active display engine) so the
+  // confirmation matches the rest of the setup UI — a graphical dialog under
+  // the LVGL display engine, the standard HII popup in text mode — instead of
+  // the legacy console CreatePopUp overlay.
+  //
+  Status = gBS->LocateProtocol (&gEfiHiiPopupProtocolGuid, NULL, (VOID **)&HiiPopup);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  UserSelection = EfiHiiPopupSelectionNo;
+  Status        = HiiPopup->CreatePopup (
+                              HiiPopup,
+                              EfiHiiPopupStyleWarning,
+                              EfiHiiPopupTypeYesNo,
+                              Private->HiiHandle,
+                              STRING_TOKEN (STR_ENTER_SETUP_MODE_POPUP),
+                              &UserSelection
+                              );
+  if (EFI_ERROR (Status) || (UserSelection != EfiHiiPopupSelectionYes)) {
     return EFI_ABORTED;
   }
 
   Status = DeletePlatformKey ();
   if (EFI_ERROR (Status)) {
-    CreatePopUp (
-      EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-      &Key,
-      L"Could not enter Setup Mode.",
-      L"Physical presence is required to clear PK.",
-      NULL
-      );
+    HiiPopup->CreatePopup (
+                HiiPopup,
+                EfiHiiPopupStyleError,
+                EfiHiiPopupTypeOk,
+                Private->HiiHandle,
+                STRING_TOKEN (STR_ENTER_SETUP_MODE_FAIL_POPUP),
+                NULL
+                );
     return Status;
   }
 
@@ -4541,13 +4555,14 @@ ConfirmEnterSetupMode (
   IfrNvData->HasPk    = FALSE;
   IfrNvData->DeletePk = FALSE;
 
-  CreatePopUp (
-    EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-    &Key,
-    L"Setup Mode is now enabled.",
-    L"Reset the platform for changes to take full effect.",
-    NULL
-    );
+  HiiPopup->CreatePopup (
+              HiiPopup,
+              EfiHiiPopupStyleInfo,
+              EfiHiiPopupTypeOk,
+              Private->HiiHandle,
+              STRING_TOKEN (STR_ENTER_SETUP_MODE_DONE_POPUP),
+              NULL
+              );
 
   return EFI_SUCCESS;
 }

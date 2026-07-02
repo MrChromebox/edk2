@@ -100,6 +100,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #string STR_ENTER_SETUP_MODE               #language en-US "Enter Setup Mode"
 #string STR_ENTER_SETUP_MODE_HELP          #language en-US "Clear the Platform Key (PK) to enter UEFI Setup Mode. While in Setup Mode, Secure Boot keys and signature databases can be changed without authentication. A platform reset is recommended afterward."
+#string STR_ENTER_SETUP_MODE_POPUP         #language en-US "Entering Setup Mode clears the Platform Key (PK).\nSecure Boot enforcement is disabled and keys may be changed.\n\nAre you sure?"
+#string STR_ENTER_SETUP_MODE_FAIL_POPUP    #language en-US "Could not enter Setup Mode.\nPhysical presence is required to clear the PK."
+#string STR_ENTER_SETUP_MODE_DONE_POPUP    #language en-US "Setup Mode is now enabled.\nReset the platform for changes to take full effect."
 
 #string STR_ENROLL_PK_TITLE                #language en-US "Enroll PK"
 
