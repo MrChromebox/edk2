@@ -25,3 +25,4 @@
 #string STR_RESET_STRING               #language en-US  "Reboot"
 #string STR_RESET_STRING_HELP          #language en-US  "Reboot the device"
 #string STR_NULL_STRING                #language en-US  " "
+#string STR_RESET_REMINDER_POPUP       #language en-US  "Configuration changed. Reset to apply it now."

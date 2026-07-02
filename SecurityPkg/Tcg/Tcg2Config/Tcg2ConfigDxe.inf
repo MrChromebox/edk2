@@ -68,6 +68,7 @@
   gEfiDevicePathProtocolGuid                    ## PRODUCES
   gEdkiiVariableLockProtocolGuid                ## SOMETIMES_CONSUMES
   gEfiTcg2ProtocolGuid                          ## CONSUMES
+  gEfiHiiPopupProtocolGuid                      ## CONSUMES
 
 [Pcd]
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmInstanceGuid            ## CONSUMES
