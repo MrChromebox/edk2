@@ -302,7 +302,12 @@ INF MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
 INF UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
 !endif
+!if $(LVGL_ENABLE) == TRUE
+INF LvglPkg/LvglDisplayEngineDxe/LvglDisplayEngineDxe.inf
+INF LvglPkg/LvglSetupDxe/LvglSetupDxe.inf
+!else
 INF MdeModulePkg/Universal/DisplayEngineDxe/DisplayEngineDxe.inf
+!endif
 INF MdeModulePkg/Universal/TimeDateSettingsDxe/TimeDateSettingsDxe.inf
 INF MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
 INF UefiPayloadPkg/BlSupportDxe/BlSupportDxe.inf
@@ -439,7 +444,11 @@ INF MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf
 INF MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
 INF MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
 INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
+!if $(LVGL_ENABLE) == TRUE
+INF MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
+!else
 INF MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf
+!endif
 
 #
 # ACPI Support
