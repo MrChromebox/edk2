@@ -51,6 +51,7 @@
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
   gEfiDevicePathToTextProtocolGuid              ## CONSUMES
   gEdkiiFormBrowserEx2ProtocolGuid              ## CONSUMES
+  gEfiHiiPopupProtocolGuid                      ## CONSUMES
 
 [FeaturePcd]
 
