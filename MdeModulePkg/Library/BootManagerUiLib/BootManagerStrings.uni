@@ -23,4 +23,5 @@
 #string STR_BOOT_MANAGER_HELP          #language en-US  "Show One-Time Boot Menu"
 #string STR_BOOT_OPTION_BANNER         #language en-US  "Select a Boot Device"
 #string STR_ANY_KEY_CONTINUE           #language en-US  "Press any key to continue...\n"
+#string STR_RESET_REMINDER_POPUP       #language en-US  "Configuration changed. Reset to apply it now."
 #string STR_LAST_STRING                #language en-US  ""

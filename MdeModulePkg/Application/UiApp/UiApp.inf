@@ -64,6 +64,7 @@
   gEfiSmbiosProtocolGuid                        ## CONSUMES
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
   gEfiBatteryStatusProtocolGuid                 ## CONSUMES
+  gEfiHiiPopupProtocolGuid                      ## CONSUMES
 
 [FeaturePcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdUiAppFrontPageBatteryToConOut  ## CONSUMES
