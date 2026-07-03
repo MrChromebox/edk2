@@ -72,8 +72,6 @@ formset
       key    = KEY_ENTER_SETUP_MODE;
     endif;
 
-    subtitle text = STRING_TOKEN(STR_NULL);
-
     grayoutif NOT ideqval SECUREBOOT_CONFIGURATION.PhysicalPresent == 1;
     goto FORMID_SECURE_BOOT_OPTION_FORM,
          prompt = STRING_TOKEN(STR_SECURE_BOOT_OPTION),
