@@ -4675,7 +4675,6 @@ SecureBootCallback (
   UINT16                          LabelId;
   UINT8                           *SecureBootEnable;
   UINT8                           *Pk;
-  UINT8                           *SecureBootMode;
   UINT8                           *SetupMode;
   CHAR16                          PromptString[100];
   EFI_DEVICE_PATH_PROTOCOL        *File;
@@ -4689,7 +4688,6 @@ SecureBootCallback (
 
   Status               = EFI_SUCCESS;
   SecureBootEnable     = NULL;
-  SecureBootMode       = NULL;
   SetupMode            = NULL;
   File                 = NULL;
   EnrollKeyErrorCode   = None_Error;
@@ -4747,7 +4745,11 @@ SecureBootCallback (
           SecureBootExtractConfigFromVariable (Private, IfrNvData);
         }
 
-        Value->u8 = SECURE_BOOT_MODE_STANDARD;
+        //
+        // Reflect the persisted Secure Boot mode (Standard/Custom) so the user
+        // can tell whether custom keys are in effect.
+        //
+        Value->u8 = IfrNvData->SecureBootMode;
         Status    = EFI_SUCCESS;
       }
     }
@@ -5236,6 +5238,16 @@ SecureBootCallback (
         break;
       case KEY_SECURE_BOOT_MODE:
         mIsEnterSecureBootForm = FALSE;
+        //
+        // Persist the user's Standard/Custom selection so it survives leaving
+        // the form and reboots.
+        //
+        if (Value->u8 == SECURE_BOOT_MODE_CUSTOM) {
+          SetSecureBootMode (CUSTOM_SECURE_BOOT_MODE);
+        } else {
+          SetSecureBootMode (STANDARD_SECURE_BOOT_MODE);
+        }
+
         break;
       case KEY_SECURE_BOOT_KEK_GUID:
       case KEY_SECURE_BOOT_SIGNATURE_GUID_DB:
@@ -5320,18 +5332,9 @@ SecureBootCallback (
     }
   } else if (Action == EFI_BROWSER_ACTION_FORM_CLOSE) {
     //
-    // Force the platform back to Standard Mode once user leave the setup screen.
+    // The Secure Boot mode (Standard/Custom) is intentionally left persistent
+    // so the user's key-management context survives leaving the setup screen.
     //
-    GetVariable2 (EFI_CUSTOM_MODE_NAME, &gEfiCustomModeEnableGuid, (VOID **)&SecureBootMode, NULL);
-    if ((NULL != SecureBootMode) && (*SecureBootMode == CUSTOM_SECURE_BOOT_MODE)) {
-      IfrNvData->SecureBootMode = STANDARD_SECURE_BOOT_MODE;
-      SetSecureBootMode (STANDARD_SECURE_BOOT_MODE);
-    }
-
-    if (SecureBootMode != NULL) {
-      FreePool (SecureBootMode);
-    }
-
     if (QuestionId == KEY_SECURE_BOOT_DELETE_ALL_DATA) {
       //
       // Free memory when exit from the SECUREBOOT_DELETE_SIGNATURE_DATA_FORM form.
