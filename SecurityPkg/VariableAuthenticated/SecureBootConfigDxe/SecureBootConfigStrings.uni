@@ -18,6 +18,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #string STR_SECURE_BOOT_STATE_HELP         #language en-US "Current Secure Boot state: enabled or disabled."
 #string STR_SECURE_BOOT_STATE_CONTENT      #language en-US " "
 
+#string STR_SECURE_BOOT_KEYS_PROMPT        #language en-US "Secure Boot Keys"
+#string STR_SECURE_BOOT_KEYS_HELP          #language en-US "Indicates whether the enrolled Secure Boot keys (PK, KEK, db, dbx) match the platform defaults or have been customized."
+#string STR_SECURE_BOOT_KEYS_CONTENT       #language en-US " "
+
 #string STR_SECURE_BOOT_PROMPT             #language en-US "Attempt Secure Boot"
 #string STR_SECURE_BOOT_HELP               #language en-US "Enable/Disable the Secure Boot feature after platform reset"
 

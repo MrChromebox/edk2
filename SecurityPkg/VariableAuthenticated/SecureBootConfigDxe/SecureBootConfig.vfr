@@ -34,6 +34,16 @@ formset
       text   = STRING_TOKEN(STR_SECURE_BOOT_STATE_CONTENT);
     endif;
 
+    //
+    // Display of enrolled key provenance: Default vs Custom
+    //
+    grayoutif ideqval SECUREBOOT_CONFIGURATION.PhysicalPresent == 1 OR NOT ideqval SECUREBOOT_CONFIGURATION.PhysicalPresent == 1;
+    text
+      help   = STRING_TOKEN(STR_SECURE_BOOT_KEYS_HELP),
+      text   = STRING_TOKEN(STR_SECURE_BOOT_KEYS_PROMPT),
+      text   = STRING_TOKEN(STR_SECURE_BOOT_KEYS_CONTENT);
+    endif;
+
     subtitle text = STRING_TOKEN(STR_NULL);
 
     //
@@ -90,7 +100,7 @@ formset
   endform;
 
   //
-  // ##2 Form: 'Custom Secure Boot Options' (single flattened page)
+  // ##2 Form: 'Custom Secure Boot Options'
   //
   form formid = FORMID_SECURE_BOOT_OPTION_FORM,
     title  = STRING_TOKEN(STR_SECURE_BOOT_OPTION_TITLE);

@@ -3293,6 +3293,152 @@ ON_EXIT:
 
 /**
 
+  Compare a live Secure Boot key variable against its "*Default" counterpart.
+
+  @param[in]  VariableName      Name of the live key variable (e.g. L"PK").
+  @param[in]  VendorGuid        Vendor GUID of the live key variable.
+  @param[in]  DefaultName       Name of the default reference variable
+                                (e.g. L"PKDefault").
+  @param[out] DefaultAvailable  Set to TRUE if the default variable exists and a
+                                comparison could be made.
+
+  @retval TRUE   The live variable differs from its default (custom keys).
+  @retval FALSE  The live variable matches the default, or no default exists to
+                 compare against (in which case *DefaultAvailable is FALSE).
+**/
+STATIC
+BOOLEAN
+IsKeyVariableCustom (
+  IN  CHAR16    *VariableName,
+  IN  EFI_GUID  *VendorGuid,
+  IN  CHAR16    *DefaultName,
+  OUT BOOLEAN   *DefaultAvailable
+  )
+{
+  UINT8    *Current;
+  UINTN    CurrentSize;
+  UINT8    *Default;
+  UINTN    DefaultSize;
+  BOOLEAN  Custom;
+
+  Current           = NULL;
+  CurrentSize       = 0;
+  Default           = NULL;
+  DefaultSize       = 0;
+  *DefaultAvailable = FALSE;
+
+  GetVariable2 (DefaultName, &gEfiGlobalVariableGuid, (VOID **)&Default, &DefaultSize);
+  if (Default == NULL) {
+    //
+    // No reference to compare against.
+    //
+    return FALSE;
+  }
+
+  *DefaultAvailable = TRUE;
+
+  GetVariable2 (VariableName, VendorGuid, (VOID **)&Current, &CurrentSize);
+  if (Current == NULL) {
+    //
+    // Default exists but the live key is absent/empty => customized.
+    //
+    Custom = TRUE;
+  } else if ((CurrentSize != DefaultSize) || (CompareMem (Current, Default, DefaultSize) != 0)) {
+    Custom = TRUE;
+  } else {
+    Custom = FALSE;
+  }
+
+  if (Current != NULL) {
+    FreePool (Current);
+  }
+
+  FreePool (Default);
+
+  return Custom;
+}
+
+/**
+  Determine whether any of the enrolled Secure Boot keys (PK, KEK, db, dbx)
+  differ from the platform defaults.
+
+  @param[out] Determined  Set to TRUE if at least one "*Default" reference
+                          existed, so the result is meaningful.
+
+  @retval TRUE   At least one live key differs from its default (custom keys).
+  @retval FALSE  All comparable keys match their defaults, or nothing could be
+                 compared (see Determined).
+**/
+STATIC
+BOOLEAN
+SecureBootKeysAreCustom (
+  OUT BOOLEAN  *Determined
+  )
+{
+  BOOLEAN  Custom;
+  BOOLEAN  Available;
+
+  Custom      = FALSE;
+  *Determined = FALSE;
+
+  Custom     |= IsKeyVariableCustom (EFI_PLATFORM_KEY_NAME, &gEfiGlobalVariableGuid, EFI_PK_DEFAULT_VARIABLE_NAME, &Available);
+  *Determined = (BOOLEAN)(*Determined || Available);
+  Custom     |= IsKeyVariableCustom (EFI_KEY_EXCHANGE_KEY_NAME, &gEfiGlobalVariableGuid, EFI_KEK_DEFAULT_VARIABLE_NAME, &Available);
+  *Determined = (BOOLEAN)(*Determined || Available);
+  Custom     |= IsKeyVariableCustom (EFI_IMAGE_SECURITY_DATABASE, &gEfiImageSecurityDatabaseGuid, EFI_DB_DEFAULT_VARIABLE_NAME, &Available);
+  *Determined = (BOOLEAN)(*Determined || Available);
+  Custom     |= IsKeyVariableCustom (EFI_IMAGE_SECURITY_DATABASE1, &gEfiImageSecurityDatabaseGuid, EFI_DBX_DEFAULT_VARIABLE_NAME, &Available);
+  *Determined = (BOOLEAN)(*Determined || Available);
+
+  return Custom;
+}
+
+/**
+  Update the "Secure Boot Keys" indicator string to reflect whether the enrolled
+  PK/KEK/db/dbx match the platform defaults (Default) or have been customized
+  (Custom).
+
+  @param[in]  Private   Module's private data.
+**/
+STATIC
+VOID
+UpdateSecureBootKeysString (
+  IN SECUREBOOT_CONFIG_PRIVATE_DATA  *Private
+  )
+{
+  UINT8    *SetupMode;
+  BOOLEAN  Custom;
+  BOOLEAN  Determined;
+
+  SetupMode = NULL;
+
+  //
+  // Without a Platform Key the system is in Setup Mode and has no active keys.
+  //
+  GetVariable2 (EFI_SETUP_MODE_NAME, &gEfiGlobalVariableGuid, (VOID **)&SetupMode, NULL);
+  if ((SetupMode == NULL) || (*SetupMode == SETUP_MODE)) {
+    HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_SECURE_BOOT_KEYS_CONTENT), L"None (Setup Mode)", NULL);
+    if (SetupMode != NULL) {
+      FreePool (SetupMode);
+    }
+
+    return;
+  }
+
+  FreePool (SetupMode);
+
+  Custom = SecureBootKeysAreCustom (&Determined);
+
+  if (!Determined) {
+    HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_SECURE_BOOT_KEYS_CONTENT), L"Unknown", NULL);
+  } else if (Custom) {
+    HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_SECURE_BOOT_KEYS_CONTENT), L"Custom", NULL);
+  } else {
+    HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_SECURE_BOOT_KEYS_CONTENT), L"Default", NULL);
+  }
+}
+
+/**
   Update SecureBoot strings based on new Secure Boot Mode State. String includes STR_SECURE_BOOT_STATE_CONTENT
  and STR_CUR_SECURE_BOOT_MODE_CONTENT.
 
@@ -3324,6 +3470,11 @@ UpdateSecureBootString (
   } else {
     HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_SECURE_BOOT_STATE_CONTENT), L"Disabled", NULL);
   }
+
+  //
+  // Reflect whether the enrolled keys are the platform defaults or custom.
+  //
+  UpdateSecureBootKeysString (Private);
 
   FreePool (SecureBoot);
 
@@ -3419,6 +3570,23 @@ SecureBootExtractConfigFromVariable (
     ConfigData->SecureBootMode = STANDARD_SECURE_BOOT_MODE;
   } else {
     ConfigData->SecureBootMode = *(SecureBootMode);
+  }
+
+  //
+  // Present the mode as Custom whenever the platform is in a non-default key
+  // state: either Setup Mode has been entered (PK deleted) or the enrolled keys
+  // differ from the platform defaults. This keeps the mode in Custom until the
+  // keys are reset to defaults, regardless of the volatile CustomMode variable
+  // (which the variable driver resets to Standard on every boot).
+  //
+  if ((SetupMode == NULL) || (*SetupMode == SETUP_MODE)) {
+    ConfigData->SecureBootMode = SECURE_BOOT_MODE_CUSTOM;
+  } else {
+    BOOLEAN  Determined;
+
+    if (SecureBootKeysAreCustom (&Determined) && Determined) {
+      ConfigData->SecureBootMode = SECURE_BOOT_MODE_CUSTOM;
+    }
   }
 
   if (SecureBootEnable != NULL) {
