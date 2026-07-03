@@ -4494,6 +4494,73 @@ error:
 }
 
 /**
+  Display a message (and, for a confirmation, collect a Yes/No answer) through
+  the active display engine's HII popup protocol, so the dialog matches the rest
+  of the setup UI -- a graphical dialog under the LVGL display engine, the
+  standard HII popup in text mode -- instead of the legacy console CreatePopUp
+  overlay.
+
+  The message text is registered at runtime into a scratch HII string, which
+  lets callers pass literal or dynamically-built strings without a dedicated
+  string token per message.
+
+  @param[in]  Private    Module private data (provides the HII handle).
+  @param[in]  Style      Popup style (info, warning, or error).
+  @param[in]  PopupType  Popup button set (e.g. EfiHiiPopupTypeOk or
+                         EfiHiiPopupTypeYesNo).
+  @param[in]  Line1      First message line (required).
+  @param[in]  Line2      Optional second message line.
+
+  @retval TRUE   The user confirmed (selected Yes). Always FALSE for non-YesNo
+                 popups or when no popup protocol is available.
+**/
+STATIC
+BOOLEAN
+SecureBootPopup (
+  IN SECUREBOOT_CONFIG_PRIVATE_DATA  *Private,
+  IN EFI_HII_POPUP_STYLE             Style,
+  IN EFI_HII_POPUP_TYPE              PopupType,
+  IN CONST CHAR16                    *Line1,
+  IN CONST CHAR16                    *Line2  OPTIONAL
+  )
+{
+  EFI_STATUS               Status;
+  EFI_HII_POPUP_PROTOCOL   *HiiPopup;
+  EFI_HII_POPUP_SELECTION  UserSelection;
+  CHAR16                   Message[256];
+
+  if (Line2 != NULL) {
+    UnicodeSPrint (Message, sizeof (Message), L"%s\n%s", Line1, Line2);
+  } else {
+    StrCpyS (Message, ARRAY_SIZE (Message), Line1);
+  }
+
+  HiiSetString (
+    Private->HiiHandle,
+    STRING_TOKEN (STR_SECURE_BOOT_POPUP_SCRATCH),
+    Message,
+    NULL
+    );
+
+  Status = gBS->LocateProtocol (&gEfiHiiPopupProtocolGuid, NULL, (VOID **)&HiiPopup);
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
+
+  UserSelection = EfiHiiPopupSelectionNo;
+  HiiPopup->CreatePopup (
+              HiiPopup,
+              Style,
+              PopupType,
+              Private->HiiHandle,
+              STRING_TOKEN (STR_SECURE_BOOT_POPUP_SCRATCH),
+              &UserSelection
+              );
+
+  return (BOOLEAN)(UserSelection == EfiHiiPopupSelectionYes);
+}
+
+/**
   Clear PK after user confirmation to enter UEFI Setup Mode.
 
   @param[in]  Private     Module private data.
@@ -4600,7 +4667,6 @@ SecureBootCallback (
   OUT EFI_BROWSER_ACTION_REQUEST           *ActionRequest
   )
 {
-  EFI_INPUT_KEY                   Key;
   EFI_STATUS                      Status;
   RETURN_STATUS                   RStatus;
   SECUREBOOT_CONFIG_PRIVATE_DATA  *Private;
@@ -4705,17 +4771,19 @@ SecureBootCallback (
         if (NULL != SecureBootEnable) {
           FreePool (SecureBootEnable);
           if (EFI_ERROR (SaveSecureBootVariable (Value->u8))) {
-            CreatePopUp (
-              EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-              &Key,
+            SecureBootPopup (
+              Private,
+              EfiHiiPopupStyleError,
+              EfiHiiPopupTypeOk,
               L"Only Physical Presence User could disable secure boot!",
               NULL
               );
             Status = EFI_UNSUPPORTED;
           } else {
-            CreatePopUp (
-              EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-              &Key,
+            SecureBootPopup (
+              Private,
+              EfiHiiPopupStyleInfo,
+              EfiHiiPopupTypeOk,
               L"Configuration changed, please reset the platform to take effect!",
               NULL
               );
@@ -4825,19 +4893,20 @@ SecureBootCallback (
 
       case KEY_SECURE_BOOT_DELETE_PK:
         if (Value->u8) {
-          CreatePopUp (
-            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-            &Key,
-            L"Are you sure you want to delete PK? Secure boot will be disabled!",
-            L"Press 'Y' to delete PK and exit, 'N' to discard change and return",
-            NULL
-            );
-          if ((Key.UnicodeChar == 'y') || (Key.UnicodeChar == 'Y')) {
+          if (SecureBootPopup (
+                Private,
+                EfiHiiPopupStyleWarning,
+                EfiHiiPopupTypeYesNo,
+                L"Are you sure you want to delete PK? Secure boot will be disabled!",
+                NULL
+                ))
+          {
             Status = DeletePlatformKey ();
             if (EFI_ERROR (Status)) {
-              CreatePopUp (
-                EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-                &Key,
+              SecureBootPopup (
+                Private,
+                EfiHiiPopupStyleError,
+                EfiHiiPopupTypeOk,
                 L"Only Physical Presence User could delete PK in custom mode!",
                 NULL
                 );
@@ -4888,15 +4957,14 @@ SecureBootCallback (
       // Delete all signature list and reload.
       //
       case KEY_SECURE_BOOT_DELETE_ALL_LIST:
-        CreatePopUp (
-          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-          &Key,
-          L"Press 'Y' to delete signature list.",
-          L"Press other key to cancel and exit.",
-          NULL
-          );
-
-        if ((Key.UnicodeChar == L'Y') || (Key.UnicodeChar == L'y')) {
+        if (SecureBootPopup (
+              Private,
+              EfiHiiPopupStyleWarning,
+              EfiHiiPopupTypeYesNo,
+              L"Delete this signature list?",
+              NULL
+              ))
+        {
           DeleteSignatureEx (Private, Delete_Signature_List_All, IfrNvData->CheckedDataCount);
         }
 
@@ -4913,15 +4981,14 @@ SecureBootCallback (
       // Delete one signature list and reload.
       //
       case KEY_SECURE_BOOT_DELETE_ALL_DATA:
-        CreatePopUp (
-          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-          &Key,
-          L"Press 'Y' to delete signature data.",
-          L"Press other key to cancel and exit.",
-          NULL
-          );
-
-        if ((Key.UnicodeChar == L'Y') || (Key.UnicodeChar == L'y')) {
+        if (SecureBootPopup (
+              Private,
+              EfiHiiPopupStyleWarning,
+              EfiHiiPopupTypeYesNo,
+              L"Delete this signature data?",
+              NULL
+              ))
+        {
           DeleteSignatureEx (Private, Delete_Signature_List_One, IfrNvData->CheckedDataCount);
         }
 
@@ -4938,15 +5005,14 @@ SecureBootCallback (
       // Delete checked signature data and reload.
       //
       case KEY_SECURE_BOOT_DELETE_CHECK_DATA:
-        CreatePopUp (
-          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-          &Key,
-          L"Press 'Y' to delete signature data.",
-          L"Press other key to cancel and exit.",
-          NULL
-          );
-
-        if ((Key.UnicodeChar == L'Y') || (Key.UnicodeChar == L'y')) {
+        if (SecureBootPopup (
+              Private,
+              EfiHiiPopupStyleWarning,
+              EfiHiiPopupTypeYesNo,
+              L"Delete this signature data?",
+              NULL
+              ))
+        {
           DeleteSignatureEx (Private, Delete_Signature_Data, IfrNvData->CheckedDataCount);
         }
 
@@ -4974,12 +5040,12 @@ SecureBootCallback (
       case KEY_VALUE_SAVE_AND_EXIT_KEK:
         Status = EnrollKeyExchangeKey (Private);
         if (EFI_ERROR (Status)) {
-          CreatePopUp (
-            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-            &Key,
+          SecureBootPopup (
+            Private,
+            EfiHiiPopupStyleError,
+            EfiHiiPopupTypeOk,
             L"ERROR: Unsupported file type!",
-            L"Only supports DER-encoded X509 certificate",
-            NULL
+            L"Only supports DER-encoded X509 certificate"
             );
         }
 
@@ -4988,12 +5054,12 @@ SecureBootCallback (
       case KEY_VALUE_SAVE_AND_EXIT_DB:
         Status = EnrollSignatureDatabase (Private, EFI_IMAGE_SECURITY_DATABASE);
         if (EFI_ERROR (Status)) {
-          CreatePopUp (
-            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-            &Key,
+          SecureBootPopup (
+            Private,
+            EfiHiiPopupStyleError,
+            EfiHiiPopupTypeOk,
             L"ERROR: Unsupported file type!",
-            L"Only supports DER-encoded X509 certificate and executable EFI image",
-            NULL
+            L"Only supports DER-encoded X509 certificate and executable EFI image"
             );
         }
 
@@ -5001,9 +5067,10 @@ SecureBootCallback (
 
       case KEY_VALUE_SAVE_AND_EXIT_DBX:
         if (IsX509CertInDbx (Private, EFI_IMAGE_SECURITY_DATABASE1)) {
-          CreatePopUp (
-            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-            &Key,
+          SecureBootPopup (
+            Private,
+            EfiHiiPopupStyleError,
+            EfiHiiPopupTypeOk,
             L"Enrollment failed! Same certificate had already been in the dbx!",
             NULL
             );
@@ -5029,12 +5096,12 @@ SecureBootCallback (
         }
 
         if (EFI_ERROR (Status)) {
-          CreatePopUp (
-            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-            &Key,
+          SecureBootPopup (
+            Private,
+            EfiHiiPopupStyleError,
+            EfiHiiPopupTypeOk,
             L"ERROR: Unsupported file type!",
-            L"Only supports DER-encoded X509 certificate, AUTH_2 format data & executable EFI image",
-            NULL
+            L"Only supports DER-encoded X509 certificate, AUTH_2 format data & executable EFI image"
             );
         } else {
           IfrNvData->ListCount = Private->ListCount;
@@ -5045,12 +5112,12 @@ SecureBootCallback (
       case KEY_VALUE_SAVE_AND_EXIT_DBT:
         Status = EnrollSignatureDatabase (Private, EFI_IMAGE_SECURITY_DATABASE2);
         if (EFI_ERROR (Status)) {
-          CreatePopUp (
-            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-            &Key,
+          SecureBootPopup (
+            Private,
+            EfiHiiPopupStyleError,
+            EfiHiiPopupTypeOk,
             L"ERROR: Unsupported file type!",
-            L"Only supports DER-encoded X509 certificate.",
-            NULL
+            L"Only supports DER-encoded X509 certificate."
             );
         }
 
@@ -5062,12 +5129,12 @@ SecureBootCallback (
         Status = CheckX509Certificate (Private->FileContext, &EnrollKeyErrorCode);
         if (EFI_ERROR (Status)) {
           if ((EnrollKeyErrorCode != None_Error) && (EnrollKeyErrorCode < Enroll_Error_Max)) {
-            CreatePopUp (
-              EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-              &Key,
+            SecureBootPopup (
+              Private,
+              EfiHiiPopupStyleError,
+              EfiHiiPopupTypeOk,
               mX509EnrollPromptTitle[EnrollKeyErrorCode],
-              mX509EnrollPromptString[EnrollKeyErrorCode],
-              NULL
+              mX509EnrollPromptString[EnrollKeyErrorCode]
               );
             break;
           }
@@ -5082,12 +5149,12 @@ SecureBootCallback (
             L"Error status: %x.",
             Status
             );
-          CreatePopUp (
-            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-            &Key,
+          SecureBootPopup (
+            Private,
+            EfiHiiPopupStyleError,
+            EfiHiiPopupTypeOk,
             L"ERROR: Enrollment failed!",
-            PromptString,
-            NULL
+            PromptString
             );
         } else {
           SecureBootExtractConfigFromVariable (Private, IfrNvData);
