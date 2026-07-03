@@ -204,6 +204,284 @@ Out:
 }
 
 /**
+  Build a signature-list payload from a NULL-terminated list of certificate
+  triplets and store it in the read-only "<name>Default" variable.
+
+  The payload is byte-for-byte identical to what GetVariable() returns for the
+  live key variable enrolled from the same certificates via EnrollListOfCerts()
+  (i.e. the signature lists without the authentication descriptor). That is what
+  lets the Secure Boot setup UI compare the live keys against these defaults to
+  tell whether the platform is using default or custom keys.
+
+  The variable is written volatile (BS+RT, no NV) so it is rebuilt on every boot
+  and always reflects the firmware's current default keys.
+
+  @param[in] DefaultName  The name of the "*Default" variable to write.
+  @param[in] CertType     The GUID determining the type of all certificates.
+  @param[in] ...          A NULL-terminated list of
+                            IN CONST UINT8    *Cert,
+                            IN UINTN          CertSize,
+                            IN CONST EFI_GUID *OwnerGuid
+                          triplets, matching EnrollListOfCerts().
+**/
+STATIC
+VOID
+EFIAPI
+ProvisionSigListDefault (
+  IN CHAR16    *DefaultName,
+  IN EFI_GUID  *CertType,
+  ...
+  )
+{
+  UINTN             DataSize;
+  REPEATING_HEADER  *RepeatingHeader;
+  VA_LIST           Marker;
+  CONST UINT8       *Cert;
+  EFI_STATUS        Status;
+  UINT8             *Data;
+  UINT8             *Position;
+
+  //
+  // Compute total size first.
+  //
+  DataSize = 0;
+  VA_START (Marker, CertType);
+  for (Cert = VA_ARG (Marker, CONST UINT8 *);
+       Cert != NULL;
+       Cert = VA_ARG (Marker, CONST UINT8 *))
+  {
+    UINTN  CertSize;
+
+    CertSize = VA_ARG (Marker, UINTN);
+    (VOID)VA_ARG (Marker, CONST EFI_GUID *);
+
+    if ((CertSize == 0) ||
+        (CertSize > MAX_UINT32 - sizeof *RepeatingHeader) ||
+        (DataSize > MAX_UINT32 - sizeof *RepeatingHeader - CertSize))
+    {
+      VA_END (Marker);
+      return;
+    }
+
+    DataSize += sizeof *RepeatingHeader + CertSize;
+  }
+
+  VA_END (Marker);
+
+  if (DataSize == 0) {
+    return;
+  }
+
+  Data = AllocatePool (DataSize);
+  if (Data == NULL) {
+    return;
+  }
+
+  Position = Data;
+
+  VA_START (Marker, CertType);
+  for (Cert = VA_ARG (Marker, CONST UINT8 *);
+       Cert != NULL;
+       Cert = VA_ARG (Marker, CONST UINT8 *))
+  {
+    UINTN           CertSize;
+    CONST EFI_GUID  *OwnerGuid;
+
+    CertSize  = VA_ARG (Marker, UINTN);
+    OwnerGuid = VA_ARG (Marker, CONST EFI_GUID *);
+
+    RepeatingHeader = (REPEATING_HEADER *)Position;
+    CopyGuid (&RepeatingHeader->SignatureType, CertType);
+    RepeatingHeader->SignatureListSize   = (UINT32)(sizeof *RepeatingHeader + CertSize);
+    RepeatingHeader->SignatureHeaderSize = 0;
+    RepeatingHeader->SignatureSize       = (UINT32)(sizeof RepeatingHeader->SignatureOwner + CertSize);
+    CopyGuid (&RepeatingHeader->SignatureOwner, OwnerGuid);
+    Position += sizeof *RepeatingHeader;
+
+    CopyMem (Position, Cert, CertSize);
+    Position += CertSize;
+  }
+
+  VA_END (Marker);
+
+  Status = gRT->SetVariable (
+                  DefaultName,
+                  &gEfiGlobalVariableGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                  DataSize,
+                  Data
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: SetVariable(\"%s\"): %r\n", DefaultName, Status));
+  }
+
+  FreePool (Data);
+}
+
+/**
+  Store the signature-list portion of a time-based authenticated payload (such
+  as the Microsoft dbx update) in the read-only "dbxDefault" variable.
+
+  GetVariable() on the live "dbx" variable returns the payload with the
+  authentication descriptor stripped, so this strips the same descriptor here to
+  keep the default comparable to the live variable.
+
+  @param[in] Blob      The authenticated payload (EFI_VARIABLE_AUTHENTICATION_2
+                       followed by the signature lists).
+  @param[in] BlobSize  Size of Blob in bytes.
+**/
+STATIC
+VOID
+EFIAPI
+ProvisionDbxDefaultFromAuthPayload (
+  IN UINT8  *Blob,
+  IN UINTN  BlobSize
+  )
+{
+  SINGLE_HEADER  *Header;
+  UINTN          DescriptorSize;
+  EFI_STATUS     Status;
+
+  if ((Blob == NULL) || (BlobSize <= sizeof (SINGLE_HEADER))) {
+    return;
+  }
+
+  //
+  // The authentication descriptor is the leading EFI_TIME plus the
+  // WIN_CERTIFICATE_UEFI_GUID whose length is given by dwLength.
+  //
+  Header         = (SINGLE_HEADER *)Blob;
+  DescriptorSize = OFFSET_OF (SINGLE_HEADER, dwLength) + Header->dwLength;
+  if ((DescriptorSize >= BlobSize) || (DescriptorSize < OFFSET_OF (SINGLE_HEADER, dwLength))) {
+    return;
+  }
+
+  Status = gRT->SetVariable (
+                  EFI_DBX_DEFAULT_VARIABLE_NAME,
+                  &gEfiGlobalVariableGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                  BlobSize - DescriptorSize,
+                  Blob + DescriptorSize
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: SetVariable(\"%s\"): %r\n", EFI_DBX_DEFAULT_VARIABLE_NAME, Status));
+  }
+}
+
+/**
+  Publish the PKDefault/KEKDefault/dbDefault/dbxDefault variables from the
+  firmware-embedded default key material.
+
+  These are the authoritative "what the shipped defaults are" reference used by
+  the Secure Boot setup UI to distinguish default keys from user-customized
+  ("custom") keys. They are refreshed on every boot regardless of Setup/User
+  Mode, so the indicator works on freshly-provisioned as well as already-enrolled
+  systems.
+**/
+STATIC
+VOID
+EFIAPI
+ProvisionKeyDefaults (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT8       *DbMicrosoftUefi2011      = NULL;
+  UINTN       DbMicrosoftUefi2011Size;
+  UINT8       *DbMicrosoftUefi2023      = NULL;
+  UINTN       DbMicrosoftUefi2023Size;
+  UINT8       *DbMicrosoftWin2011       = NULL;
+  UINTN       DbMicrosoftWin2011Size;
+  UINT8       *DbMicrosoftWinuefi2023   = NULL;
+  UINTN       DbMicrosoftWinuefi2023Size;
+  UINT8       *DbxMicrosoftUpdate       = NULL;
+  UINTN       DbxMicrosoftUpdateSize;
+  UINT8       *KekMicrosoft2011         = NULL;
+  UINTN       KekMicrosoft2011Size;
+  UINT8       *KekMicrosoft2023         = NULL;
+  UINTN       KekMicrosoft2023Size;
+  UINT8       *DbMicrosoftOpRomUefi2023 = NULL;
+  UINTN       DbMicrosoftOpRomUefi2023Size;
+  UINT8       *PkMicrosoftOem2023       = NULL;
+  UINTN       PkMicrosoftOem2023Size;
+
+  Status = GetSectionFromAnyFv (&gMicrosoftPkOem2023Guid, EFI_SECTION_RAW, 0, (void **)&PkMicrosoftOem2023, &PkMicrosoftOem2023Size);
+  if (!EFI_ERROR (Status)) {
+    ProvisionSigListDefault (
+      EFI_PK_DEFAULT_VARIABLE_NAME,
+      &gEfiCertX509Guid,
+      PkMicrosoftOem2023, PkMicrosoftOem2023Size, &gMicrosoftVendorGuid,
+      NULL
+      );
+    FreePool (PkMicrosoftOem2023);
+  }
+
+  Status  = GetSectionFromAnyFv (&gMicrosoftKek2011Guid, EFI_SECTION_RAW, 0, (void **)&KekMicrosoft2011, &KekMicrosoft2011Size);
+  Status |= GetSectionFromAnyFv (&gMicrosoftKek2023Guid, EFI_SECTION_RAW, 0, (void **)&KekMicrosoft2023, &KekMicrosoft2023Size);
+  if (!EFI_ERROR (Status)) {
+    ProvisionSigListDefault (
+      EFI_KEK_DEFAULT_VARIABLE_NAME,
+      &gEfiCertX509Guid,
+      KekMicrosoft2011, KekMicrosoft2011Size, &gMicrosoftVendorGuid,
+      KekMicrosoft2023, KekMicrosoft2023Size, &gMicrosoftVendorGuid,
+      NULL
+      );
+  }
+
+  if (KekMicrosoft2011 != NULL) {
+    FreePool (KekMicrosoft2011);
+  }
+
+  if (KekMicrosoft2023 != NULL) {
+    FreePool (KekMicrosoft2023);
+  }
+
+  Status  = GetSectionFromAnyFv (&gMicrosoftDbUefi2011Guid, EFI_SECTION_RAW, 0, (void **)&DbMicrosoftUefi2011, &DbMicrosoftUefi2011Size);
+  Status |= GetSectionFromAnyFv (&gMicrosoftDbUefi2023Guid, EFI_SECTION_RAW, 0, (void **)&DbMicrosoftUefi2023, &DbMicrosoftUefi2023Size);
+  Status |= GetSectionFromAnyFv (&gMicrosoftDbWin2011Guid, EFI_SECTION_RAW, 0, (void **)&DbMicrosoftWin2011, &DbMicrosoftWin2011Size);
+  Status |= GetSectionFromAnyFv (&gMicrosoftDbWinUefi2023Guid, EFI_SECTION_RAW, 0, (void **)&DbMicrosoftWinuefi2023, &DbMicrosoftWinuefi2023Size);
+  Status |= GetSectionFromAnyFv (&gMicrosoftDbOpRomUefi2023Guid, EFI_SECTION_RAW, 0, (void **)&DbMicrosoftOpRomUefi2023, &DbMicrosoftOpRomUefi2023Size);
+  if (!EFI_ERROR (Status)) {
+    ProvisionSigListDefault (
+      EFI_DB_DEFAULT_VARIABLE_NAME,
+      &gEfiCertX509Guid,
+      DbMicrosoftUefi2011,      DbMicrosoftUefi2011Size,      &gMicrosoftVendorGuid,
+      DbMicrosoftUefi2023,      DbMicrosoftUefi2023Size,      &gMicrosoftVendorGuid,
+      DbMicrosoftWin2011,       DbMicrosoftWin2011Size,       &gMicrosoftVendorGuid,
+      DbMicrosoftWinuefi2023,   DbMicrosoftWinuefi2023Size,   &gMicrosoftVendorGuid,
+      DbMicrosoftOpRomUefi2023, DbMicrosoftOpRomUefi2023Size, &gMicrosoftVendorGuid,
+      NULL
+      );
+  }
+
+  if (DbMicrosoftUefi2011 != NULL) {
+    FreePool (DbMicrosoftUefi2011);
+  }
+
+  if (DbMicrosoftUefi2023 != NULL) {
+    FreePool (DbMicrosoftUefi2023);
+  }
+
+  if (DbMicrosoftWin2011 != NULL) {
+    FreePool (DbMicrosoftWin2011);
+  }
+
+  if (DbMicrosoftWinuefi2023 != NULL) {
+    FreePool (DbMicrosoftWinuefi2023);
+  }
+
+  if (DbMicrosoftOpRomUefi2023 != NULL) {
+    FreePool (DbMicrosoftOpRomUefi2023);
+  }
+
+  Status = GetSectionFromAnyFv (&gMicrosoftDbxUpdateGuid, EFI_SECTION_RAW, 0, (void **)&DbxMicrosoftUpdate, &DbxMicrosoftUpdateSize);
+  if (!EFI_ERROR (Status)) {
+    ProvisionDbxDefaultFromAuthPayload (DbxMicrosoftUpdate, DbxMicrosoftUpdateSize);
+    FreePool (DbxMicrosoftUpdate);
+  }
+}
+
+/**
   Read a UEFI variable into a caller-allocated buffer, enforcing an exact size.
 
   @param[in] VariableName  The name of the variable to read; passed to
@@ -406,6 +684,13 @@ EnrollDefaultKeys (
   if (EFI_ERROR (Status)) {
     return;
   }
+
+  //
+  // Publish the default key reference variables on every boot (regardless of
+  // Setup/User Mode) so the Secure Boot setup UI can tell default keys from
+  // user-customized ones.
+  //
+  ProvisionKeyDefaults ();
 
   Status = GetSettings (&Settings, TRUE);
   if (EFI_ERROR (Status)) {
