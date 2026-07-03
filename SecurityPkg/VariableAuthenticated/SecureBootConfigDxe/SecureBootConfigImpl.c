@@ -3745,13 +3745,13 @@ LoadSignatureList (
 
   if (PrivateData->VariableName == Variable_DB) {
     UnicodeSPrint (VariableName, sizeof (VariableName), EFI_IMAGE_SECURITY_DATABASE);
-    DstFormId = FORMID_SECURE_BOOT_DB_OPTION_FORM;
+    DstFormId = FORMID_SECURE_BOOT_OPTION_FORM;
   } else if (PrivateData->VariableName == Variable_DBX) {
     UnicodeSPrint (VariableName, sizeof (VariableName), EFI_IMAGE_SECURITY_DATABASE1);
-    DstFormId = FORMID_SECURE_BOOT_DBX_OPTION_FORM;
+    DstFormId = FORMID_SECURE_BOOT_OPTION_FORM;
   } else if (PrivateData->VariableName == Variable_DBT) {
     UnicodeSPrint (VariableName, sizeof (VariableName), EFI_IMAGE_SECURITY_DATABASE2);
-    DstFormId = FORMID_SECURE_BOOT_DBT_OPTION_FORM;
+    DstFormId = FORMID_SECURE_BOOT_OPTION_FORM;
   } else {
     goto ON_EXIT;
   }
@@ -4583,8 +4583,8 @@ ConfirmEnterSetupMode (
 
   //
   // Use EFI_HII_POPUP_PROTOCOL (produced by the active display engine) so the
-  // confirmation matches the rest of the setup UI — a graphical dialog under
-  // the LVGL display engine, the standard HII popup in text mode — instead of
+  // confirmation matches the rest of the setup UI ? a graphical dialog under
+  // the LVGL display engine, the standard HII popup in text mode ? instead of
   // the legacy console CreatePopUp overlay.
   //
   Status = gBS->LocateProtocol (&gEfiHiiPopupProtocolGuid, NULL, (VOID **)&HiiPopup);
@@ -4722,7 +4722,8 @@ SecureBootCallback (
       // When entering SecureBoot OPTION Form
       // always close opened file & free resource
       //
-      if ((QuestionId == KEY_SECURE_BOOT_PK_OPTION) ||
+      if ((QuestionId == KEY_SECURE_BOOT_OPTION) ||
+          (QuestionId == KEY_SECURE_BOOT_PK_OPTION) ||
           (QuestionId == KEY_SECURE_BOOT_KEK_OPTION) ||
           (QuestionId == KEY_SECURE_BOOT_DB_OPTION) ||
           (QuestionId == KEY_SECURE_BOOT_DBX_OPTION) ||

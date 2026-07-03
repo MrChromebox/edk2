@@ -90,64 +90,16 @@ formset
   endform;
 
   //
-  // ##2 Form: 'Custom Secure Boot Options'
+  // ##2 Form: 'Custom Secure Boot Options' (single flattened page)
   //
   form formid = FORMID_SECURE_BOOT_OPTION_FORM,
     title  = STRING_TOKEN(STR_SECURE_BOOT_OPTION_TITLE);
 
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto FORMID_SECURE_BOOT_PK_OPTION_FORM,
-         prompt = STRING_TOKEN(STR_SECURE_BOOT_PK_OPTION),
-         help   = STRING_TOKEN(STR_SECURE_BOOT_PK_OPTION_HELP),
-         flags  = INTERACTIVE,
-         key    = KEY_SECURE_BOOT_PK_OPTION;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto FORMID_SECURE_BOOT_KEK_OPTION_FORM,
-         prompt = STRING_TOKEN(STR_SECURE_BOOT_KEK_OPTION),
-         help   = STRING_TOKEN(STR_SECURE_BOOT_KEK_OPTION_HELP),
-         flags  = INTERACTIVE,
-         key    = KEY_SECURE_BOOT_KEK_OPTION;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto FORMID_SECURE_BOOT_DB_OPTION_FORM,
-         prompt = STRING_TOKEN(STR_SECURE_BOOT_DB_OPTION),
-         help   = STRING_TOKEN(STR_SECURE_BOOT_DB_OPTION_HELP),
-         flags  = INTERACTIVE,
-         key    = KEY_SECURE_BOOT_DB_OPTION;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto FORMID_SECURE_BOOT_DBX_OPTION_FORM,
-         prompt = STRING_TOKEN(STR_SECURE_BOOT_DBX_OPTION),
-         help   = STRING_TOKEN(STR_SECURE_BOOT_DBX_OPTION_HELP),
-         flags  = INTERACTIVE,
-         key    = KEY_SECURE_BOOT_DBX_OPTION;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto FORMID_SECURE_BOOT_DBT_OPTION_FORM,
-         prompt = STRING_TOKEN(STR_SECURE_BOOT_DBT_OPTION),
-         help   = STRING_TOKEN(STR_SECURE_BOOT_DBT_OPTION_HELP),
-         flags  = INTERACTIVE,
-         key    = KEY_SECURE_BOOT_DBT_OPTION;
-
-  endform;
-
-  //
-  // ##3 Form: 'PK Options'
-  //
-  form formid = FORMID_SECURE_BOOT_PK_OPTION_FORM,
-    title  = STRING_TOKEN(STR_SECURE_BOOT_PK_OPTION);
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
     //
-    // Display of 'Enroll PK'
+    // PK
     //
+    subtitle text = STRING_TOKEN(STR_SECURE_BOOT_PK_OPTION);
+
     grayoutif ideqval SECUREBOOT_CONFIGURATION.HasPk == 1;
     goto FORMID_ENROLL_PK_FORM,
          prompt = STRING_TOKEN(STR_ENROLL_PK),
@@ -156,11 +108,6 @@ formset
          key    = KEY_ENROLL_PK;
     endif;
 
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    //
-    // Display of Check Box: 'Delete Pk'
-    //
     grayoutif ideqval SECUREBOOT_CONFIGURATION.HideSecureBoot == 1;
     checkbox varid = SECUREBOOT_CONFIGURATION.DeletePk,
           questionid = KEY_SECURE_BOOT_DELETE_PK,
@@ -169,6 +116,71 @@ formset
           flags  = INTERACTIVE | RESET_REQUIRED,
     endcheckbox;
     endif;
+
+    //
+    // KEK
+    //
+    subtitle text = STRING_TOKEN(STR_SECURE_BOOT_KEK_OPTION);
+
+    goto FORMID_ENROLL_KEK_FORM,
+         prompt = STRING_TOKEN(STR_ENROLL_KEK),
+         help   = STRING_TOKEN(STR_ENROLL_KEK_HELP),
+         flags  = INTERACTIVE;
+
+    goto FORMID_DELETE_KEK_FORM,
+         prompt = STRING_TOKEN(STR_DELETE_KEK),
+         help   = STRING_TOKEN(STR_DELETE_KEK_HELP),
+         flags  = INTERACTIVE,
+         key    = KEY_DELETE_KEK;
+
+    //
+    // DB
+    //
+    subtitle text = STRING_TOKEN(STR_SECURE_BOOT_DB_OPTION);
+
+    goto SECUREBOOT_ENROLL_SIGNATURE_TO_DB,
+         prompt = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
+         help   = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
+         flags  = 0;
+
+    goto SECUREBOOT_DELETE_SIGNATURE_FROM_DB,
+         prompt = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
+         help   = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
+         flags  = INTERACTIVE,
+         key    = SECUREBOOT_DELETE_SIGNATURE_FROM_DB;
+
+    //
+    // DBX
+    //
+    subtitle text = STRING_TOKEN(STR_SECURE_BOOT_DBX_OPTION);
+
+    goto SECUREBOOT_ENROLL_SIGNATURE_TO_DBX,
+         prompt = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
+         help   = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
+         flags  = 0;
+
+    goto SECUREBOOT_DELETE_SIGNATURE_LIST_FORM,
+         prompt = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
+         help   = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
+         flags  = INTERACTIVE,
+         key    = KEY_VALUE_FROM_DBX_TO_LIST_FORM;
+
+    //
+    // DBT
+    //
+    subtitle text = STRING_TOKEN(STR_SECURE_BOOT_DBT_OPTION);
+
+    goto SECUREBOOT_ENROLL_SIGNATURE_TO_DBT,
+         prompt = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
+         help   = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
+         flags  = 0;
+
+    goto SECUREBOOT_DELETE_SIGNATURE_FROM_DBT,
+         prompt = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
+         help   = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
+         flags  = INTERACTIVE,
+         key    = SECUREBOOT_DELETE_SIGNATURE_FROM_DBT;
+
   endform;
 
   //
@@ -202,34 +214,6 @@ formset
       flags  = INTERACTIVE,
       key    = KEY_VALUE_NO_SAVE_AND_EXIT_PK;
 
-  endform;
-
-  //
-  // ##5 Form: 'KEK Options'
-  //
-  form formid = FORMID_SECURE_BOOT_KEK_OPTION_FORM,
-    title  = STRING_TOKEN(STR_SECURE_BOOT_KEK_OPTION);
-
-    //
-    // Display of 'Enroll KEK'
-    //
-    goto FORMID_ENROLL_KEK_FORM,
-         prompt = STRING_TOKEN(STR_ENROLL_KEK),
-         help   = STRING_TOKEN(STR_ENROLL_KEK_HELP),
-         flags  = INTERACTIVE;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    //
-    // Display of 'Delete KEK'
-    //
-    goto FORMID_DELETE_KEK_FORM,
-         prompt = STRING_TOKEN(STR_DELETE_KEK),
-         help   = STRING_TOKEN(STR_DELETE_KEK_HELP),
-         flags  = INTERACTIVE,
-         key    = KEY_DELETE_KEK;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
   endform;
 
   //
@@ -287,75 +271,6 @@ formset
     label LABEL_END;
 
     subtitle text = STRING_TOKEN(STR_NULL);
-
-  endform;
-
-  //
-  // ##8 Form: 'DB Options'
-  //
-  form formid = FORMID_SECURE_BOOT_DB_OPTION_FORM,
-    title = STRING_TOKEN(STR_SECURE_BOOT_DB_OPTION);
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto SECUREBOOT_ENROLL_SIGNATURE_TO_DB,
-    prompt = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
-    help   = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
-    flags  = 0;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto SECUREBOOT_DELETE_SIGNATURE_FROM_DB,
-    prompt = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
-    help   = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
-    flags  = INTERACTIVE,
-    key    = SECUREBOOT_DELETE_SIGNATURE_FROM_DB;
-
-  endform;
-
-  //
-  // ##9 Form: 'DBX Options'
-  //
-  form formid = FORMID_SECURE_BOOT_DBX_OPTION_FORM,
-    title = STRING_TOKEN(STR_SECURE_BOOT_DBX_OPTION);
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto SECUREBOOT_ENROLL_SIGNATURE_TO_DBX,
-    prompt = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
-    help   = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
-    flags  = 0;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto SECUREBOOT_DELETE_SIGNATURE_LIST_FORM,
-    prompt = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
-    help   = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
-    flags  = INTERACTIVE,
-    key    = KEY_VALUE_FROM_DBX_TO_LIST_FORM;
-
-  endform;
-
-  //
-  // ##9 Form: 'DBT Options'
-  //
-  form formid = FORMID_SECURE_BOOT_DBT_OPTION_FORM,
-    title = STRING_TOKEN(STR_SECURE_BOOT_DBT_OPTION);
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto SECUREBOOT_ENROLL_SIGNATURE_TO_DBT,
-    prompt = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
-    help   = STRING_TOKEN (STR_SECURE_BOOT_ENROLL_SIGNATURE),
-    flags  = 0;
-
-    subtitle text = STRING_TOKEN(STR_NULL);
-
-    goto SECUREBOOT_DELETE_SIGNATURE_FROM_DBT,
-    prompt = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
-    help   = STRING_TOKEN (STR_SECURE_BOOT_DELETE_SIGNATURE),
-    flags  = INTERACTIVE,
-    key    = SECUREBOOT_DELETE_SIGNATURE_FROM_DBT;
 
   endform;
 
