@@ -2800,6 +2800,16 @@ CoreInitializeGcdServices (
               mDefaultMaximumAddress
               );
           }
+        } else if (!EFI_ERROR (Status) &&
+                   (Descriptor.GcdMemoryType == EfiGcdMemoryTypeMemoryMappedIo) &&
+                   (MemoryHob->AllocDescriptor.MemoryType == EfiReservedMemoryType))
+        {
+          CoreAddMemoryDescriptor (
+            MemoryHob->AllocDescriptor.MemoryType,
+            MemoryHob->AllocDescriptor.MemoryBaseAddress,
+            RShiftU64 (MemoryHob->AllocDescriptor.MemoryLength, EFI_PAGE_SHIFT),
+            Descriptor.Capabilities & (~EFI_MEMORY_RUNTIME)
+            );
         }
       }
     }
