@@ -232,12 +232,6 @@
 !endif
   *_*_*_CC_FLAGS                 = $(APPEND_CC_FLAGS)
 
-!if $(DISABLE_SERIAL_TERMINAL) == TRUE
-  # Upstream LVGL sources (LvglLib) trip GCC's -Wformat; suppress to build clean.
-  GCC:*_*_*_CC_FLAGS             = -Wno-format
-  MSFT:*_*_*_CC_FLAGS            = /wd4244 /wd4204 /wd4389 /wd4221 /wd4800 /wd4267 /wd4018 /wd4047 /wd4245 /wd4003 /wd4702 /wd4718 /wd4706 /wd4819 /wd4028 /wd5287 /GL-
-!endif
-
 [BuildOptions.AARCH64]
   GCC:*_*_*_CC_FLAGS         = -mstrict-align
   GCC:*_GCC_*_CC_FLAGS         = -mcmodel=tiny
@@ -294,14 +288,6 @@
   DxeCoreEntryPoint|MdePkg/Library/DxeCoreEntryPoint/DxeCoreEntryPoint.inf
   UefiDriverEntryPoint|MdePkg/Library/UefiDriverEntryPoint/UefiDriverEntryPoint.inf
   UefiApplicationEntryPoint|MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
-
-  #
-  # LVGL-based display engine (replaces MdeModulePkg DisplayEngineDxe when
-  # DISABLE_SERIAL_TERMINAL == TRUE, i.e. graphical-only builds)
-  #
-!if $(DISABLE_SERIAL_TERMINAL) == TRUE
-  LvglLib|LvglPkg/Library/LvglLib/LvglLib.inf
-!endif
 
   #
   # Basic
@@ -1256,11 +1242,7 @@
 !endif
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
   MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
-!if $(DISABLE_SERIAL_TERMINAL) == TRUE
-  LvglPkg/LvglDisplayEngineDxe/LvglDisplayEngineDxe.inf
-!else
   MdeModulePkg/Universal/DisplayEngineDxe/DisplayEngineDxe.inf
-!endif
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
   UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
 !endif
@@ -1351,11 +1333,7 @@
   MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
   MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
   MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
-!if $(DISABLE_SERIAL_TERMINAL) == TRUE
-  MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
-!else
   MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf
-!endif
 
   #
   # ISA Support
