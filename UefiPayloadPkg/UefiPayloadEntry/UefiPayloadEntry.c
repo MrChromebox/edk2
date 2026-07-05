@@ -59,9 +59,12 @@ MemInfoCallbackMmio (
     return EFI_SUCCESS;
   }
 
-  if (MemoryMapEntry->Base == AcpiBoardInfo->PcieBaseAddress) {
+  if ((AcpiBoardInfo->PcieBaseSize != 0) &&
+      (MemoryMapEntry->Base == AcpiBoardInfo->PcieBaseAddress))
+  {
     //
-    // MMCONF is always MMIO
+    // ECAM must remain MMIO in the GCD map so DXE PCI config access works.
+    // DxeCore reports this range as reserved in the final UEFI memory map.
     //
     Type = EFI_RESOURCE_MEMORY_MAPPED_IO;
   } else if (MemoryMapEntry->Base < mTopOfLowerUsableDram) {
@@ -92,7 +95,11 @@ MemInfoCallbackMmio (
   BuildResourceDescriptorHob (Type, Attribute, (EFI_PHYSICAL_ADDRESS)Base, Size);
   DEBUG ((DEBUG_INFO, "buildhob: base = 0x%lx, size = 0x%lx, type = 0x%x\n", Base, Size, Type));
 
-  if ((MemoryMapEntry->Type == E820_UNUSABLE) ||
+  if ((AcpiBoardInfo->PcieBaseSize != 0) &&
+      (MemoryMapEntry->Base == AcpiBoardInfo->PcieBaseAddress))
+  {
+    BuildMemoryAllocationHob (Base, Size, EfiReservedMemoryType);
+  } else if ((MemoryMapEntry->Type == E820_UNUSABLE) ||
       (MemoryMapEntry->Type == E820_DISABLED))
   {
     BuildMemoryAllocationHob (Base, Size, EfiUnusableMemory);
