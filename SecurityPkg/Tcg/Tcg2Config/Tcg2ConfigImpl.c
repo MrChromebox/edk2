@@ -10,6 +10,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "Tcg2ConfigImpl.h"
 #include <Library/PcdLib.h>
+#include <Library/TcgUiConfigLib.h>
 #include <Library/Tpm2CommandLib.h>
 #include <Library/Tpm2DeviceLib.h>
 #include <Library/IoLib.h>
@@ -572,7 +573,7 @@ Tcg2Callback (
   }
 
   Private = TCG2_CONFIG_PRIVATE_DATA_FROM_THIS (This);
-  SimpleUi = PcdGetBool (PcdTcg2ConfigSimpleUi);
+  SimpleUi = TcgUiConfigIsTpm2SimpleUiEnabled ();
 
   if (Action == EFI_BROWSER_ACTION_FORM_OPEN) {
     //
@@ -916,7 +917,7 @@ InstallTcg2ConfigForm (
 
   PrivateData->DriverHandle = DriverHandle;
 
-  FormBin = PcdGetBool (PcdTcg2ConfigSimpleUi) ? (VOID *)Tcg2ConfigSimpleBin : (VOID *)Tcg2ConfigBin;
+  FormBin = TcgUiConfigIsTpm2SimpleUiEnabled () ? (VOID *)Tcg2ConfigSimpleBin : (VOID *)Tcg2ConfigBin;
 
   //
   // Publish the HII package list

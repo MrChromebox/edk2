@@ -1,0 +1,5 @@
+#langdef en-US "English"
+
+#string STR_MODULE_ABSTRACT  #language en-US "TCG/TPM setup UI configuration library"
+
+#string STR_MODULE_DESCRIPTION  #language en-US "Loads persisted TCG/TPM setup UI mode selections."

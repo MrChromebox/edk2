@@ -7,6 +7,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include "Tcg2ConfigImpl.h"
+#include <Library/TcgUiConfigLib.h>
 
 extern TPM_INSTANCE_ID  mTpmInstanceId[TPM_DEVICE_MAX + 1];
 
@@ -265,6 +266,8 @@ Tcg2ConfigDriverEntryPoint (
   UINTN                         DataSize;
   EDKII_VARIABLE_LOCK_PROTOCOL  *VariableLockProtocol;
   UINT32                        CurrentActivePCRBanks;
+
+  TcgUiConfigEnsureVariable ();
 
   Status = gBS->OpenProtocol (
                   ImageHandle,

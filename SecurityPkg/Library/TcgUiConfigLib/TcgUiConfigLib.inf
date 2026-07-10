@@ -1,0 +1,36 @@
+## @file
+#  TCG/TPM setup UI configuration library.
+#
+#  Copyright (c) 2026, MrChromebox. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TcgUiConfigLib
+  MODULE_UNI_FILE                = TcgUiConfigLib.uni
+  FILE_GUID                      = 7C1A9E42-5D8F-4B6A-A3C1-2E9F8D7B6C50
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = TcgUiConfigLib|DXE_DRIVER UEFI_DRIVER
+
+[Sources]
+  TcgUiConfigLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SecurityPkg/SecurityPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  PcdLib
+  UefiRuntimeServicesTableLib
+
+[Guids]
+  gTcgUiConfigFormSetGuid
+
+[Pcd]
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2ConfigSimpleUi    ## CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcgStorageSimpleUi    ## CONSUMES

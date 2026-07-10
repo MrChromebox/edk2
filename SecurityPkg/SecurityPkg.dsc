@@ -20,11 +20,11 @@
   SKUID_IDENTIFIER               = DEFAULT
 
   #
-  # Optional build-time switch to enable the "Simple UI" mode for the OPAL/SED HII menu.
-  # This only provides a default for the PCD; code uses the PCD as the single source of truth.
+  # Default TPM2 / TCG Storage setup UI modes when the TcgUiConfig variable is absent.
+  # Runtime selection is stored in NVRAM and exposed from the TPM and TCG Disk Encryption setup forms.
   #
-  # Example:
-  #   build -p SecurityPkg/SecurityPkg.dsc -a X64 -t GCC5 -b DEBUG -D TCG_STORAGE_SIMPLE_UI=ON
+  # Example (seed Standard mode on first boot):
+  #   build ... -D TCG_STORAGE_SIMPLE_UI=ON -D TPM_SIMPLE_UI=ON
   #
   DEFINE TCG_STORAGE_SIMPLE_UI           = FALSE
 
@@ -37,7 +37,7 @@
   DEFINE SECURE_BOOT_SIMPLE_UI           = FALSE
 
   #
-  # Optional build-time switch to enable the "Simple UI" mode for TPM configuration.
+  # Default TPM2 setup UI mode when the TcgUiConfig variable is absent.
   #
   # Example:
   #   build -p SecurityPkg/SecurityPkg.dsc -a X64 -t GCC5 -b DEBUG -D TPM_SIMPLE_UI=ON
@@ -92,6 +92,7 @@
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
   TcgStorageCoreLib|SecurityPkg/Library/TcgStorageCoreLib/TcgStorageCoreLib.inf
   TcgStorageOpalLib|SecurityPkg/Library/TcgStorageOpalLib/TcgStorageOpalLib.inf
+  TcgUiConfigLib|SecurityPkg/Library/TcgUiConfigLib/TcgUiConfigLib.inf
   ResetSystemLib|MdeModulePkg/Library/BaseResetSystemLibNull/BaseResetSystemLibNull.inf
   TcgEventLogRecordLib|SecurityPkg/Library/TcgEventLogRecordLib/TcgEventLogRecordLib.inf
   MmUnblockMemoryLib|MdePkg/Library/MmUnblockMemoryLib/MmUnblockMemoryLibNull.inf

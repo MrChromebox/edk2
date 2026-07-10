@@ -54,6 +54,7 @@
   Tpm2DeviceLib
   Tpm2CommandLib
   Tcg2PhysicalPresenceLib
+  TcgUiConfigLib
   IoLib
 
 [Guids]
@@ -63,6 +64,10 @@
   ## PRODUCES           ## Variable:L"TCG2_DEVICE_DETECTION"
   ## SOMETIMES_CONSUMES ## Variable:L"TCG2_DEVICE_DETECTION"
   gTcg2ConfigFormSetGuid
+
+  ## PRODUCES           ## Variable:L"TcgUiConfig"
+  ## SOMETIMES_CONSUMES ## Variable:L"TcgUiConfig"
+  gTcgUiConfigFormSetGuid
 
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
@@ -78,7 +83,6 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTcgPhysicalPresenceInterfaceVer  ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev           ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType     ## CONSUMES
-  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2ConfigSimpleUi         ## CONSUMES
 
 [Depex]
   gEfiTcg2ProtocolGuid              AND

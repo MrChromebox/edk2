@@ -1,36 +1,35 @@
-# OpalPassword “Simple UI” mode
+# OpalPassword UI modes
 
-This driver supports an optional “Simple UI” mode intended for non-enterprise users. When enabled, the HII UI only exposes:
+This driver supports two setup UI modes for TCG disk encryption management:
 
-- Set password
-- Change password
-- Remove password (non-destructive; requires current password)
-- Erase & Reset (Forgotten password) (destructive; does not require current password; requires strong local confirmation)
+- **Advanced** (default): full technical OPAL form with BlockSID options, checkboxes, and deferred request processing.
+- **Standard**: simplified consumer-oriented form with direct password actions and immediate reboot.
 
-When disabled (default), the existing full/advanced UI is unchanged.
+## Runtime selection
 
-## Enabling Simple UI
+UI mode is stored in the non-volatile `TcgUiConfig` UEFI variable and exposed from the **TCG Disk Encryption** setup form.
 
-The code uses the PCD as the single source of truth:
+A reboot is required after changing the mode because the HII form package is selected at driver initialization.
 
-- `gEfiSecurityPkgTokenSpaceGuid.PcdTcgStorageSimpleUi` (BOOLEAN, default `FALSE`)
+## First-boot defaults
 
-To enable via a platform DSC / `build --pcd`, set:
+When `TcgUiConfig` is absent, platform PCDs seed the initial value:
 
-```
-gEfiSecurityPkgTokenSpaceGuid.PcdTcgStorageSimpleUi|TRUE
-```
+- `gEfiSecurityPkgTokenSpaceGuid.PcdTcgStorageSimpleUi` (BOOLEAN, default `FALSE` = Advanced)
 
-If building `SecurityPkg/SecurityPkg.dsc` directly, you can also pass a build define to set the default PCD value:
+Optional build-time default override:
 
 ```
 -D TCG_STORAGE_SIMPLE_UI=ON
 ```
 
-## Erase & Reset behavior
+## Standard mode behavior
 
-In Simple UI mode, “Erase & Reset (Forgotten Password)”:
+Standard mode only exposes:
 
-- Requires strong confirmation at execution time (typing `ERASE` and a final `Y/N` confirmation).
-- Requires entering the 32-character reset key printed on the drive label.
-- Permanently deletes all data on the disk.
+- Set password
+- Change password
+- Remove password (non-destructive; requires current password)
+- Erase & Reset (Forgotten password) (destructive; does not require current password)
+
+Erase & Reset requires strong confirmation at execution time (typing `ERASE` and a final `Y/N` confirmation), plus the 32-character reset key printed on the drive label.

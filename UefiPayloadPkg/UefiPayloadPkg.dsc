@@ -452,6 +452,7 @@
   !endif
 !endif
   FileExplorerLib|MdeModulePkg/Library/FileExplorerLib/FileExplorerLib.inf
+  TcgUiConfigLib|SecurityPkg/Library/TcgUiConfigLib/TcgUiConfigLib.inf
 
   Tcg2PhysicalPresenceLib|OvmfPkg/Library/Tcg2PhysicalPresenceLibNull/DxeTcg2PhysicalPresenceLib.inf
 

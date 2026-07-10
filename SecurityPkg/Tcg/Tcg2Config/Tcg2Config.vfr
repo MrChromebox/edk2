@@ -7,6 +7,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include "Tcg2ConfigNvData.h"
+#include <Guid/TcgUiConfig.h>
 
 formset
   guid      = TCG2_CONFIG_FORM_SET_GUID,
@@ -32,8 +33,23 @@ formset
     name  = TCG2_VERSION,
     guid  = TCG2_CONFIG_FORM_SET_GUID;
 
+  efivarstore TCG_UI_CONFIG_VARSTORE_DATA,
+    attribute = 0x03,  // EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE
+    name  = TcgUiConfig,
+    guid  = TCG_UI_CONFIG_FORMSET_GUID;
+
   form formid = TCG2_CONFIGURATION_FORM_ID,
     title = STRING_TOKEN(STR_TCG2_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_NULL);
+
+    oneof varid = TcgUiConfig.Tpm2UiMode,
+      prompt = STRING_TOKEN(STR_TPM2_UI_MODE_PROMPT),
+      help   = STRING_TOKEN(STR_TPM2_UI_MODE_HELP),
+      flags  = NUMERIC_SIZE_1 | RESET_REQUIRED,
+      option text = STRING_TOKEN(STR_TCG_UI_MODE_ADVANCED), value = 0, flags = DEFAULT | MANUFACTURING;
+      option text = STRING_TOKEN(STR_TCG_UI_MODE_STANDARD), value = 1, flags = 0;
+    endoneof;
 
     subtitle text = STRING_TOKEN(STR_NULL);
 

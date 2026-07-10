@@ -83,6 +83,10 @@
   #
   TcgStorageOpalLib|Include/Library/TcgStorageOpalLib.h
 
+  ## @libraryclass  Loads persisted TPM/OPAL setup UI mode selections.
+  #
+  TcgUiConfigLib|Include/Library/TcgUiConfigLib.h
+
   ## @libraryclass  Provides interfaces about firmware TPM measurement.
   #
   TcgEventLogRecordLib|Include/Library/TcgEventLogRecordLib.h
@@ -187,6 +191,10 @@
   ## GUID used for FormSet and config variable.
   #  Include/Guid/Tcg2ConfigHii.h
   gTcg2ConfigFormSetGuid    = {0x6339d487, 0x26ba, 0x424b, { 0x9a, 0x5d, 0x68, 0x7e, 0x25, 0xd7, 0x40, 0xbc }}
+
+  ## GUID used for TCG/TPM setup UI mode configuration.
+  #  Include/Guid/TcgUiConfig.h
+  gTcgUiConfigFormSetGuid   = { 0xa4e8c2f1, 0x6b3d, 0x4a9e, { 0x9f, 0x12, 0x8c, 0x7d, 0x5e, 0x4b, 0x2a, 0x10 } }
 
   ## GUID used for FormSet.
   #  Include/Guid/SecureBootConfigHii.h
@@ -567,10 +575,10 @@
   # @Prompt Skip Hdd Password prompt.
   gEfiSecurityPkgTokenSpaceGuid.PcdSkipHddPasswordPrompt|FALSE|BOOLEAN|0x00010021
 
-  ## Enables a simplified, consumer-oriented UI for TCG Storage / OPAL drive management.<BR><BR>
-  #   FALSE - Default/full UI with advanced options.<BR>
-  #   TRUE  - Simple UI exposing only password set/change/disable and an erase & reset action.<BR>
-  # @Prompt Enable simplified TCG Storage UI.
+  ## Default TCG Storage / OPAL setup UI mode when the TcgUiConfig variable is absent.<BR><BR>
+  #   FALSE - Advanced UI with full technical options (default).<BR>
+  #   TRUE  - Standard UI with simplified consumer-oriented options.<BR>
+  # @Prompt Default TCG Storage setup UI mode is Standard.
   gEfiSecurityPkgTokenSpaceGuid.PcdTcgStorageSimpleUi|FALSE|BOOLEAN|0x00010032
 
   ## Enables a simplified, consumer-oriented UI for Secure Boot configuration.<BR><BR>
@@ -579,10 +587,10 @@
   # @Prompt Enable simplified Secure Boot UI.
   gEfiSecurityPkgTokenSpaceGuid.PcdSecureBootConfigSimpleUi|FALSE|BOOLEAN|0x00010033
 
-  ## Enables a simplified, consumer-oriented UI for TPM configuration.<BR><BR>
-  #   FALSE - Default/full UI with advanced options.<BR>
-  #   TRUE  - Simple UI exposing only TPM status and a Clear TPM action, with Advanced options hidden behind a submenu.<BR>
-  # @Prompt Enable simplified TPM UI.
+  ## Default TPM2 setup UI mode when the TcgUiConfig variable is absent.<BR><BR>
+  #   FALSE - Advanced UI with full technical options (default).<BR>
+  #   TRUE  - Standard UI with simplified consumer-oriented options.<BR>
+  # @Prompt Default TPM2 setup UI mode is Standard.
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2ConfigSimpleUi|FALSE|BOOLEAN|0x00010034
 
 [PcdsDynamic, PcdsDynamicEx]

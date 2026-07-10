@@ -19,6 +19,11 @@
 #string STR_TCG2_SIMPLE_CLEAR_PROMPT        #language en-US "Clear TPM"
 #string STR_TCG2_SIMPLE_CLEAR_HELP          #language en-US "Clears TPM state. This can affect disk encryption (e.g., BitLocker). Requires a reboot."
 
+#string STR_TPM2_UI_MODE_PROMPT          #language en-US "TPM Setup UI"
+#string STR_TPM2_UI_MODE_HELP            #language en-US "Advanced shows the full TPM configuration form. Standard shows a simplified TPM page with Clear TPM on the main screen. A reboot is required for a change to take effect."
+#string STR_TCG_UI_MODE_ADVANCED         #language en-US "Advanced"
+#string STR_TCG_UI_MODE_STANDARD         #language en-US "Standard"
+
 #string STR_TCG2_DEVICE_STATE_PROMPT        #language en-US "Current TPM Device"
 #string STR_TCG2_DEVICE_STATE_HELP          #language en-US "Current TPM Device: Disable, TPM1.2, or TPM2.0"
 #string STR_TCG2_DEVICE_STATE_CONTENT       #language en-US ""

@@ -95,3 +95,8 @@
 
 #string STR_SIMPLE_ERASE_AND_RESET                #language en-US "Erase and Reset (Forgotten password)"
 #string STR_SIMPLE_ERASE_AND_RESET_HELP           #language en-US "Erase all data and reset the disk security state. This does not require the current password, but requires strong confirmation and a reset key printed on the drive label. A reset is required for the request to be processed on next boot."
+
+#string STR_TCG_STORAGE_UI_MODE_PROMPT   #language en-US "Disk Encryption Setup UI"
+#string STR_TCG_STORAGE_UI_MODE_HELP     #language en-US "Advanced shows the full OPAL/TCG disk encryption form with technical options. Standard shows simplified password actions only. A reboot is required for a change to take effect."
+#string STR_TCG_UI_MODE_ADVANCED         #language en-US "Advanced"
+#string STR_TCG_UI_MODE_STANDARD         #language en-US "Standard"

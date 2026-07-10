@@ -15,6 +15,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "OpalDriver.h"
 #include "OpalHii.h"
+#include <Library/TcgUiConfigLib.h>
 
 #include <Protocol/DiskInfo.h>
 #include <Protocol/NvmExpressPassthru.h>
@@ -454,7 +455,7 @@ TcgStorageIsSimpleUiEnabled (
   VOID
   )
 {
-  return PcdGetBool (PcdTcgStorageSimpleUi);
+  return TcgUiConfigIsTcgStorageSimpleUiEnabled ();
 }
 
 //
@@ -3472,6 +3473,8 @@ EfiDriverEntryPoint (
   EFI_STATUS  Status;
   EFI_EVENT   EndOfDxeEvent;
   EFI_EVENT   ReadyToBootEvent;
+
+  TcgUiConfigEnsureVariable ();
 
   Status = EfiLibInstallDriverBindingComponentName2 (
              ImageHandle,
