@@ -50,7 +50,6 @@
   PlatformHookLib
   CapsuleLib
   HobLib
-  IoLib
   TcgPhysicalPresenceLib
   Tcg2PhysicalPresenceLib
 
