@@ -1365,6 +1365,10 @@
   #
 !if $(SD_ENABLE) == TRUE
   MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+  UefiPayloadPkg/SdhciNonPciDxe/SdhciNonPciDxe.inf {
+    <LibraryClasses>
+      NonDiscoverableDeviceRegistrationLib|MdeModulePkg/Library/NonDiscoverableDeviceRegistrationLib/NonDiscoverableDeviceRegistrationLib.inf
+  }
   UefiPayloadPkg/SdMmcPciGliDxe/SdMmcPciGliDxe.inf
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf

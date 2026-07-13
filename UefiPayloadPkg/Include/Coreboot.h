@@ -249,6 +249,23 @@ struct cb_cbmem_tab {
   UINT64    cbmem_tab;
 };
 
+#define CB_TAG_SDHCI_NONPCI  0x004a
+struct cb_sdhci_nonpci_control {
+  UINT32    mmio_base;
+  UINT32    mmio_size;
+  UINT8     slot;
+  UINT8     flags;
+  UINT8     reserved[2];
+};
+
+struct cb_sdhci_nonpci {
+  UINT32                            tag;
+  UINT32                            size;
+  UINT32                            version;
+  UINT32                            count;
+  struct cb_sdhci_nonpci_control    ctrl[8];
+};
+
 #define CB_TAG_SMMSTOREV2  0x0039
 struct cb_smmstorev2 {
   UINT32    tag;
