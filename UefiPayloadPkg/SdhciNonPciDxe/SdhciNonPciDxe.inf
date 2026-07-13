@@ -1,0 +1,44 @@
+## @file
+#
+#  Non-discoverable SDHCI driver for non-PCI controllers.
+#
+#  Copyright (c) 2026, Matt DeVillier <matt.devillier@gmail.com>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = SdhciNonPciDxe
+  FILE_GUID                      = 93d005e9-bbf5-4af0-80c0-c184bc5c0445
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = SdhciNonPciDxeInitialize
+
+[Sources]
+  SdhciNonPciDxe.c
+  SdhciNonPciDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  DebugLib
+  HobLib
+  IoLib
+  NonDiscoverableDeviceRegistrationLib
+  UefiBootServicesTableLib
+
+[Guids]
+  gUefiSdhciNonPciInfoGuid
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid  ## PRODUCES
+  gEdkiiSdMmcOverrideProtocolGuid          ## PRODUCES
+
+[Depex]
+  TRUE
