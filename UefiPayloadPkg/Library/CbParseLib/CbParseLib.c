@@ -21,6 +21,7 @@
 #include <IndustryStandard/Acpi.h>
 #include <Coreboot.h>
 #include <Guid/CfrSetupMenuGuid.h>
+#include <Guid/SdhciNonPciInfoGuid.h>
 #include <UniversalPayload/PciRootBridges.h>
 
 /**
@@ -627,13 +628,80 @@ ParseGfxDeviceInfo (
 }
 
 /**
-  Find the RootBridge info.
+  Publish non-PCI SDHCI controller info from LB_TAG_SDHCI_NONPCI as a GUID HOB.
 
-  @param  SmmStoreInfo       Pointer to the SMMSTORE_INFO structure
-
-  @retval RETURN_SUCCESS     Successfully find the Smm store buffer information.
-  @retval RETURN_NOT_FOUND   Failed to find the Smm store buffer information .
+  @retval RETURN_SUCCESS     Successfully created the HOB.
+  @retval RETURN_NOT_FOUND   LB tag absent.
+  @retval RETURN_UNSUPPORTED Invalid record contents.
+  @retval RETURN_OUT_OF_RESOURCES  Could not build HOB.
 **/
+STATIC
+RETURN_STATUS
+ParseSdhciNonPciInfo (
+  VOID
+  )
+{
+  struct cb_sdhci_nonpci  *Rec;
+  SDHCI_NONPCI_INFO       *Hob;
+  UINT32                  Idx;
+  UINT32                  MinSize;
+
+  Rec = FindCbTag (CB_TAG_SDHCI_NONPCI);
+  if (Rec == NULL) {
+    return RETURN_NOT_FOUND;
+  }
+
+  //
+  // Require tag/size/version/count, then validate the ctrl[] payload against
+  // count rather than assuming a fixed ctrl[SDHCI_NONPCI_CTRL_MAX] record.
+  //
+  if ((Rec->size < OFFSET_OF (struct cb_sdhci_nonpci, ctrl)) ||
+      (Rec->version != SDHCI_NONPCI_INFO_VERSION) ||
+      (Rec->count == 0) ||
+      (Rec->count > SDHCI_NONPCI_CTRL_MAX))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Invalid SDHCI non-PCI LB record (size=0x%x ver=%u count=%u)\n",
+      Rec->size,
+      Rec->version,
+      Rec->count
+      ));
+    return RETURN_UNSUPPORTED;
+  }
+
+  MinSize = OFFSET_OF (struct cb_sdhci_nonpci, ctrl) +
+            Rec->count * sizeof (Rec->ctrl[0]);
+  if (Rec->size < MinSize) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Invalid SDHCI non-PCI LB record size 0x%x (need >= 0x%x for count=%u)\n",
+      Rec->size,
+      MinSize,
+      Rec->count
+      ));
+    return RETURN_UNSUPPORTED;
+  }
+
+  Hob = BuildGuidHob (&gUefiSdhciNonPciInfoGuid, sizeof (SDHCI_NONPCI_INFO));
+  if (Hob == NULL) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
+
+  ZeroMem (Hob, sizeof (SDHCI_NONPCI_INFO));
+  Hob->Version = Rec->version;
+  Hob->Count   = Rec->count;
+  for (Idx = 0; Idx < Rec->count; Idx++) {
+    Hob->Ctrl[Idx].MmioBase = Rec->ctrl[Idx].mmio_base;
+    Hob->Ctrl[Idx].MmioSize = Rec->ctrl[Idx].mmio_size;
+    Hob->Ctrl[Idx].Slot     = Rec->ctrl[Idx].slot;
+    Hob->Ctrl[Idx].Flags    = Rec->ctrl[Idx].flags;
+  }
+
+  DEBUG ((DEBUG_INFO, "Created SDHCI non-PCI info hob: count=%u\n", Rec->count));
+  return RETURN_SUCCESS;
+}
+
 RETURN_STATUS
 EFIAPI
 ParseRootBridgeInfo (
@@ -699,6 +767,10 @@ ParseMiscInfo (
 
   if (ParseRootBridgeInfo () != RETURN_SUCCESS) {
     DEBUG ((DEBUG_INFO, "Failed to create PCI root bridge info guid hob\n"));
+  }
+
+  if (ParseSdhciNonPciInfo () != RETURN_SUCCESS) {
+    DEBUG ((DEBUG_INFO, "No SDHCI non-PCI info in coreboot table\n"));
   }
 
   //
