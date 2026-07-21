@@ -49,6 +49,7 @@
   DEFINE LOCKBOX_SUPPORT              = FALSE
   DEFINE LOAD_OPTION_ROMS             = FALSE
   DEFINE FOLLOW_BGRT_SPEC             = FALSE
+  DEFINE FMP_DEVICE_PKCS7_PCD_INC     = BaseTools/Source/Python/Pkcs7Sign/TestRoot.cer.gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr.inc
 
   #
   # Capsule updates
@@ -1241,7 +1242,7 @@
       #
       # See BaseTools/Source/Python/Pkcs7Sign/Readme.md for more details on such
       # PCDs and include files.
-      !include BaseTools/Source/Python/Pkcs7Sign/TestRoot.cer.gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr.inc
+      !include $(FMP_DEVICE_PKCS7_PCD_INC)
     <LibraryClasses>
 !if $(BOOTLOADER) == "COREBOOT"
       FmpDeviceLib|UefiPayloadPkg/Library/FmpDeviceSmmLib/FmpDeviceSmmLib.inf
