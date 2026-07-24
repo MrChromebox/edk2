@@ -153,3 +153,9 @@ gUefiPayloadPkgTokenSpaceGuid.PcdUseUniversalPayloadSerialPort|TRUE|BOOLEAN|0x00
 
 ## Indicates whether allows PCI Root Bridge to allocate DMA memory resource above 4G
 gUefiPayloadPkgTokenSpaceGuid.PcdPciAllocateMemoryAbove4GB|FALSE|BOOLEAN|0x0000002E
+
+
+[PcdsFeatureFlag]
+## Connect every controller during normal boot before launching the selected option.
+## When disabled, BDS connects the selected Boot#### device path on demand.
+gUefiPayloadPkgTokenSpaceGuid.PcdConnectAllDevices|TRUE|BOOLEAN|0x0000002F

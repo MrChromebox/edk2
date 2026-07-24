@@ -60,6 +60,7 @@
   StackCheckLib
   UefiCpuBaseArchSupportLib
   MemoryAllocationLib
+  CbMemLib
 
 [Guids]
   gEfiMemoryTypeInformationGuid

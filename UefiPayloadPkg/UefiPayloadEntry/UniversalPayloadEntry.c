@@ -469,10 +469,18 @@ _ModuleEntryPoint (
   EFI_PEI_HOB_POINTERS        Hob;
   EFI_FIRMWARE_VOLUME_HEADER  *DxeFv;
 
+  Status = PcdSet64S (PcdBootloaderParameter, BootloaderParameter);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   mHobList = (VOID *)BootloaderParameter;
   DxeFv    = NULL;
   // Call constructor for all libraries
   ProcessLibraryConstructorList ();
+
+  CbMemTimestampAdd (CBMEM_TS_UPL_ENTRY);
+  CbMemLogSummary ();
 
   DEBUG ((DEBUG_INFO, "Entering Universal Payload...\n"));
   DEBUG ((DEBUG_INFO, "sizeof(UINTN) = 0x%x\n", sizeof (UINTN)));
@@ -490,6 +498,7 @@ _ModuleEntryPoint (
   // Build HOB based on information from Bootloader
   Status = BuildHobs (BootloaderParameter, &DxeFv);
   ASSERT_EFI_ERROR (Status);
+  CbMemTimestampAdd (CBMEM_TS_UPL_HOB_READY);
 
   //
   // Create Memory Type Information HOB
@@ -503,10 +512,13 @@ _ModuleEntryPoint (
   }
 
   FixUpPcdDatabase (DxeFv);
+  CbMemTimestampAdd (CBMEM_TS_UPL_DXE_LOAD_START);
   Status = UniversalLoadDxeCore (DxeFv, &DxeCoreEntryPoint);
   ASSERT_EFI_ERROR (Status);
+  CbMemTimestampAdd (CBMEM_TS_UPL_DXE_LOAD_END);
 
   Hob.HandoffInformationTable = (EFI_HOB_HANDOFF_INFO_TABLE *)GetFirstHob (EFI_HOB_TYPE_HANDOFF);
+  CbMemTimestampAdd (CBMEM_TS_UPL_DXE_HANDOFF);
   HandOffToDxeCore (DxeCoreEntryPoint, Hob);
 
   // Should not get here

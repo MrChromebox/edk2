@@ -1,0 +1,34 @@
+## @file
+#  Add late UPL lifecycle timestamps to coreboot CBMEM.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CbMemTimestampDxe
+  FILE_GUID                      = 63F10BEA-9D2C-4E9A-8A55-8DDBA6D1F9C4
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = CbMemTimestampDxeEntryPoint
+
+[Sources]
+  CbMemTimestampDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[LibraryClasses]
+  CbMemLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Depex]
+  TRUE
+
+[Guids]
+  gEfiEventReadyToBootGuid
+  gEfiEventExitBootServicesGuid

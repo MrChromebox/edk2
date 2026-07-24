@@ -66,6 +66,7 @@
   gEfiSmmAccess2ProtocolGuid
   gEfiSerialIoProtocolGuid
   gEfiPciRootBridgeIoProtocolGuid
+  gEfiPciIoProtocolGuid
 
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
@@ -80,3 +81,6 @@
   gUefiPayloadPkgTokenSpaceGuid.PcdSerialTerminalPrintEnabled
   gUefiPayloadPkgTokenSpaceGuid.PcdiPXEFile
   gUefiPayloadPkgTokenSpaceGuid.PcdiPXEOptionName
+
+[FeaturePcd]
+  gUefiPayloadPkgTokenSpaceGuid.PcdConnectAllDevices

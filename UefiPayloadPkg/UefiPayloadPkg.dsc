@@ -42,7 +42,9 @@
   DEFINE PRIORITIZE_INTERNAL          = FALSE
   DEFINE SD_MMC_TIMEOUT               = 1000000
   DEFINE USE_CBMEM_FOR_CONSOLE        = FALSE
+  DEFINE CBMEM_TIMESTAMPS              = FALSE
   DEFINE BOOTSPLASH_IMAGE             = TRUE
+  DEFINE USE_SPI_FLASH_FOR_CONSOLE    = FALSE
   DEFINE NVME_ENABLE                  = TRUE
   DEFINE UFS_ENABLE                   = TRUE
   DEFINE CAPSULE_SUPPORT              = FALSE
@@ -226,6 +228,7 @@
   DEFINE TPM_ENABLE                     = TRUE
   DEFINE TPM2_ENABLE                    = TRUE
   DEFINE TPM1_ENABLE                    = TRUE
+  DEFINE CONNECT_ALL_DEVICES            = FALSE
 
 [BuildOptions]
   *_*_*_CC_FLAGS                 = -D DISABLE_NEW_DEPRECATED_INTERFACES
@@ -240,6 +243,13 @@
   # Upstream LVGL sources (LvglLib) trip GCC's -Wformat; suppress to build clean.
   GCC:*_*_*_CC_FLAGS             = -Wno-format
   MSFT:*_*_*_CC_FLAGS            = /wd4244 /wd4204 /wd4389 /wd4221 /wd4800 /wd4267 /wd4018 /wd4047 /wd4245 /wd4003 /wd4702 /wd4718 /wd4706 /wd4819 /wd4028 /wd5287 /GL-
+!endif
+
+[BuildOptions.AARCH64]
+!if $(CBMEM_TIMESTAMPS) == TRUE
+  GCC:*_*_*_CC_FLAGS             = -D CBMEM_TIMESTAMPS=1
+  INTEL:*_*_*_CC_FLAGS           = /D CBMEM_TIMESTAMPS=1
+  MSFT:*_*_*_CC_FLAGS            = /D CBMEM_TIMESTAMPS=1
 !endif
 
 [BuildOptions.AARCH64]
@@ -349,6 +359,7 @@
   CustomFdtNodeParserLib|UefiPayloadPkg/Library/CustomFdtNodeParserNullLib/CustomFdtNodeParserNullLib.inf
   PayloadEntryHelperLib|UefiPayloadPkg/Library/PayloadEntryHelperLib/PayloadEntryHelperLib.inf
   MemoryAllocationLib|UefiPayloadPkg/Library/PayloadEntryMemoryAllocationLib/PayloadEntryMemoryAllocationLib.inf
+  CbMemLib|UefiPayloadPkg/Library/CbMemLib/CbMemLib.inf
 
   #
   # UEFI & PI
@@ -434,6 +445,10 @@
     BlParseLib|UefiPayloadPkg/Library/CbParseLib/CbParseLib.inf
   !else
     BlParseLib|UefiPayloadPkg/Library/SblParseLib/SblParseLib.inf
+  !endif
+!else
+  !if $(CBMEM_TIMESTAMPS) == TRUE && $(BOOTLOADER) == "COREBOOT"
+    BlParseLib|UefiPayloadPkg/Library/CbParseLib/CbParseLib.inf
   !endif
 !endif
   CfrHelpersLib|UefiPayloadPkg/Library/CfrHelpersLib/CfrHelpersLib.inf
@@ -747,6 +762,7 @@
 ################################################################################
 [PcdsFeatureFlag]
   gEfiMdeModulePkgTokenSpaceGuid.PcdConOutGopSupport|TRUE
+  gUefiPayloadPkgTokenSpaceGuid.PcdConnectAllDevices|$(CONNECT_ALL_DEVICES)
   ## This PCD specified whether ACPI SDT protocol is installed.
   gEfiMdeModulePkgTokenSpaceGuid.PcdInstallAcpiSdtProtocol|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdHiiOsRuntimeSupport|FALSE
@@ -1174,6 +1190,10 @@
 !endif
 
 [Components.X64, Components.AARCH64]
+!if $(CBMEM_TIMESTAMPS) == TRUE
+  UefiPayloadPkg/CbMemTimestampDxe/CbMemTimestampDxe.inf
+!endif
+
   #
   # DXE Core
   #

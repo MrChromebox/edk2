@@ -507,6 +507,10 @@ FitUplEntryPoint (
  #endif
   VOID  *FdtBaseResvd;
 
+  Status = PcdSet64S (PcdBootloaderParameter, BootloaderParameter);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
   if (FixedPcdGetBool (PcdHandOffFdtEnable)) {
     mHobList = (VOID *)NULL;
   } else {
@@ -517,6 +521,9 @@ FitUplEntryPoint (
   FdtBaseResvd = 0;
   // Call constructor for all libraries
   ProcessLibraryConstructorList ();
+
+  CbMemTimestampAdd (CBMEM_TS_UPL_ENTRY);
+  CbMemLogSummary ();
 
   DEBUG ((DEBUG_INFO, "Entering Universal Payload...\n"));
   DEBUG ((DEBUG_INFO, "sizeof(UINTN) = 0x%x\n", sizeof (UINTN)));
@@ -543,6 +550,15 @@ FitUplEntryPoint (
 
   // Build HOB based on information from Bootloader
   Status = FitBuildHobs ((UINTN)FdtBaseResvd, &DxeFv);
+  ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  Status = CbMemPublishTableHob ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "CBMEM: failed to publish table HOB: %r\n", Status));
+  }
+  CbMemTimestampAdd (CBMEM_TS_UPL_HOB_READY);
 
   // Call constructor for all libraries again since hobs were built
   ProcessLibraryConstructorList ();
@@ -555,10 +571,13 @@ FitUplEntryPoint (
     );
 
   FixUpPcdDatabase (DxeFv);
+  CbMemTimestampAdd (CBMEM_TS_UPL_DXE_LOAD_START);
   Status = UniversalLoadDxeCore (DxeFv, &DxeCoreEntryPoint);
   ASSERT_EFI_ERROR (Status);
+  CbMemTimestampAdd (CBMEM_TS_UPL_DXE_LOAD_END);
 
   Hob.HandoffInformationTable = (EFI_HOB_HANDOFF_INFO_TABLE *)GetFirstHob (EFI_HOB_TYPE_HANDOFF);
+  CbMemTimestampAdd (CBMEM_TS_UPL_DXE_HANDOFF);
   HandOffToDxeCore (DxeCoreEntryPoint, Hob);
 
   // Should not get here

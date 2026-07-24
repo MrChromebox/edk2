@@ -236,6 +236,40 @@ struct cb_vdat {
 
 #define CB_TAG_TIMESTAMPS     0x0016
 #define CB_TAG_CBMEM_CONSOLE  0x0017
+
+#define CB_TAG_CBMEM_ENTRY    0x0031
+#define CB_TAG_TSC_INFO       0x0032
+
+#define CBMEM_ID_CONSOLE      0x434F4E53
+#define CBMEM_ID_TIMESTAMP    0x54494D45
+
+struct cb_timestamp_entry {
+  UINT32    entry_id;
+  INT64     entry_stamp;
+} __attribute__ ((packed));
+
+struct cb_timestamp_table {
+  UINT64                    base_time;
+  UINT16                    max_entries;
+  UINT16                    tick_freq_mhz;
+  UINT32                    num_entries;
+  struct cb_timestamp_entry entries[0];
+} __attribute__ ((packed));
+
+struct cb_cbmem_entry {
+  UINT32          tag;
+  UINT32          size;
+  struct cbuint64 address;
+  UINT32          entry_size;
+  UINT32          id;
+} __attribute__ ((packed));
+
+struct cb_tsc_info {
+  UINT32          tag;
+  UINT32          size;
+  UINT32          freq_khz;
+} __attribute__ ((packed));
+
 struct cbmem_console {
   UINT32    size;
   UINT32    cursor;

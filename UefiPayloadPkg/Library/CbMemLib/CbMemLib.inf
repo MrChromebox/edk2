@@ -1,0 +1,32 @@
+## @file
+#  Coreboot CBMEM access and payload timestamp library.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CbMemLib
+  FILE_GUID                      = 1A4E28F9-4A4B-4E5C-9BB7-1D4AA20E5C6F
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = CbMemLib
+
+[Sources]
+  CbMemLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  FdtLib
+  HobLib
+  PcdLib
+
+[Pcd]
+  gUefiPayloadPkgTokenSpaceGuid.PcdBootloaderParameter

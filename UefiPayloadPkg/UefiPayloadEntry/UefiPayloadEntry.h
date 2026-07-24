@@ -21,6 +21,7 @@
 #include <Library/IoLib.h>
 #include <Library/PeCoffLib.h>
 #include <Library/BlParseLib.h>
+#include <Library/CbMemLib.h>
 #include <Library/SmmStoreParseLib.h>
 #include <Library/PlatformSupportLib.h>
 #include <Library/CpuLib.h>

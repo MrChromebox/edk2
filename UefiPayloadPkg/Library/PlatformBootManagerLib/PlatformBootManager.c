@@ -9,7 +9,149 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "PlatformBootManager.h"
 #include "PlatformConsole.h"
+#include <IndustryStandard/Pci.h>
+#include <IndustryStandard/Usb.h>
 #include <Protocol/FirmwareVolume2.h>
+#include <Protocol/PciIo.h>
+
+#define PLATFORM_USB_MASS_STORAGE_CLASS  0x08
+
+typedef struct {
+  USB_CLASS_DEVICE_PATH       UsbClass;
+  EFI_DEVICE_PATH_PROTOCOL    End;
+} USB_MASS_STORAGE_DEVICE_PATH;
+
+STATIC USB_MASS_STORAGE_DEVICE_PATH  mUsbMassStorageDevicePath = {
+  {
+    {
+      MESSAGING_DEVICE_PATH,
+      MSG_USB_CLASS_DP,
+      {
+        (UINT8)(sizeof (USB_CLASS_DEVICE_PATH)),
+        (UINT8)((sizeof (USB_CLASS_DEVICE_PATH)) >> 8)
+      }
+    },
+    0xffff,
+    0xffff,
+    PLATFORM_USB_MASS_STORAGE_CLASS,
+    0xff,
+    0xff
+  },
+  {
+    END_DEVICE_PATH_TYPE,
+    END_ENTIRE_DEVICE_PATH_SUBTYPE,
+    { END_DEVICE_PATH_LENGTH, 0 }
+  }
+};
+
+STATIC
+BOOLEAN
+PlatformBootOptionUsesInternalDisk (
+  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
+  )
+{
+  EFI_DEVICE_PATH_PROTOCOL  *Node;
+  BOOLEAN                   HasHardDrive;
+
+  if ((BootOption == NULL) || ((BootOption->Attributes & LOAD_OPTION_ACTIVE) == 0)) {
+    return FALSE;
+  }
+
+  HasHardDrive = FALSE;
+  for (Node = BootOption->FilePath; !IsDevicePathEnd (Node); Node = NextDevicePathNode (Node)) {
+    if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) &&
+        ((DevicePathSubType (Node) == MSG_USB_DP) ||
+         (DevicePathSubType (Node) == MSG_USB_CLASS_DP) ||
+         (DevicePathSubType (Node) == MSG_USB_WWID_DP)))
+    {
+      return FALSE;
+    }
+
+    if ((DevicePathType (Node) == MEDIA_DEVICE_PATH) &&
+        (DevicePathSubType (Node) == MEDIA_HARDDRIVE_DP))
+    {
+      HasHardDrive = TRUE;
+    }
+  }
+
+  return HasHardDrive;
+}
+
+STATIC
+BOOLEAN
+PlatformHasInternalBootOption (
+  VOID
+  )
+{
+  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOptions;
+  UINTN                         BootOptionCount;
+  UINTN                         Index;
+  BOOLEAN                       HasInternalBoot;
+
+  BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
+  HasInternalBoot = FALSE;
+  for (Index = 0; Index < BootOptionCount; Index++) {
+    if (PlatformBootOptionUsesInternalDisk (&BootOptions[Index])) {
+      HasInternalBoot = TRUE;
+      break;
+    }
+  }
+
+  EfiBootManagerFreeLoadOptions (BootOptions, BootOptionCount);
+  return HasInternalBoot;
+}
+
+STATIC
+VOID
+PlatformConnectRemovableMedia (
+  VOID
+  )
+{
+  EFI_STATUS           Status;
+  EFI_HANDLE           *Handles;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  UINTN                HandleCount;
+  UINTN                Index;
+  UINT8                ClassCode[3];
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiPciIoProtocolGuid,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "No PCI handles available for removable-media discovery\n"));
+    return;
+  }
+
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (Handles[Index], &gEfiPciIoProtocolGuid, (VOID **)&PciIo);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint8, 0x09, sizeof (ClassCode), ClassCode);
+    if (EFI_ERROR (Status) ||
+        (ClassCode[2] != PCI_CLASS_SERIAL) ||
+        (ClassCode[1] != PCI_CLASS_SERIAL_USB))
+    {
+      continue;
+    }
+
+    DEBUG ((DEBUG_INFO, "Connecting USB mass-storage paths on PCI controller\n"));
+    gBS->ConnectController (
+             Handles[Index],
+             NULL,
+             (EFI_DEVICE_PATH_PROTOCOL *)&mUsbMassStorageDevicePath,
+             TRUE
+             );
+  }
+
+  FreePool (Handles);
+  EfiBootManagerRefreshAllBootOption ();
+}
 
 /**
   Signal EndOfDxe event and install SMM Ready to lock protocol.
@@ -472,8 +614,21 @@ PlatformBootManagerAfterConsole (
     BootLogoEnableLogo ();
   }
 
-  EfiBootManagerConnectAll ();
-  EfiBootManagerRefreshAllBootOption ();
+  if (FeaturePcdGet (PcdConnectAllDevices)) {
+    EfiBootManagerConnectAll ();
+    EfiBootManagerRefreshAllBootOption ();
+  } else if (!PlatformHasInternalBootOption ()) {
+    DEBUG ((
+      DEBUG_INFO,
+      "No internal boot option; discovering removable media\n"
+      ));
+    PlatformConnectRemovableMedia ();
+  } else {
+    DEBUG ((
+      DEBUG_INFO,
+      "Skipping global device discovery; connecting the selected boot path on demand\n"
+      ));
+  }
 
   //
   // Active BOOT_ON_FLASH_UPDATE mode means that at least one capsule has been
