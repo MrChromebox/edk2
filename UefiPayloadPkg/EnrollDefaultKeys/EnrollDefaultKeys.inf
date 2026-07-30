@@ -52,12 +52,16 @@
   DebugLib
   DxeServicesLib
   MemoryAllocationLib
+  PcdLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiRuntimeServicesTableLib
 
 [Protocols]
   gEfiVariableWriteArchProtocolGuid                  ## CONSUMES
+
+[Pcd]
+  gUefiPayloadPkgTokenSpaceGuid.PcdSecureBootDefaultEnable
 
 [Depex]
   TRUE

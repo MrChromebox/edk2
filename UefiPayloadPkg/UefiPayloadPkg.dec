@@ -153,3 +153,8 @@ gUefiPayloadPkgTokenSpaceGuid.PcdUseUniversalPayloadSerialPort|TRUE|BOOLEAN|0x00
 
 ## Indicates whether allows PCI Root Bridge to allocate DMA memory resource above 4G
 gUefiPayloadPkgTokenSpaceGuid.PcdPciAllocateMemoryAbove4GB|FALSE|BOOLEAN|0x0000002E
+
+## If TRUE, EnrollDefaultKeys leaves Secure Boot enabled after provisioning
+#  default PK/KEK/db/dbx. If FALSE (legacy MrChromebox behavior), keys are
+#  enrolled but SecureBootEnable/SecureBoot remain disabled until toggled in setup.
+gUefiPayloadPkgTokenSpaceGuid.PcdSecureBootDefaultEnable|FALSE|BOOLEAN|0x0000002F
