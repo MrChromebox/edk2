@@ -18,6 +18,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/DxeServicesLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -575,7 +576,7 @@ GetExact (
 
   @param[out] Settings      The SETTINGS object to fill.
   @param[in]  AllowMissing  If FALSE, the required variables must exist; if
-                            TRUE, the function can succeed even if some 
+                            TRUE, the function can succeed even if some
                             variables are missing.
 
   @retval EFI_SUCCESS       Settings has been populated.
@@ -660,6 +661,7 @@ EnrollDefaultKeys (
   EFI_STATUS  Status;
   VOID        *Protocol;
   SETTINGS Settings;
+  UINT8     DefaultState;
 
   UINT8 *DbMicrosoftUefi2011 = 0;
   UINTN DbMicrosoftUefi2011Size;
@@ -809,10 +811,16 @@ EnrollDefaultKeys (
     ASSERT_EFI_ERROR (Status);
   }
 
-  // FIXME: Force SecureBoot to ON. The AuthService will do this if authenticated variables
-  // are supported, which aren't as the SMM handler isn't able to verify them.
+  //
+  // AuthService would normally set SecureBoot from PK enrollment when
+  // authenticated variables are fully supported. Force the post-enroll
+  // policy from PcdSecureBootDefaultEnable instead (FALSE = legacy
+  // MrChromebox: keys enrolled, SB off until setup; TRUE = SB on).
+  //
+  DefaultState = FixedPcdGetBool (PcdSecureBootDefaultEnable) ?
+                 SECURE_BOOT_ENABLE : SECURE_BOOT_DISABLE;
 
-  Settings.SecureBootEnable = SECURE_BOOT_DISABLE;
+  Settings.SecureBootEnable = DefaultState;
   Status = gRT->SetVariable (EFI_SECURE_BOOT_ENABLE_NAME, &gEfiSecureBootEnableDisableGuid,
            EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
            sizeof Settings.SecureBootEnable, &Settings.SecureBootEnable);
@@ -822,7 +830,7 @@ EnrollDefaultKeys (
     ASSERT_EFI_ERROR (Status);
   }
 
-  Settings.SecureBoot = SECURE_BOOT_DISABLE;
+  Settings.SecureBoot = DefaultState;
   Status = gRT->SetVariable (EFI_SECURE_BOOT_MODE_NAME, &gEfiGlobalVariableGuid,
            EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
            sizeof Settings.SecureBoot, &Settings.SecureBoot);
@@ -869,14 +877,20 @@ EnrollDefaultKeys (
 
   PrintSettings (&Settings);
 
-  if (Settings.SetupMode != 0 || Settings.SecureBoot != 1 ||
-      Settings.SecureBootEnable != 1 || Settings.CustomMode != 0 ||
-      Settings.VendorKeys != 0) {
-    DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: disabled\n"));
+  if (Settings.SetupMode != 0 ||
+      Settings.SecureBoot != DefaultState ||
+      Settings.SecureBootEnable != DefaultState ||
+      Settings.CustomMode != 0 ||
+      Settings.VendorKeys != VENDOR_KEYS_VALID) {
+    DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: unexpected Secure Boot state after enrollment\n"));
     return;
   }
 
-  DEBUG ((EFI_D_INFO, "EnrollDefaultKeys: SecureBoot enabled\n"));
+  if (DefaultState == SECURE_BOOT_ENABLE) {
+    DEBUG ((EFI_D_INFO, "EnrollDefaultKeys: SecureBoot enabled\n"));
+  } else {
+    DEBUG ((EFI_D_INFO, "EnrollDefaultKeys: keys enrolled, SecureBoot left disabled\n"));
+  }
 }
 
 EFI_STATUS

@@ -179,7 +179,8 @@
   #
   # Security
   #
-  DEFINE SECURE_BOOT_ENABLE       = FALSE
+  DEFINE SECURE_BOOT_ENABLE         = FALSE
+  DEFINE SECURE_BOOT_DEFAULT_ENABLE = FALSE
 
   #
   # Flat DeviceTree handoff option:
@@ -817,6 +818,7 @@
 
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape|$(BOOT_MANAGER_ESCAPE)
   gUefiPayloadPkgTokenSpaceGuid.PcdSerialTerminalPrintEnabled|!$(DISABLE_SERIAL_TERMINAL)
+  gUefiPayloadPkgTokenSpaceGuid.PcdSecureBootDefaultEnable|$(SECURE_BOOT_DEFAULT_ENABLE)
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification|$(FOLLOW_BGRT_SPEC)
 
