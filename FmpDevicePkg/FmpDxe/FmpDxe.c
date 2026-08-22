@@ -101,6 +101,22 @@ EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  mProgressFunc = NULL;
 CHAR16  *mImageIdName = NULL;
 
 /**
+  No-op progress callback used when the capsule caller cannot draw progress.
+
+  @param[in] Completion  Completion progress.
+
+  @retval EFI_SUCCESS    Progress reporting was intentionally ignored.
+**/
+EFI_STATUS
+EFIAPI
+FmpDxeNullProgress (
+  IN UINTN  Completion
+  )
+{
+  return EFI_SUCCESS;
+}
+
+/**
   Callback function to report the process of the firmware updating.
 
   Wrap the caller's version in this so that progress from the device lib is
@@ -1307,10 +1323,8 @@ SetTheImage (
   }
 
   if (Progress == NULL) {
-    DEBUG ((DEBUG_ERROR, "FmpDxe(%s): SetTheImage() - Invalid progress callback\n", mImageIdName));
-    LastAttemptStatus = LAST_ATTEMPT_STATUS_DRIVER_ERROR_PROGRESS_CALLBACK_ERROR;
-    Status            = EFI_INVALID_PARAMETER;
-    goto cleanup;
+    DEBUG ((DEBUG_WARN, "FmpDxe(%s): SetTheImage() - progress callback unavailable\n", mImageIdName));
+    Progress = FmpDxeNullProgress;
   }
 
   mProgressFunc = Progress;
