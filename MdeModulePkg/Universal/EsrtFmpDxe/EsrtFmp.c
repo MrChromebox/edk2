@@ -382,6 +382,7 @@ CreateFmpBasedEsrt (
   EFI_FIRMWARE_IMAGE_DESCRIPTOR  *OrgFmpImageInfoBuf;
   EFI_SYSTEM_RESOURCE_TABLE      *Table;
   GUID_HARDWAREINSTANCE_PAIR     *HardwareInstances;
+  UINTN                          TableSize;
 
   Status             = EFI_SUCCESS;
   NoProtocols        = 0;
@@ -419,14 +420,15 @@ CreateFmpBasedEsrt (
   //
   // Allocate ESRT Table and GUID/HardwareInstance table
   //
-  Table = AllocateZeroPool (
-            (NumberOfDescriptors * sizeof (EFI_SYSTEM_RESOURCE_ENTRY)) + sizeof (EFI_SYSTEM_RESOURCE_TABLE)
-            );
-  if (Table == NULL) {
-    DEBUG ((DEBUG_ERROR, "EsrtFmpDxe: Failed to allocate memory for ESRT.\n"));
+  TableSize = (NumberOfDescriptors * sizeof (EFI_SYSTEM_RESOURCE_ENTRY)) + sizeof (EFI_SYSTEM_RESOURCE_TABLE);
+  Status = gBS->AllocatePool (EfiACPIMemoryNVS, TableSize, (VOID **)&Table);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "EsrtFmpDxe: Failed to allocate memory for ESRT: %r.\n", Status));
     FreePool (Buffer);
     return NULL;
   }
+
+  ZeroMem (Table, TableSize);
 
   HardwareInstances = AllocateZeroPool (NumberOfDescriptors * sizeof (GUID_HARDWAREINSTANCE_PAIR));
   if (HardwareInstances == NULL) {
