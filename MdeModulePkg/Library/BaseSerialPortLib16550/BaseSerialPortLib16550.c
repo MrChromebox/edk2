@@ -493,8 +493,7 @@ SerialPortInitialize (
   RETURN_STATUS  Status;
   UINTN          SerialRegisterBase;
   UINT32         Divisor;
-  UINT32         CurrentDivisor;
-  BOOLEAN        Initialized;
+  UINT8          CurrentLcr;
 
   //
   // Perform platform specific initialization required to enable use of the 16550 device
@@ -524,21 +523,16 @@ SerialPortInitialize (
 
   //
   // See if the serial port is already initialized
+  // If line control is correct, trust that baud rate is also correct
+  // to avoid writing to UART registers during initialization check
   //
-  Initialized = TRUE;
-  if ((SerialPortReadRegister (SerialRegisterBase, R_UART_LCR) & 0x3F) != (PcdGet8 (PcdSerialLineControl) & 0x3F)) {
-    Initialized = FALSE;
-  }
+  CurrentLcr = SerialPortReadRegister (SerialRegisterBase, R_UART_LCR);
 
-  SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, (UINT8)(SerialPortReadRegister (SerialRegisterBase, R_UART_LCR) | B_UART_LCR_DLAB));
-  CurrentDivisor  =  SerialPortReadRegister (SerialRegisterBase, R_UART_BAUD_HIGH) << 8;
-  CurrentDivisor |= (UINT32)SerialPortReadRegister (SerialRegisterBase, R_UART_BAUD_LOW);
-  SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, (UINT8)(SerialPortReadRegister (SerialRegisterBase, R_UART_LCR) & ~B_UART_LCR_DLAB));
-  if (CurrentDivisor != Divisor) {
-    Initialized = FALSE;
-  }
-
-  if (Initialized) {
+  if ((CurrentLcr & 0x3F) == (PcdGet8 (PcdSerialLineControl) & 0x3F)) {
+    //
+    // Serial port is already properly initialized, return success
+    // without touching any UART registers to avoid disrupting output
+    //
     return RETURN_SUCCESS;
   }
 
@@ -981,6 +975,7 @@ SerialPortSetAttributes (
   UINT8   LcrData;
   UINT8   LcrParity;
   UINT8   LcrStop;
+  UINT8   CurrentLcr;
 
   SerialRegisterBase = GetSerialRegisterBase ();
   if (SerialRegisterBase == 0) {
@@ -1108,6 +1103,21 @@ SerialPortSetAttributes (
   }
 
   //
+  // Calculate expected LCR value
+  //
+  Lcr = (UINT8)((LcrParity << 3) | (LcrStop << 2) | LcrData);
+
+  //
+  // Check if UART already has the correct settings
+  // If line control matches, assume baud rate is also correct to avoid
+  // any UART register writes that could disrupt serial output
+  //
+  CurrentLcr = SerialPortReadRegister (SerialRegisterBase, R_UART_LCR);
+  if ((CurrentLcr & 0x3F) == (Lcr & 0x3F)) {
+    return RETURN_SUCCESS;
+  }
+
+  //
   // Configure baud rate
   //
   SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, B_UART_LCR_DLAB);
@@ -1118,7 +1128,6 @@ SerialPortSetAttributes (
   // Clear DLAB and configure Data Bits, Parity, and Stop Bits.
   // Strip reserved bits from line control value
   //
-  Lcr = (UINT8)((LcrParity << 3) | (LcrStop << 2) | LcrData);
   SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, (UINT8)(Lcr & 0x3F));
 
   return RETURN_SUCCESS;
