@@ -30,6 +30,8 @@
   UefiPayloadPkg/UefiPayloadPkg.dec
 
 [LibraryClasses]
+  BaseLib
+  CpuLib
   DebugLib
   IoLib
   HobLib
