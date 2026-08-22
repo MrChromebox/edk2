@@ -58,6 +58,7 @@
   #
   DEFINE CAPSULE_SUPPORT              = FALSE
   DEFINE CAPSULE_MAIN_FW_GUID         =
+  DEFINE CAPSULE_EMBED_FMP_DXE        = FALSE
 
   #
   # Crypto Support
@@ -253,6 +254,7 @@
   BaseMemoryLib|MdePkg/Library/BaseMemoryLibRepStr/BaseMemoryLibRepStr.inf
   SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
   PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
+  FileHandleLib|MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
   CpuLib|MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
   IoLib|MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
 !if $(PCIE_BASE_SUPPORT) == FALSE
@@ -646,6 +648,8 @@
 
   ## Whether FMP capsules are enabled.
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleFmpSupport|$(CAPSULE_SUPPORT)
+  ## Whether embedded drivers in FMP capsules are supported (opt-in).
+  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleEmbeddedDriverSupport|FALSE
 
 !if $(CRYPTO_PROTOCOL_SUPPORT) == TRUE
 !if $(CRYPTO_DRIVER_EXTERNAL_SUPPORT) == FALSE
@@ -1002,7 +1006,11 @@
   }
   MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
 !if $(CAPSULE_SUPPORT) == TRUE
-  # Build FmpDxe meant for the inclusion into an update capsule as an embedded driver.
+!if "$(CAPSULE_MAIN_FW_GUID)" == ""
+  !error "CAPSULE_MAIN_FW_GUID must be set when CAPSULE_SUPPORT is TRUE"
+!endif
+  # Build FmpDxe (either included in the payload FV or embedded into an update
+  # capsule, depending on CAPSULE_EMBED_FMP_DXE).
   FmpDevicePkg/FmpDxe/FmpDxe.inf {
     <Defines>
       # FmpDxe interprets its FILE_GUID as firmware GUID.  This allows including
