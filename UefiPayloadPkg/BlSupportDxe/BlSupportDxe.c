@@ -95,8 +95,14 @@ BlDxeEntryPoint (
   if (GuidHob != NULL) {
     FirmwareInfo = (FIRMWARE_INFO *)GET_GUID_HOB_DATA (GuidHob);
 
-    Esrt = AllocateZeroPool (sizeof (EFI_SYSTEM_RESOURCE_TABLE) + sizeof (EFI_SYSTEM_RESOURCE_ENTRY));
-    ASSERT (Esrt != NULL);
+    Size = sizeof (EFI_SYSTEM_RESOURCE_TABLE) + sizeof (EFI_SYSTEM_RESOURCE_ENTRY);
+    Status = gBS->AllocatePool (EfiACPIMemoryNVS, Size, (VOID **)&Esrt);
+    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    ZeroMem (Esrt, Size);
 
     Esrt->FwResourceVersion  = EFI_SYSTEM_RESOURCE_TABLE_FIRMWARE_RESOURCE_VERSION;
     Esrt->FwResourceCount    = 1;
