@@ -538,6 +538,7 @@ EsrtReadyToBootEventNotify (
   EFI_SYSTEM_RESOURCE_ENTRY  *NonFmpEsrtRepository;
   UINTN                      FmpRepositorySize;
   UINTN                      NonFmpRepositorySize;
+  UINTN                      EsrtTableSize;
 
   FmpEsrtRepository    = NULL;
   NonFmpEsrtRepository = NULL;
@@ -593,11 +594,14 @@ EsrtReadyToBootEventNotify (
     goto EXIT;
   }
 
-  EsrtTable = AllocatePool (sizeof (EFI_SYSTEM_RESOURCE_TABLE) + NonFmpRepositorySize + FmpRepositorySize);
-  if (EsrtTable == NULL) {
-    DEBUG ((DEBUG_ERROR, "Esrt table memory allocation failure\n"));
+  EsrtTableSize = sizeof (EFI_SYSTEM_RESOURCE_TABLE) + NonFmpRepositorySize + FmpRepositorySize;
+  Status = gBS->AllocatePool (EfiACPIMemoryNVS, EsrtTableSize, (VOID **)&EsrtTable);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Esrt table memory allocation failure: %r\n", Status));
     goto EXIT;
   }
+
+  ZeroMem (EsrtTable, EsrtTableSize);
 
   EsrtTable->FwResourceVersion  = EFI_SYSTEM_RESOURCE_TABLE_FIRMWARE_RESOURCE_VERSION;
   EsrtTable->FwResourceCount    = (UINT32)((NonFmpRepositorySize + FmpRepositorySize) / sizeof (EFI_SYSTEM_RESOURCE_ENTRY));

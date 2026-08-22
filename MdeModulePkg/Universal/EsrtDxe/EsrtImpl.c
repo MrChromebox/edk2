@@ -422,6 +422,56 @@ IsSystemFmp (
   return FALSE;
 }
 
+STATIC
+BOOLEAN
+IsValidEsrtFwType (
+  IN UINT32  FwType
+  )
+{
+  return (BOOLEAN)(
+                    (FwType == ESRT_FW_TYPE_SYSTEMFIRMWARE) ||
+                    (FwType == ESRT_FW_TYPE_DEVICEFIRMWARE) ||
+                    (FwType == ESRT_FW_TYPE_UEFIDRIVER)
+                    );
+}
+
+STATIC
+BOOLEAN
+GetPublishedEsrtFwType (
+  IN  CONST EFI_GUID  *FwClass,
+  OUT UINT32          *FwType
+  )
+{
+  EFI_STATUS                 Status;
+  EFI_SYSTEM_RESOURCE_TABLE  *EsrtTable;
+  EFI_SYSTEM_RESOURCE_ENTRY  *EsrtEntry;
+  UINTN                      Index;
+
+  if ((FwClass == NULL) || (FwType == NULL)) {
+    return FALSE;
+  }
+
+  Status = EfiGetSystemConfigurationTable (
+             &gEfiSystemResourceTableGuid,
+             (VOID **)&EsrtTable
+             );
+  if (EFI_ERROR (Status) || (EsrtTable == NULL)) {
+    return FALSE;
+  }
+
+  EsrtEntry = (EFI_SYSTEM_RESOURCE_ENTRY *)(EsrtTable + 1);
+  for (Index = 0; Index < EsrtTable->FwResourceCount; Index++, EsrtEntry++) {
+    if (  CompareGuid (FwClass, &EsrtEntry->FwClass)
+       && IsValidEsrtFwType (EsrtEntry->FwType))
+    {
+      *FwType = EsrtEntry->FwType;
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
 /**
   Init one ESRT entry according to input FmpImageInfo (V1, V2, V3) .
 
@@ -439,10 +489,16 @@ SetEsrtEntryFromFmpInfo (
 {
   EsrtEntry->FwVersion = FmpImageInfo->Version;
   EsrtEntry->FwClass   = FmpImageInfo->ImageTypeId;
-  if (IsSystemFmp (FmpImageInfo)) {
-    EsrtEntry->FwType = ESRT_FW_TYPE_SYSTEMFIRMWARE;
-  } else {
-    EsrtEntry->FwType = ESRT_FW_TYPE_DEVICEFIRMWARE;
+
+  //
+  // Preserve firmware type from an ESRT already installed by the bootloader.
+  //
+  if (!GetPublishedEsrtFwType (&FmpImageInfo->ImageTypeId, &EsrtEntry->FwType)) {
+    if (IsSystemFmp (FmpImageInfo)) {
+      EsrtEntry->FwType = ESRT_FW_TYPE_SYSTEMFIRMWARE;
+    } else {
+      EsrtEntry->FwType = ESRT_FW_TYPE_DEVICEFIRMWARE;
+    }
   }
 
   EsrtEntry->LowestSupportedFwVersion = 0;
