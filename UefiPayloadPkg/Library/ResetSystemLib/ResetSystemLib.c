@@ -8,13 +8,43 @@
 
 #include <PiDxe.h>
 #include <Library/BaseLib.h>
+#include <Library/CpuLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/HobLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Guid/AcpiBoardInfoGuid.h>
 
+#define ACPI_PM1_CNT_SLP_TYP_MASK   0x3c00
+#define ACPI_PM1_CNT_SLP_TYP_SHIFT  10
+#define ACPI_PM1_CNT_SLP_EN         BIT13
+
+//
+// PM1_CNT.SLP_TYP for S5 is chipset-defined (see ACPI \_S5). Coreboot uses 7
+// on Intel and 5 on AMD; CPUID vendor is a practical stand-in for parsing ASL.
+//
+#define ACPI_SLP_TYP_S5_INTEL  7
+#define ACPI_SLP_TYP_S5_AMD    5
+
 ACPI_BOARD_INFO  mAcpiBoardInfo;
+
+/**
+  Return the PM1_CNT SLP_TYP value used to enter S5 / soft-off.
+
+  @return  Chipset S5 sleep type (Intel 7, AMD 5).
+**/
+STATIC
+UINT16
+GetPm1SleepTypeS5 (
+  VOID
+  )
+{
+  if (StandardSignatureIsAuthenticAMD ()) {
+    return ACPI_SLP_TYP_S5_AMD;
+  }
+
+  return ACPI_SLP_TYP_S5_INTEL;
+}
 
 /**
   The constructor function to initialize mAcpiBoardInfo.
@@ -114,8 +144,12 @@ ResetShutdown (
   // Transform system into S5 sleep state
   //
   PmCtrlReg = (UINTN)mAcpiBoardInfo.PmCtrlRegBase;
-  IoAndThenOr16 (PmCtrlReg, (UINT16) ~0x3c00, (UINT16)(7 << 10));
-  IoOr16 (PmCtrlReg, BIT13);
+  IoAndThenOr16 (
+    PmCtrlReg,
+    (UINT16)~ACPI_PM1_CNT_SLP_TYP_MASK,
+    (UINT16)(GetPm1SleepTypeS5 () << ACPI_PM1_CNT_SLP_TYP_SHIFT)
+    );
+  IoOr16 (PmCtrlReg, ACPI_PM1_CNT_SLP_EN);
   CpuDeadLoop ();
 
   ASSERT (FALSE);
