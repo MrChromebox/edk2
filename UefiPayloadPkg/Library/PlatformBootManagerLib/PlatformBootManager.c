@@ -383,6 +383,7 @@ PlatformBootManagerBeforeConsole (
   EFI_INPUT_KEY                 CustomKey;
   EFI_INPUT_KEY                 Down;
   EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
+  BOOLEAN                       ConsoleInitialized;
 
   //
   // Register ENTER as CONTINUE key
@@ -421,6 +422,11 @@ PlatformBootManagerBeforeConsole (
   //
   if (GetBootModeHob () == BOOT_ON_FLASH_UPDATE) {
     // TODO: when enabling capsule support for laptops, add a battery check here
+    PlatformConsoleInit ();
+    ConsoleInitialized = TRUE;
+
+    BootSplashApply ();
+
     Status = ProcessCapsules ();
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a(): ProcessCapsule() failed with: %r\n", __func__, Status));
@@ -464,21 +470,24 @@ PlatformBootManagerAfterConsole (
 {
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Black;
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  White;
-  EDKII_PLATFORM_LOGO_PROTOCOL   *PlatformLogo;
   EFI_STATUS                     Status;
 
   Black.Blue = Black.Green = Black.Red = Black.Reserved = 0;
   White.Blue = White.Green = White.Red = White.Reserved = 0xFF;
 
-  Status = gBS->LocateProtocol (&gEdkiiPlatformLogoProtocolGuid, NULL, (VOID **)&PlatformLogo);
-
-  if (!EFI_ERROR (Status)) {
-    gST->ConOut->ClearScreen (gST->ConOut);
-    BootLogoEnableLogo ();
+  //
+  // Custom splash needs filesystems connected first. Default (or disabled)
+  // can draw immediately so ConnectAll console churn does not precede the logo.
+  //
+  if (BootSplashRequiresConnect ()) {
+    EfiBootManagerConnectAll ();
+    EfiBootManagerRefreshAllBootOption ();
+    BootSplashApply ();
+  } else {
+    BootSplashApply ();
+    EfiBootManagerConnectAll ();
+    EfiBootManagerRefreshAllBootOption ();
   }
-
-  EfiBootManagerConnectAll ();
-  EfiBootManagerRefreshAllBootOption ();
 
   //
   // Active BOOT_ON_FLASH_UPDATE mode means that at least one capsule has been

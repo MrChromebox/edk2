@@ -83,6 +83,25 @@ typedef struct {
 extern USB_CLASS_FORMAT_DEVICE_PATH  gUsbClassKeyboardDevicePath;
 
 /**
+  TRUE if splash is enabled and type is Custom (needs a connected filesystem).
+**/
+BOOLEAN
+BootSplashRequiresConnect (
+  VOID
+  );
+
+/**
+  Apply boot splash policy from NVRAM (enable / type / custom BMP path).
+
+  When disabled, does nothing. When custom fails to load, falls back to the
+  embedded PlatformLogo default.
+**/
+VOID
+BootSplashApply (
+  VOID
+  );
+
+/**
   Use SystemTable Conout to stop video based Simple Text Out consoles from going
   to the video device. Put up LogoFile on every video device that is a console.
 
