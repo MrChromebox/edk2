@@ -378,7 +378,6 @@ PlatformBootManagerBeforeConsole (
   EFI_INPUT_KEY                 CustomKey;
   EFI_INPUT_KEY                 Down;
   EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
-  EDKII_PLATFORM_LOGO_PROTOCOL  *PlatformLogo;
   BOOLEAN                       ConsoleInitialized;
 
   //
@@ -422,11 +421,7 @@ PlatformBootManagerBeforeConsole (
     PlatformConsoleInit ();
     ConsoleInitialized = TRUE;
 
-    Status = gBS->LocateProtocol (&gEdkiiPlatformLogoProtocolGuid, NULL, (VOID **)&PlatformLogo);
-    if (!EFI_ERROR (Status) && (gST != NULL) && (gST->ConOut != NULL)) {
-      gST->ConOut->ClearScreen (gST->ConOut);
-      BootLogoEnableLogo ();
-    }
+    BootSplashApply ();
 
     Status = ProcessCapsules ();
     if (EFI_ERROR (Status)) {
@@ -473,21 +468,24 @@ PlatformBootManagerAfterConsole (
 {
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Black;
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  White;
-  EDKII_PLATFORM_LOGO_PROTOCOL   *PlatformLogo;
   EFI_STATUS                     Status;
 
   Black.Blue = Black.Green = Black.Red = Black.Reserved = 0;
   White.Blue = White.Green = White.Red = White.Reserved = 0xFF;
 
-  Status = gBS->LocateProtocol (&gEdkiiPlatformLogoProtocolGuid, NULL, (VOID **)&PlatformLogo);
-
-  if (!EFI_ERROR (Status)) {
-    gST->ConOut->ClearScreen (gST->ConOut);
-    BootLogoEnableLogo ();
+  //
+  // Custom splash needs filesystems connected first. Default (or disabled)
+  // can draw immediately so ConnectAll console churn does not precede the logo.
+  //
+  if (BootSplashRequiresConnect ()) {
+    EfiBootManagerConnectAll ();
+    EfiBootManagerRefreshAllBootOption ();
+    BootSplashApply ();
+  } else {
+    BootSplashApply ();
+    EfiBootManagerConnectAll ();
+    EfiBootManagerRefreshAllBootOption ();
   }
-
-  EfiBootManagerConnectAll ();
-  EfiBootManagerRefreshAllBootOption ();
 
   //
   // Active BOOT_ON_FLASH_UPDATE mode means that at least one capsule has been
