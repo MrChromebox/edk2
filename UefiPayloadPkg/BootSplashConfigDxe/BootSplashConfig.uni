@@ -1,0 +1,31 @@
+/** @file
+  Boot Splash Config Unicode strings.
+
+  Copyright (c) 2026
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+**/
+
+#langdef en-US "English"
+
+#string STR_BOOT_SPLASH_FORMSET_TITLE       #language en-US "Boot Splash Settings"
+#string STR_BOOT_SPLASH_FORMSET_HELP        #language en-US "Configure the boot splash logo"
+
+#string STR_BOOT_SPLASH_FORM_TITLE          #language en-US "Boot Splash"
+#string STR_BOOT_SPLASH_FORM_SUBTITLE       #language en-US "Boot splash logo options:"
+
+#string STR_BOOT_SPLASH_ENABLE_PROMPT       #language en-US "Show boot splash"
+#string STR_BOOT_SPLASH_ENABLE_HELP         #language en-US "Enable or disable displaying a logo during boot"
+
+#string STR_BOOT_SPLASH_TYPE_PROMPT         #language en-US "Logo source"
+#string STR_BOOT_SPLASH_TYPE_HELP           #language en-US "Use the built-in logo or a custom BMP from the filesystem"
+#string STR_BOOT_SPLASH_TYPE_DEFAULT        #language en-US "Default"
+#string STR_BOOT_SPLASH_TYPE_CUSTOM         #language en-US "Custom"
+
+#string STR_BOOT_SPLASH_PATH_PROMPT         #language en-US "Custom logo file"
+#string STR_BOOT_SPLASH_PATH_HELP           #language en-US "BMP file used when Logo source is Custom"
+#string STR_BOOT_SPLASH_PATH_VALUE          #language en-US "<none selected>"
+
+#string STR_BOOT_SPLASH_BROWSE_PROMPT       #language en-US "Browse for BMP..."
+#string STR_BOOT_SPLASH_BROWSE_HELP         #language en-US "Open the file explorer and select a .bmp logo file"
+
+#string STR_NULL_STRING                     #language en-US ""

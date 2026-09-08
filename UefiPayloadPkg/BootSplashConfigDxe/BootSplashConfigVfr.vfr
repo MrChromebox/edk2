@@ -1,0 +1,70 @@
+/** @file
+  Boot Splash Config VFR formset.
+
+  Copyright (c) 2026
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+**/
+
+#include <Uefi/UefiMultiPhase.h>
+#include <Guid/HiiPlatformSetupFormset.h>
+#include <Guid/BootSplashConfig.h>
+
+#define BOOT_SPLASH_FORM_ID             0x1000
+#define BOOT_SPLASH_BROWSE_QUESTION_ID  0x1001
+
+formset
+  guid      = BOOT_SPLASH_CONFIG_FORMSET_GUID,
+  title     = STRING_TOKEN(STR_BOOT_SPLASH_FORMSET_TITLE),
+  help      = STRING_TOKEN(STR_BOOT_SPLASH_FORMSET_HELP),
+  classguid = EFI_HII_PLATFORM_SETUP_FORMSET_GUID,
+
+  efivarstore BOOT_SPLASH_UINT8_VAR,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+    name      = BootSplashEnable,
+    guid      = UEFI_PAYLOAD_BOOT_SPLASH_GUID;
+
+  efivarstore BOOT_SPLASH_UINT8_VAR,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+    name      = BootSplashType,
+    guid      = UEFI_PAYLOAD_BOOT_SPLASH_GUID;
+
+  form formid = BOOT_SPLASH_FORM_ID,
+    title = STRING_TOKEN(STR_BOOT_SPLASH_FORM_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_BOOT_SPLASH_FORM_SUBTITLE);
+    subtitle text = STRING_TOKEN(STR_NULL_STRING);
+
+    checkbox varid = BootSplashEnable.Value,
+      prompt = STRING_TOKEN(STR_BOOT_SPLASH_ENABLE_PROMPT),
+      help   = STRING_TOKEN(STR_BOOT_SPLASH_ENABLE_HELP),
+      flags  = CHECKBOX_DEFAULT,
+    endcheckbox;
+
+    subtitle text = STRING_TOKEN(STR_NULL_STRING);
+
+    suppressif ideqval BootSplashEnable.Value == 0;
+      oneof varid = BootSplashType.Value,
+        prompt = STRING_TOKEN(STR_BOOT_SPLASH_TYPE_PROMPT),
+        help   = STRING_TOKEN(STR_BOOT_SPLASH_TYPE_HELP),
+        option text = STRING_TOKEN(STR_BOOT_SPLASH_TYPE_DEFAULT), value = 0, flags = DEFAULT;
+        option text = STRING_TOKEN(STR_BOOT_SPLASH_TYPE_CUSTOM), value = 1, flags = 0;
+      endoneof;
+
+      subtitle text = STRING_TOKEN(STR_NULL_STRING);
+
+      suppressif ideqval BootSplashType.Value == 0;
+        text
+          help = STRING_TOKEN(STR_BOOT_SPLASH_PATH_HELP),
+          text = STRING_TOKEN(STR_BOOT_SPLASH_PATH_PROMPT),
+          text = STRING_TOKEN(STR_BOOT_SPLASH_PATH_VALUE);
+
+        goto BOOT_SPLASH_FORM_ID,
+          prompt = STRING_TOKEN(STR_BOOT_SPLASH_BROWSE_PROMPT),
+          help   = STRING_TOKEN(STR_BOOT_SPLASH_BROWSE_HELP),
+          flags  = INTERACTIVE,
+          key    = BOOT_SPLASH_BROWSE_QUESTION_ID;
+      endif;
+    endif;
+
+  endform;
+endformset;

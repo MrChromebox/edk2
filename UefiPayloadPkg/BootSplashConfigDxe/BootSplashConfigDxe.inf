@@ -1,0 +1,56 @@
+## @file
+#  Boot Splash Config DXE Driver
+#
+#  Platform Setup formset for enabling/disabling the boot splash logo and
+#  selecting a custom BMP from the filesystem.
+#
+#  Copyright (c) 2026
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = BootSplashConfigDxe
+  FILE_GUID                      = A1B2C3D4-E5F6-4789-ABCD-EF0123456789
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = BootSplashConfigDxeEntryPoint
+
+[Sources]
+  BootSplashConfig.c
+  BootSplashConfigVfr.vfr
+  BootSplashConfig.uni
+  BootSplashConfig.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  DevicePathLib
+  FileExplorerLib
+  HiiLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeServicesTableLib
+
+[Guids]
+  gEfiHiiPlatformSetupFormsetGuid               ## CONSUMES
+  gUefiPayloadBootSplashGuid                    ## PRODUCES ## Variable:L"BootSplashEnable"
+  gBootSplashConfigFormSetGuid                  ## PRODUCES
+
+[Protocols]
+  gEfiDevicePathProtocolGuid                    ## TO_START
+  gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
+
+[Depex]
+  gEfiHiiDatabaseProtocolGuid AND
+  gEfiVariableArchProtocolGuid AND
+  gEfiVariableWriteArchProtocolGuid

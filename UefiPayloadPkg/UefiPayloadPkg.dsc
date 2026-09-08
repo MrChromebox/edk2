@@ -1300,6 +1300,9 @@
 !endif
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
   UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
+!if $(BOOTSPLASH_IMAGE)
+  UefiPayloadPkg/BootSplashConfigDxe/BootSplashConfigDxe.inf
+!endif
 !endif
   MdeModulePkg/Universal/TimeDateSettingsDxe/TimeDateSettingsDxe.inf
   MdeModulePkg/Universal/PlatformDriOverrideDxe/PlatformDriOverrideDxe.inf

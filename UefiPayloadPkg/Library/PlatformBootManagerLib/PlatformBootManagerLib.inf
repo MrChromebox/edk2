@@ -26,6 +26,7 @@
   PlatformConsole.h
   PlatformBootManager.c
   PlatformBootManager.h
+  BootSplash.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -41,6 +42,8 @@
   UefiLib
   UefiBootManagerLib
   BootLogoLib
+  BmpSupportLib
+  FileHandleLib
   PcdLib
   DxeServicesLib
   MemoryAllocationLib
@@ -56,11 +59,15 @@
 [Guids]
   gEfiEndOfDxeEventGroupGuid
   gUefiShellFileGuid
+  gUefiPayloadBootSplashGuid
 
 [Protocols]
   gEfiGenericMemTestProtocolGuid  ## CONSUMES
   gEfiGraphicsOutputProtocolGuid  ## CONSUMES
   gEfiBootLogoProtocolGuid        ## CONSUMES
+  gEdkiiBootLogo2ProtocolGuid     ## CONSUMES
+  gEdkiiPlatformLogoProtocolGuid  ## CONSUMES
+  gEfiSimpleFileSystemProtocolGuid ## CONSUMES
   gEfiDxeSmmReadyToLockProtocolGuid
   gEfiSmmAccess2ProtocolGuid
   gEfiSerialIoProtocolGuid
@@ -75,6 +82,7 @@
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification
   gUefiPayloadPkgTokenSpaceGuid.PcdBootManagerEscape
   gUefiPayloadPkgTokenSpaceGuid.PcdSerialTerminalPrintEnabled
   gUefiPayloadPkgTokenSpaceGuid.PcdiPXEFile
