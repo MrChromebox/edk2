@@ -333,6 +333,8 @@
   PeCoffGetEntryPointLib|MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
   CacheMaintenanceLib|MdePkg/Library/BaseCacheMaintenanceLib/BaseCacheMaintenanceLib.inf
   SafeIntLib|MdePkg/Library/BaseSafeIntLib/BaseSafeIntLib.inf
+  BmpSupportLib|MdeModulePkg/Library/BaseBmpSupportLib/BaseBmpSupportLib.inf
+  BootSplashLib|UefiPayloadPkg/Library/BootSplashLib/BootSplashLib.inf
   DxeHobListLib|UefiPayloadPkg/Library/DxeHobListLib/DxeHobListLib.inf
 !if $(CRYPTO_PROTOCOL_SUPPORT) == TRUE
   BaseCryptLib|CryptoPkg/Library/BaseCryptLibOnProtocolPpi/DxeCryptLib.inf
@@ -1313,6 +1315,9 @@
 !endif
 !if $(VARIABLE_SUPPORT) == "EMU" || $(VARIABLE_SUPPORT) == "SMMSTORE" || $(VARIABLE_SUPPORT) == "SPI"
   UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
+!if $(BOOTSPLASH_IMAGE)
+  UefiPayloadPkg/BootSplashConfigDxe/BootSplashConfigDxe.inf
+!endif
 !endif
   MdeModulePkg/Universal/TimeDateSettingsDxe/TimeDateSettingsDxe.inf
   MdeModulePkg/Universal/PlatformDriOverrideDxe/PlatformDriOverrideDxe.inf
