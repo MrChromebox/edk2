@@ -17,11 +17,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 // bit maps.
 //
 USB_CHANGE_FEATURE_MAP  mHubFeatureMap[] = {
-  { USB_PORT_STAT_C_CONNECTION,  EfiUsbPortConnectChange     },
-  { USB_PORT_STAT_C_ENABLE,      EfiUsbPortEnableChange      },
-  { USB_PORT_STAT_C_SUSPEND,     EfiUsbPortSuspendChange     },
-  { USB_PORT_STAT_C_OVERCURRENT, EfiUsbPortOverCurrentChange },
-  { USB_PORT_STAT_C_RESET,       EfiUsbPortResetChange       }
+  { USB_PORT_STAT_C_CONNECTION,  EfiUsbPortConnectChange                       },
+  { USB_PORT_STAT_C_ENABLE,      EfiUsbPortEnableChange                        },
+  { USB_PORT_STAT_C_SUSPEND,     EfiUsbPortSuspendChange                       },
+  { USB_PORT_STAT_C_OVERCURRENT, EfiUsbPortOverCurrentChange                   },
+  { USB_PORT_STAT_C_RESET,       EfiUsbPortResetChange                         },
+  { USB_SS_PORT_STAT_C_BH_RESET, (EFI_USB_PORT_FEATURE)USB_HUB_C_BH_PORT_RESET }
 };
 
 USB_CHANGE_FEATURE_MAP  mRootHubFeatureMap[] = {
@@ -736,8 +737,19 @@ UsbHubGetPortStatus (
   EFI_STATUS  Status;
 
   Status = UsbHubCtrlGetPortStatus (HubIf->Device, Port, PortState);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
-  return Status;
+  //
+  // SuperSpeed hubs report warm-reset completion as C_BH_RESET. Mirror it to
+  // C_RESET so UsbHubResetPort's existing wait/completion path observes it.
+  //
+  if (USB_BIT_IS_SET (PortState->PortChangeStatus, USB_SS_PORT_STAT_C_BH_RESET)) {
+    PortState->PortChangeStatus = (UINT16)(PortState->PortChangeStatus | USB_PORT_STAT_C_RESET);
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -850,7 +862,16 @@ UsbHubResetPort (
   UINTN                Index;
   EFI_STATUS           Status;
 
-  Status = UsbHubSetPortFeature (HubIf, Port, (EFI_USB_PORT_FEATURE)USB_HUB_PORT_RESET);
+  //
+  // Reset the SuperSpeed link as well as the downstream device. The xHCI
+  // driver reports both hot and warm reset completion as C_RESET.
+  //
+  Status = UsbHubSetPortFeature (
+             HubIf,
+             Port,
+             (EFI_USB_PORT_FEATURE)(HubIf->Device->Speed == EFI_USB_SPEED_SUPER ?
+                                    USB_HUB_BH_PORT_RESET : USB_HUB_PORT_RESET)
+             );
 
   if (EFI_ERROR (Status)) {
     return Status;
