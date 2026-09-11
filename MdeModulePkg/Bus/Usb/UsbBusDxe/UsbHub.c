@@ -850,7 +850,16 @@ UsbHubResetPort (
   UINTN                Index;
   EFI_STATUS           Status;
 
-  Status = UsbHubSetPortFeature (HubIf, Port, (EFI_USB_PORT_FEATURE)USB_HUB_PORT_RESET);
+  //
+  // Reset the SuperSpeed link as well as the downstream device. The xHCI
+  // driver reports both hot and warm reset completion as C_RESET.
+  //
+  Status = UsbHubSetPortFeature (
+             HubIf,
+             Port,
+             (EFI_USB_PORT_FEATURE)(HubIf->Device->Speed == EFI_USB_SPEED_SUPER ?
+                                    USB_HUB_BH_PORT_RESET : USB_HUB_PORT_RESET)
+             );
 
   if (EFI_ERROR (Status)) {
     return Status;
