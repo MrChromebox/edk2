@@ -42,6 +42,12 @@ CfrSetupMenuEntryPoint (
   }
 
   //
+  // Clear persisted lock-at-boot trigger before registering policies so
+  // setup can still write LOCK_AT_BOOT options during this boot.
+  //
+  CfrResetLockAtBootState ();
+
+  //
   // Install Device Path and Config Access protocols to driver handle
   //
   mSetupMenuPrivate.DriverHandle = NULL;
@@ -72,7 +78,15 @@ CfrSetupMenuEntryPoint (
   //
   CfrCreateRuntimeComponents ();
 
-  return Status;
+  //
+  // Engage LOCK_ON_VAR_STATE for CFR_OPTFLAG_LOCK_AT_BOOT at ReadyToBoot.
+  //
+  Status = CfrRegisterLockAtBootEvent ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "CFR: Failed to register lock-at-boot event!\n"));
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -104,6 +118,8 @@ CfrSetupMenuUnload (
   // Remove our HII data
   //
   HiiRemovePackages (mSetupMenuPrivate.HiiHandle);
+
+  CfrCleanupLockAtBoot ();
 
   return Status;
 }
