@@ -696,7 +696,7 @@ CfrProcessNumericOption (
   if (Option->flags & CFR_OPTFLAG_SUPPRESS) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_SUPPRESS_IF_OP);
   }
-  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
+  if (Option->flags & (CFR_OPTFLAG_INACTIVE | CFR_OPTFLAG_READONLY)) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_GRAY_OUT_IF_OP);
   }
 
@@ -728,6 +728,7 @@ CfrProcessNumericOption (
   if (Option->tag == CB_TAG_CFR_OPTION_ENUM) {
     OptionOpCodeHandle = HiiAllocateOpCodeHandle ();
     ASSERT (OptionOpCodeHandle != NULL);
+
 
     while (OptionProcessedLength < Option->size) {
       CfrEnumValues = (CFR_ENUM_VALUE *)((UINT8 *)Option + OptionProcessedLength);
@@ -818,7 +819,7 @@ CfrProcessNumericOption (
     ASSERT (TempHiiBuffer != NULL);
   }
 
-  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
+  if (Option->flags & (CFR_OPTFLAG_INACTIVE | CFR_OPTFLAG_READONLY)) {
     TempHiiBuffer = HiiCreateEndOpCode (StartOpCodeHandle);
     ASSERT (TempHiiBuffer != NULL);
   }
@@ -962,7 +963,7 @@ CfrProcessCharacterOption (
   if (Option->flags & CFR_OPTFLAG_SUPPRESS) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_SUPPRESS_IF_OP);
   }
-  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
+  if (Option->flags & (CFR_OPTFLAG_INACTIVE | CFR_OPTFLAG_READONLY)) {
     CfrProduceHiiForFlags (StartOpCodeHandle, EFI_IFR_GRAY_OUT_IF_OP);
   }
 
@@ -1023,7 +1024,7 @@ CfrProcessCharacterOption (
     ASSERT (TempHiiBuffer != NULL);
   }
 
-  if (Option->flags & CFR_OPTFLAG_INACTIVE) {
+  if (Option->flags & (CFR_OPTFLAG_INACTIVE | CFR_OPTFLAG_READONLY)) {
     TempHiiBuffer = HiiCreateEndOpCode (StartOpCodeHandle);
     ASSERT (TempHiiBuffer != NULL);
   }
