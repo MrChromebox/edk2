@@ -35,11 +35,12 @@ extern EFI_GUID gEfiCfrSetupMenuFormGuid;
  * TODO: "This should be documentation instead."
  */
 enum cfr_option_flags {
-  CFR_OPTFLAG_READONLY  = 1 << 0,
-  CFR_OPTFLAG_INACTIVE  = 1 << 1,
-  CFR_OPTFLAG_SUPPRESS  = 1 << 2,
-  CFR_OPTFLAG_VOLATILE  = 1 << 3,
-  CFR_OPTFLAG_RUNTIME   = 1 << 4,
+  CFR_OPTFLAG_READONLY     = 1 << 0,
+  CFR_OPTFLAG_INACTIVE     = 1 << 1,
+  CFR_OPTFLAG_SUPPRESS     = 1 << 2,
+  CFR_OPTFLAG_VOLATILE     = 1 << 3,
+  CFR_OPTFLAG_RUNTIME      = 1 << 4,
+  CFR_OPTFLAG_LOCK_AT_BOOT = 1 << 5,
 };
 
 #define CB_TAG_CFR_VARCHAR_OPT_NAME     0x0007

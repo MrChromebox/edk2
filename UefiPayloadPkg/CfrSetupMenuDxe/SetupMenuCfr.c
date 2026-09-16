@@ -15,10 +15,161 @@
 #include <Library/HiiLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Library/VariablePolicyHelperLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Guid/CfrSetupMenuGuid.h>
 #include <Guid/VariableFormat.h>
+
+typedef struct _CFR_LOCK_AT_BOOT_ENTRY {
+  struct _CFR_LOCK_AT_BOOT_ENTRY  *Next;
+  CHAR16                          *Name;
+} CFR_LOCK_AT_BOOT_ENTRY;
+
+STATIC CFR_LOCK_AT_BOOT_ENTRY  *mLockAtBootList  = NULL;
+STATIC EFI_EVENT               mLockAtBootEvent = NULL;
+STATIC BOOLEAN                 mLockAtBootApplied = FALSE;
+
+/**
+  Queue a CFR option variable to be write-locked at ReadyToBoot.
+
+**/
+STATIC
+VOID
+EFIAPI
+CfrQueueLockAtBoot (
+  IN CONST CHAR16  *VariableName
+  )
+{
+  CFR_LOCK_AT_BOOT_ENTRY  *Entry;
+  UINTN                   NameSize;
+
+  if ((VariableName == NULL) || (VariableName[0] == L'\0')) {
+    return;
+  }
+
+  Entry = AllocateZeroPool (sizeof (*Entry));
+  if (Entry == NULL) {
+    DEBUG ((DEBUG_WARN, "CFR: Failed to queue lock-at-boot for \"%s\"!\n", VariableName));
+    return;
+  }
+
+  NameSize   = StrSize (VariableName);
+  Entry->Name = AllocateCopyPool (NameSize, VariableName);
+  if (Entry->Name == NULL) {
+    FreePool (Entry);
+    DEBUG ((DEBUG_WARN, "CFR: Failed to queue lock-at-boot for \"%s\"!\n", VariableName));
+    return;
+  }
+
+  Entry->Next      = mLockAtBootList;
+  mLockAtBootList  = Entry;
+}
+
+/**
+  Apply deferred Variable Policy locks for CFR_OPTFLAG_LOCK_AT_BOOT options.
+
+**/
+STATIC
+VOID
+EFIAPI
+CfrApplyLockAtBoot (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  CFR_LOCK_AT_BOOT_ENTRY  *Entry;
+  EFI_STATUS              Status;
+
+  if (mLockAtBootApplied) {
+    return;
+  }
+
+  mLockAtBootApplied = TRUE;
+
+  if (mVariablePolicy == NULL) {
+    DEBUG ((DEBUG_WARN, "CFR: No Variable Policy; skipping lock-at-boot!\n"));
+    return;
+  }
+
+  for (Entry = mLockAtBootList; Entry != NULL; Entry = Entry->Next) {
+    Status = RegisterBasicVariablePolicy (
+               mVariablePolicy,
+               &gEficorebootNvDataGuid,
+               Entry->Name,
+               VARIABLE_POLICY_NO_MIN_SIZE,
+               VARIABLE_POLICY_NO_MAX_SIZE,
+               VARIABLE_POLICY_NO_MUST_ATTR,
+               VARIABLE_POLICY_NO_CANT_ATTR,
+               VARIABLE_POLICY_TYPE_LOCK_NOW
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN, "CFR: Failed to lock-at-boot variable \"%s\"!\n", Entry->Name));
+    }
+  }
+}
+
+/**
+  Register a ReadyToBoot callback that write-locks CFR variables marked
+  CFR_OPTFLAG_LOCK_AT_BOOT.
+
+**/
+EFI_STATUS
+EFIAPI
+CfrRegisterLockAtBootEvent (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  if ((mLockAtBootList == NULL) || (mLockAtBootEvent != NULL)) {
+    return EFI_SUCCESS;
+  }
+
+  Status = EfiCreateEventReadyToBootEx (
+             TPL_CALLBACK,
+             CfrApplyLockAtBoot,
+             NULL,
+             &mLockAtBootEvent
+             );
+  if (EFI_ERROR (Status)) {
+    mLockAtBootEvent = NULL;
+  }
+
+  return Status;
+}
+
+/**
+  Free deferred lock state. Safe to call if nothing was registered.
+
+**/
+VOID
+EFIAPI
+CfrCleanupLockAtBoot (
+  VOID
+  )
+{
+  CFR_LOCK_AT_BOOT_ENTRY  *Entry;
+  CFR_LOCK_AT_BOOT_ENTRY  *Next;
+
+  if (mLockAtBootEvent != NULL) {
+    gBS->CloseEvent (mLockAtBootEvent);
+    mLockAtBootEvent = NULL;
+  }
+
+  for (Entry = mLockAtBootList; Entry != NULL; Entry = Next) {
+    Next = Entry->Next;
+    if (Entry->Name != NULL) {
+      FreePool (Entry->Name);
+    }
+
+    FreePool (Entry);
+  }
+
+  mLockAtBootList    = NULL;
+  mLockAtBootApplied = FALSE;
+}
 
 /**
   CFR_VARBINARY records are used as option name and UI name and help text.
@@ -232,7 +383,7 @@ CfrProduceStorageForOption (
   IN CFR_VARBINARY  *CfrOptionName,
   IN VOID           *CfrOptionDefaultValue,
   IN UINTN          CfrOptionLength,
-  IN UINT8          OptionFlags,
+  IN UINT32         OptionFlags,
   IN VOID           *StartOpCodeHandle,
   IN UINTN          QuestionIdVarStoreId
   )
@@ -252,7 +403,7 @@ CfrProduceStorageForOption (
   CfrConvertVarBinaryToStrings (CfrOptionName, &VariableCfrName, NULL);
 
   //
-  // Variables can be runtime accessible later, if desired
+  // BS always; NV unless VOLATILE; RT only if CFR_OPTFLAG_RUNTIME (OS-visible).
   //
   VariableAttributes = EFI_VARIABLE_BOOTSERVICE_ACCESS;
   if (!(OptionFlags & CFR_OPTFLAG_VOLATILE)) {
@@ -282,7 +433,12 @@ CfrProduceStorageForOption (
     ASSERT_EFI_ERROR (Status);
   }
 
-  if (OptionFlags & CFR_OPTFLAG_READONLY && mVariablePolicy != NULL) {
+  //
+  // READONLY: lock immediately (setup UI and OS). Takes precedence over
+  // LOCK_AT_BOOT.
+  // LOCK_AT_BOOT alone: allow setup writes this boot, lock at ReadyToBoot.
+  //
+  if ((OptionFlags & CFR_OPTFLAG_READONLY) && (mVariablePolicy != NULL)) {
     Status = RegisterBasicVariablePolicy (
                mVariablePolicy,
                &gEficorebootNvDataGuid,
@@ -296,6 +452,8 @@ CfrProduceStorageForOption (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_WARN, "CFR: Failed to lock variable \"%s\"!\n", VariableCfrName));
     }
+  } else if (OptionFlags & CFR_OPTFLAG_LOCK_AT_BOOT) {
+    CfrQueueLockAtBoot (VariableCfrName);
   }
 
   FreePool (VariableCfrName);

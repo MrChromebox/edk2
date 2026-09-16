@@ -72,7 +72,16 @@ CfrSetupMenuEntryPoint (
   //
   CfrCreateRuntimeComponents ();
 
-  return Status;
+  //
+  // Defer Variable Policy locks for CFR_OPTFLAG_LOCK_AT_BOOT options until
+  // ReadyToBoot so setup can still write them during this boot.
+  //
+  Status = CfrRegisterLockAtBootEvent ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "CFR: Failed to register lock-at-boot event!\n"));
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -104,6 +113,8 @@ CfrSetupMenuUnload (
   // Remove our HII data
   //
   HiiRemovePackages (mSetupMenuPrivate.HiiHandle);
+
+  CfrCleanupLockAtBoot ();
 
   return Status;
 }
