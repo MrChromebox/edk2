@@ -57,6 +57,36 @@ CfrCreateRuntimeComponents (
   );
 
 /**
+  Clear the lock-at-boot trigger so setup can write this boot.
+
+**/
+VOID
+EFIAPI
+CfrResetLockAtBootState (
+  VOID
+  );
+
+/**
+  Register a ReadyToBoot callback that engages CFR_OPTFLAG_LOCK_AT_BOOT locks.
+
+**/
+EFI_STATUS
+EFIAPI
+CfrRegisterLockAtBootEvent (
+  VOID
+  );
+
+/**
+  Free lock-at-boot event state. Safe to call if nothing was registered.
+
+**/
+VOID
+EFIAPI
+CfrCleanupLockAtBoot (
+  VOID
+  );
+
+/**
   This function allows a caller to extract the current configuration for one
   or more named elements from the target driver.
 
