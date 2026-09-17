@@ -54,6 +54,15 @@
 #define  EMMC_APP_CMD               55
 #define  EMMC_GEN_CMD               56
 
+//
+// EXT_CSD bus width values (byte 183) and enhanced strobe (BIT7).
+//
+#define  EMMC_BUS_WIDTH_4       1
+#define  EMMC_BUS_WIDTH_8       2
+#define  EMMC_BUS_WIDTH_4_DDR   5
+#define  EMMC_BUS_WIDTH_8_DDR   6
+#define  EMMC_BUS_WIDTH_STROBE  BIT7
+
 typedef enum {
   EmmcPartitionUserData = 0,
   EmmcPartitionBoot1    = 1,
@@ -191,7 +200,7 @@ typedef struct {
   UINT8    ErasedMemCont;                         // Erased memory content R [181]
   UINT8    Reserved9;                             // Reserved [182]
   UINT8    BusWidth;                              // Bus width mode W/EP [183]
-  UINT8    Reserved10;                            // Reserved [184]
+  UINT8    StrobeSupport;                         // Enhanced strobe support R [184]
   UINT8    HsTiming;                              // High-speed interface timing R/W/EP [185]
   UINT8    Reserved11;                            // Reserved [186]
   UINT8    PowerClass;                            // Power class R/W/EP [187]

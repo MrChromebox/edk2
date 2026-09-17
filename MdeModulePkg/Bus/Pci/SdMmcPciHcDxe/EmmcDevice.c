@@ -9,6 +9,12 @@
 
 #include "SdMmcPciHcDxe.h"
 
+//
+// Intel SDHCI vendor register for HS400 Enhanced Strobe (Linux INTEL_HS400_ES_REG).
+//
+#define INTEL_HS400_ES_REG  0x78
+#define INTEL_HS400_ES_BIT  BIT0
+
 /**
   Send command GO_IDLE_STATE (CMD0 with argument of 0x00000000) to the device to
   make it go to Idle State.
@@ -621,13 +627,13 @@ EmmcCheckSwitchStatus (
   Refer to EMMC Electrical Standard Spec 5.1 Section 6.6.9 and SD Host Controller
   Simplified Spec 3.0 Figure 3-7 for details.
 
-  @param[in] PciIo          A pointer to the EFI_PCI_IO_PROTOCOL instance.
-  @param[in] PassThru       A pointer to the EFI_SD_MMC_PASS_THRU_PROTOCOL instance.
-  @param[in] Slot           The slot number of the SD card to send the command to.
-  @param[in] Rca            The relative device address to be assigned.
-  @param[in] IsDdr          If TRUE, use dual data rate data simpling method. Otherwise
-                            use single data rate data simpling method.
-  @param[in] BusWidth       The bus width to be set, it could be 4 or 8.
+  @param[in] PciIo            The PCI IO protocol instance.
+  @param[in] PassThru         The SD/MMC PassThru protocol instance.
+  @param[in] Slot             Slot index.
+  @param[in] Rca              Relative card address.
+  @param[in] IsDdr            TRUE for dual data rate sampling.
+  @param[in] BusWidth         Bus width (4 or 8).
+  @param[in] EnhancedStrobe   TRUE to set EXT_CSD bus-width strobe bit (HS400-ES).
 
   @retval EFI_SUCCESS       The operation is done correctly.
   @retval Others            The operation fails.
@@ -640,7 +646,8 @@ EmmcSwitchBusWidth (
   IN UINT8                          Slot,
   IN UINT16                         Rca,
   IN BOOLEAN                        IsDdr,
-  IN UINT8                          BusWidth
+  IN UINT8                          BusWidth,
+  IN BOOLEAN                        EnhancedStrobe
   )
 {
   EFI_STATUS  Status;
@@ -655,15 +662,15 @@ EmmcSwitchBusWidth (
   Access = 0x03;
   Index  = OFFSET_OF (EMMC_EXT_CSD, BusWidth);
   if (BusWidth == 4) {
-    Value = 1;
+    Value = IsDdr ? EMMC_BUS_WIDTH_4_DDR : EMMC_BUS_WIDTH_4;
   } else if (BusWidth == 8) {
-    Value = 2;
+    Value = IsDdr ? EMMC_BUS_WIDTH_8_DDR : EMMC_BUS_WIDTH_8;
   } else {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (IsDdr) {
-    Value += 4;
+  if (EnhancedStrobe) {
+    Value |= EMMC_BUS_WIDTH_STROBE;
   }
 
   CmdSet = 0;
@@ -678,9 +685,7 @@ EmmcSwitchBusWidth (
     return Status;
   }
 
-  Status = SdMmcHcSetBusWidth (PciIo, Slot, BusWidth);
-
-  return Status;
+  return SdMmcHcSetBusWidth (PciIo, Slot, BusWidth);
 }
 
 /**
@@ -851,7 +856,7 @@ EmmcSwitchToHighSpeed (
     IsDdr = FALSE;
   }
 
-  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, IsDdr, BusMode->BusWidth);
+  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, IsDdr, BusMode->BusWidth, FALSE);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -892,7 +897,7 @@ EmmcSwitchToHS200 (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, FALSE, BusMode->BusWidth);
+  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, FALSE, BusMode->BusWidth, FALSE);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -919,6 +924,151 @@ EmmcSwitchToHS200 (
   Status = EmmcTuningClkForHs200 (PciIo, PassThru, Slot, BusMode->BusWidth);
 
   return Status;
+}
+
+/**
+  TRUE if this Intel SDHCI host exposes the HS400-ES vendor register (0x78).
+
+  Device list matches Linux sdhci-pci glk_emmc path (MMC_CAP2_HS400_ES),
+  excluding Gemini Lake which does not enable ES.
+**/
+STATIC
+BOOLEAN
+IntelHostSupportsHs400Es (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo
+  )
+{
+  PCI_TYPE00  Pci;
+
+  if (PciIo->Pci.Read (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   0,
+                   sizeof (Pci) / sizeof (UINT32),
+                   &Pci
+                   ) != EFI_SUCCESS)
+  {
+    return FALSE;
+  }
+
+  if (Pci.Hdr.VendorId != 0x8086) {
+    return FALSE;
+  }
+
+  switch (Pci.Hdr.DeviceId) {
+    case 0x18DB: // CDF
+    case 0x9DC4: // CNP
+    case 0x34C4: // ICP
+    case 0x4B47: // EHL
+    case 0x02C4: // CML
+    case 0x4DC4: // JSL
+    case 0x98C4: // LKF
+    case 0x54C4: // ADL-N / Twin Lake
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+/**
+  Enable or disable Intel HS400 Enhanced Strobe (MMIO 0x78 BIT0).
+**/
+STATIC
+EFI_STATUS
+IntelHs400EnhancedStrobe (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot,
+  IN BOOLEAN              Enable
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      Value;
+
+  Status = SdMmcHcRwMmio (PciIo, Slot, INTEL_HS400_ES_REG, TRUE, sizeof (Value), &Value);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (Enable) {
+    Value |= INTEL_HS400_ES_BIT;
+  } else {
+    Value &= ~INTEL_HS400_ES_BIT;
+  }
+
+  return SdMmcHcRwMmio (PciIo, Slot, INTEL_HS400_ES_REG, FALSE, sizeof (Value), &Value);
+}
+
+/**
+  Switch to HS400 Enhanced Strobe. Matches Linux mmc_select_hs400es().
+**/
+STATIC
+EFI_STATUS
+EmmcSwitchToHS400ES (
+  IN EFI_PCI_IO_PROTOCOL            *PciIo,
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN UINT8                          Slot,
+  IN UINT16                         Rca,
+  IN SD_MMC_BUS_SETTINGS            *BusMode
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      HsFreq;
+
+  if ((BusMode->BusTiming != SdMmcMmcHs400) || (BusMode->BusWidth != 8)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, FALSE, 8, FALSE);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  HsFreq = (BusMode->ClockFreq < 52) ? BusMode->ClockFreq : 52;
+  Status = EmmcSwitchBusTiming (
+             PciIo,
+             PassThru,
+             Slot,
+             Rca,
+             BusMode->DriverStrength,
+             SdMmcMmcHsSdr,
+             HsFreq
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, TRUE, 8, TRUE);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = EmmcSwitchBusTiming (
+             PciIo,
+             PassThru,
+             Slot,
+             Rca,
+             BusMode->DriverStrength,
+             SdMmcMmcHs400,
+             BusMode->ClockFreq
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = IntelHs400EnhancedStrobe (PciIo, Slot, TRUE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "EmmcSwitchToHS400ES: host ES enable fails with %r\n", Status));
+    return Status;
+  }
+
+  Status = EmmcCheckSwitchStatus (PassThru, Slot, Rca);
+  if (EFI_ERROR (Status)) {
+    IntelHs400EnhancedStrobe (PciIo, Slot, FALSE);
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "EmmcSwitchToHS400ES: HS400-ES @ %d MHz\n", BusMode->ClockFreq));
+  return EFI_SUCCESS;
 }
 
 /**
@@ -976,7 +1126,7 @@ EmmcSwitchToHS400 (
     return Status;
   }
 
-  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, TRUE, BusMode->BusWidth);
+  Status = EmmcSwitchBusWidth (PciIo, PassThru, Slot, Rca, TRUE, BusMode->BusWidth, FALSE);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1041,11 +1191,12 @@ EmmcIsBusTimingSupported (
 
       break;
     default:
-      ASSERT (FALSE);
+      break;
   }
 
   return Supported;
 }
+
 
 /**
   Get the target bus timing to set on the link. This function
@@ -1321,9 +1472,23 @@ EmmcSetBusMode (
 
   if (BusMode.BusTiming == SdMmcMmcHs400) {
     //
-    // Execute HS400 timing switch procedure
+    // Prefer HS400-ES when card reports strobe support and the Intel host
+    // implements the enhanced-strobe register (Linux glk_emmc path).
+    // Fall back to plain HS400 on failure.
     //
-    Status = EmmcSwitchToHS400 (PciIo, PassThru, Slot, Rca, &BusMode);
+    if ((ExtCsd.StrobeSupport != 0) && IntelHostSupportsHs400Es (PciIo)) {
+      Status = EmmcSwitchToHS400ES (PciIo, PassThru, Slot, Rca, &BusMode);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_WARN,
+          "EmmcSetBusMode: HS400-ES failed (%r), falling back to HS400\n",
+          Status
+          ));
+        Status = EmmcSwitchToHS400 (PciIo, PassThru, Slot, Rca, &BusMode);
+      }
+    } else {
+      Status = EmmcSwitchToHS400 (PciIo, PassThru, Slot, Rca, &BusMode);
+    }
   } else if (BusMode.BusTiming == SdMmcMmcHs200) {
     //
     // Execute HS200 timing switch procedure
@@ -1359,7 +1524,12 @@ EmmcSetBusMode (
     Status = EmmcSwitchToHighSpeed (PciIo, PassThru, Slot, Rca, &BusMode);
   }
 
-  DEBUG ((DEBUG_INFO, "EmmcSetBusMode: Switch to %a %r\n", (BusMode.BusTiming == SdMmcMmcHs400) ? "HS400" : ((BusMode.BusTiming == SdMmcMmcHs200) ? "HS200" : "HighSpeed"), Status));
+  DEBUG ((
+    DEBUG_INFO,
+    "EmmcSetBusMode: Switch to %a %r\n",
+    (BusMode.BusTiming == SdMmcMmcHs400) ? "HS400/HS400-ES" : ((BusMode.BusTiming == SdMmcMmcHs200) ? "HS200" : "HighSpeed"),
+    Status
+    ));
 
   return Status;
 }
