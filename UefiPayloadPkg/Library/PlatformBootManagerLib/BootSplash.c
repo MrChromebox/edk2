@@ -11,8 +11,7 @@
 #include <Protocol/BootLogo2.h>
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/PlatformLogo.h>
-#include <Library/BmpSupportLib.h>
-#include <Library/FileHandleLib.h>
+#include <Library/BootSplashLib.h>
 
 /**
   Read a UINT8 boot splash NVRAM variable or return DefaultValue.
@@ -55,26 +54,19 @@ BootSplashDisplayCustom (
   VOID
   )
 {
-  EFI_STATUS                             Status;
-  UINTN                                  DataSize;
-  EFI_DEVICE_PATH_PROTOCOL               *StoredPath;
-  EFI_DEVICE_PATH_PROTOCOL               *FilePath;
-  EFI_DEVICE_PATH_PROTOCOL               *FilePathWalk;
-  EFI_FILE_HANDLE                        FileHandle;
-  UINT64                                 FileSize64;
-  UINTN                                  FileSize;
-  VOID                                   *BmpBuffer;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL          *Blt;
-  UINTN                                  BltSize;
-  UINTN                                  Height;
-  UINTN                                  Width;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL           *GraphicsOutput;
-  EFI_BOOT_LOGO_PROTOCOL                 *BootLogo;
-  EDKII_BOOT_LOGO2_PROTOCOL              *BootLogo2;
-  INTN                                   DestX;
-  INTN                                   DestY;
-  UINT32                                 SizeOfX;
-  UINT32                                 SizeOfY;
+  EFI_STATUS                     Status;
+  UINTN                          DataSize;
+  EFI_DEVICE_PATH_PROTOCOL       *StoredPath;
+  VOID                           *BmpBuffer;
+  UINTN                          BmpSize;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *Blt;
+  UINTN                          Height;
+  UINTN                          Width;
+  INTN                           DestX;
+  INTN                           DestY;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
+  EFI_BOOT_LOGO_PROTOCOL         *BootLogo;
+  EDKII_BOOT_LOGO2_PROTOCOL      *BootLogo2;
 
   StoredPath = AllocateZeroPool (BOOT_SPLASH_PATH_MAX_SIZE);
   if (StoredPath == NULL) {
@@ -96,58 +88,23 @@ BootSplashDisplayCustom (
     return EFI_NOT_FOUND;
   }
 
-  FilePath = DuplicateDevicePath (StoredPath);
+  BmpBuffer = NULL;
+  BmpSize   = 0;
+  Status    = BootSplashReadFile (StoredPath, &BmpBuffer, &BmpSize);
   FreePool (StoredPath);
-  if (FilePath == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  FileHandle   = NULL;
-  FilePathWalk = FilePath;
-  Status       = EfiOpenFileByDevicePath (
-                   &FilePathWalk,
-                   &FileHandle,
-                   EFI_FILE_MODE_READ,
-                   0
-                   );
-  FreePool (FilePath);
-
-  if (EFI_ERROR (Status) || (FileHandle == NULL)) {
-    return EFI_ERROR (Status) ? Status : EFI_NOT_FOUND;
-  }
-
-  Status = FileHandleGetSize (FileHandle, &FileSize64);
-  if (EFI_ERROR (Status) || (FileSize64 == 0) || (FileSize64 > MAX_UINTN)) {
-    FileHandleClose (FileHandle);
-    return EFI_UNSUPPORTED;
-  }
-
-  FileSize  = (UINTN)FileSize64;
-  BmpBuffer = AllocatePool (FileSize);
-  if (BmpBuffer == NULL) {
-    FileHandleClose (FileHandle);
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  Status = FileHandleRead (FileHandle, &FileSize, BmpBuffer);
-  FileHandleClose (FileHandle);
   if (EFI_ERROR (Status)) {
-    FreePool (BmpBuffer);
     return Status;
   }
 
-  Blt     = NULL;
-  BltSize = 0;
-  Height  = 0;
-  Width   = 0;
-  Status  = TranslateBmpToGopBlt (BmpBuffer, FileSize, &Blt, &BltSize, &Height, &Width);
+  Blt    = NULL;
+  Width  = 0;
+  Height = 0;
+  DestX  = 0;
+  DestY  = 0;
+  Status = BootSplashDecodeBmp (BmpBuffer, BmpSize, &Blt, &Width, &Height, &DestX, &DestY);
   FreePool (BmpBuffer);
-  if (EFI_ERROR (Status) || (Blt == NULL) || (Width == 0) || (Height == 0)) {
-    if (Blt != NULL) {
-      FreePool (Blt);
-    }
-
-    return EFI_UNSUPPORTED;
+  if (EFI_ERROR (Status) || (Blt == NULL)) {
+    return EFI_ERROR (Status) ? Status : EFI_UNSUPPORTED;
   }
 
   Status = gBS->HandleProtocol (
@@ -158,25 +115,6 @@ BootSplashDisplayCustom (
   if (EFI_ERROR (Status)) {
     FreePool (Blt);
     return Status;
-  }
-
-  SizeOfX = GraphicsOutput->Mode->Info->HorizontalResolution;
-  SizeOfY = GraphicsOutput->Mode->Info->VerticalResolution;
-  if ((Width > SizeOfX) || (Height > SizeOfY)) {
-    FreePool (Blt);
-    return EFI_UNSUPPORTED;
-  }
-
-  DestX = (INTN)(SizeOfX - Width) / 2;
-  if (FixedPcdGetBool (PcdFollowBGRTSpecification)) {
-    DestY = (INTN)(SizeOfY * 382) / 1000 - (INTN)Height / 2;
-  } else {
-    DestY = (INTN)(SizeOfY - Height) / 2;
-  }
-
-  if ((DestX < 0) || (DestY < 0)) {
-    FreePool (Blt);
-    return EFI_UNSUPPORTED;
   }
 
   gST->ConOut->EnableCursor (gST->ConOut, FALSE);

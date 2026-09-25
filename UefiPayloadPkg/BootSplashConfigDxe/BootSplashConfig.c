@@ -2,7 +2,7 @@
   Boot Splash Config DXE driver.
 
   Provides a Platform Setup formset to enable/disable the boot splash,
-  choose default vs custom logo, and browse for a custom BMP file.
+  choose default vs custom logo, and import a custom BMP onto the ESP.
 
   Copyright (c) 2026
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -59,7 +59,7 @@ BootSplashSeedDefaults (
                     &Value
                     );
   if (Status == EFI_NOT_FOUND) {
-    Value = BOOT_SPLASH_ENABLE_DEFAULT;
+    Value  = BOOT_SPLASH_ENABLE_DEFAULT;
     Status = gRT->SetVariable (
                     BOOT_SPLASH_ENABLE_VARIABLE_NAME,
                     &gUefiPayloadBootSplashGuid,
@@ -81,7 +81,7 @@ BootSplashSeedDefaults (
                     &Value
                     );
   if (Status == EFI_NOT_FOUND) {
-    Value = BOOT_SPLASH_TYPE_DEFAULT_VALUE;
+    Value  = BOOT_SPLASH_TYPE_DEFAULT_VALUE;
     Status = gRT->SetVariable (
                     BOOT_SPLASH_TYPE_VARIABLE_NAME,
                     &gUefiPayloadBootSplashGuid,
@@ -96,6 +96,27 @@ BootSplashSeedDefaults (
 }
 
 /**
+  Show a simple popup with Message and wait for a key.
+**/
+STATIC
+VOID
+BootSplashPopup (
+  IN CONST CHAR16  *Message
+  )
+{
+  EFI_INPUT_KEY  Key;
+
+  CreatePopUp (
+    EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+    &Key,
+    Message,
+    L"",
+    L"Press any key to continue...",
+    NULL
+    );
+}
+
+/**
   Update the path display string from BootSplashPath.
 **/
 STATIC
@@ -107,7 +128,6 @@ BootSplashUpdatePathDisplay (
   EFI_STATUS                Status;
   UINTN                     DataSize;
   EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-  CHAR16                    *PathText;
 
   DevicePath = AllocateZeroPool (BOOT_SPLASH_PATH_MAX_SIZE);
   if (DevicePath == NULL) {
@@ -122,23 +142,23 @@ BootSplashUpdatePathDisplay (
                     &DataSize,
                     DevicePath
                     );
-  if (EFI_ERROR (Status) || (DataSize < sizeof (EFI_DEVICE_PATH_PROTOCOL)) ||
-      !IsDevicePathValid (DevicePath, DataSize))
-  {
-    HiiSetString (HiiHandle, STRING_TOKEN (STR_BOOT_SPLASH_PATH_VALUE), L"<none selected>", NULL);
-    FreePool (DevicePath);
-    return;
-  }
-
-  PathText = ConvertDevicePathToText (DevicePath, FALSE, FALSE);
   FreePool (DevicePath);
-  if (PathText == NULL) {
+
+  if (EFI_ERROR (Status) || (DataSize < sizeof (EFI_DEVICE_PATH_PROTOCOL))) {
     HiiSetString (HiiHandle, STRING_TOKEN (STR_BOOT_SPLASH_PATH_VALUE), L"<none selected>", NULL);
     return;
   }
 
-  HiiSetString (HiiHandle, STRING_TOKEN (STR_BOOT_SPLASH_PATH_VALUE), PathText, NULL);
-  FreePool (PathText);
+  //
+  // Imports always land at the fixed ESP path; show that instead of a raw
+  // device path so the user knows the USB stick is no longer required.
+  //
+  HiiSetString (
+    HiiHandle,
+    STRING_TOKEN (STR_BOOT_SPLASH_PATH_VALUE),
+    BOOT_SPLASH_ESP_DISPLAY,
+    NULL
+    );
 }
 
 /**
@@ -223,8 +243,9 @@ BootSplashCallback (
   OUT EFI_BROWSER_ACTION_REQUEST            *ActionRequest
   )
 {
-  EFI_STATUS                Status;
-  EFI_DEVICE_PATH_PROTOCOL  *FileDevPath;
+  EFI_STATUS                  Status;
+  EFI_DEVICE_PATH_PROTOCOL    *FileDevPath;
+  EFI_DEVICE_PATH_PROTOCOL    *EspPath;
   BOOT_SPLASH_CONFIG_PRIVATE  *Private;
 
   if ((This == NULL) || (ActionRequest == NULL)) {
@@ -253,13 +274,30 @@ BootSplashCallback (
     return EFI_SUCCESS;
   }
 
-  Status = BootSplashSavePath (FileDevPath);
-  if (!EFI_ERROR (Status)) {
-    BootSplashUpdatePathDisplay (Private->HiiHandle);
-    *ActionRequest = EFI_BROWSER_ACTION_REQUEST_FORM_APPLY;
+  EspPath = NULL;
+  Status  = BootSplashImportBmpToEsp (FileDevPath, &EspPath);
+  FreePool (FileDevPath);
+  if (EFI_ERROR (Status)) {
+    if (Status == EFI_UNSUPPORTED) {
+      BootSplashPopup (L"Selected file is not a valid boot splash BMP (max 4 MiB, must fit the display).");
+    } else if (Status == EFI_NOT_FOUND) {
+      BootSplashPopup (L"Could not find an EFI System Partition.");
+    } else {
+      BootSplashPopup (L"Could not copy logo to EFI System Partition.");
+    }
+
+    return EFI_SUCCESS;
   }
 
-  FreePool (FileDevPath);
+  Status = BootSplashSavePath (EspPath);
+  FreePool (EspPath);
+  if (EFI_ERROR (Status)) {
+    BootSplashPopup (L"Logo was copied, but saving the path failed.");
+    return EFI_SUCCESS;
+  }
+
+  BootSplashUpdatePathDisplay (Private->HiiHandle);
+  *ActionRequest = EFI_BROWSER_ACTION_REQUEST_FORM_APPLY;
   return EFI_SUCCESS;
 }
 

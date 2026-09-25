@@ -2,7 +2,7 @@
 #  Boot Splash Config DXE Driver
 #
 #  Platform Setup formset for enabling/disabling the boot splash logo and
-#  selecting a custom BMP from the filesystem.
+#  importing a custom BMP onto the EFI System Partition.
 #
 #  Copyright (c) 2026
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -31,6 +31,7 @@
 [LibraryClasses]
   BaseLib
   BaseMemoryLib
+  BootSplashLib
   DebugLib
   DevicePathLib
   FileExplorerLib

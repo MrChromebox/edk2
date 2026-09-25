@@ -19,6 +19,7 @@
 
 [LibraryClasses]
   PayloadEntryHelperLib|Include/Library/PayloadEntryHelperLib.h
+  BootSplashLib|Include/Library/BootSplashLib.h
 
 [Guids]
   # SMMSTORE for coreboot and EDK-2

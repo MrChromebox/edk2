@@ -17,15 +17,15 @@
 #string STR_BOOT_SPLASH_ENABLE_HELP         #language en-US "Enable or disable displaying a logo during boot"
 
 #string STR_BOOT_SPLASH_TYPE_PROMPT         #language en-US "Logo source"
-#string STR_BOOT_SPLASH_TYPE_HELP           #language en-US "Use the built-in logo or a custom BMP from the filesystem"
+#string STR_BOOT_SPLASH_TYPE_HELP           #language en-US "Use the built-in logo or a custom BMP copied to the EFI System Partition"
 #string STR_BOOT_SPLASH_TYPE_DEFAULT        #language en-US "Default"
 #string STR_BOOT_SPLASH_TYPE_CUSTOM         #language en-US "Custom"
 
 #string STR_BOOT_SPLASH_PATH_PROMPT         #language en-US "Custom logo file"
-#string STR_BOOT_SPLASH_PATH_HELP           #language en-US "BMP file used when Logo source is Custom"
+#string STR_BOOT_SPLASH_PATH_HELP           #language en-US "BMP stored on the EFI System Partition when Logo source is Custom. Removable media is not required after import."
 #string STR_BOOT_SPLASH_PATH_VALUE          #language en-US "<none selected>"
 
 #string STR_BOOT_SPLASH_BROWSE_PROMPT       #language en-US "Browse for BMP..."
-#string STR_BOOT_SPLASH_BROWSE_HELP         #language en-US "Open the file explorer and select a .bmp logo file"
+#string STR_BOOT_SPLASH_BROWSE_HELP         #language en-US "Select a BMP (max 4 MiB, must fit the display). It is copied to the EFI System Partition and used on every boot. Removable media can be removed afterward."
 
 #string STR_NULL_STRING                     #language en-US ""

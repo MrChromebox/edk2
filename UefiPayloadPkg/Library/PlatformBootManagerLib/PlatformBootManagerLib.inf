@@ -42,8 +42,7 @@
   UefiLib
   UefiBootManagerLib
   BootLogoLib
-  BmpSupportLib
-  FileHandleLib
+  BootSplashLib
   PcdLib
   DxeServicesLib
   MemoryAllocationLib

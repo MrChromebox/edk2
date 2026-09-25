@@ -13,6 +13,7 @@
 #include <Guid/HiiPlatformSetupFormset.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BootSplashLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/FileExplorerLib.h>

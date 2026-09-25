@@ -1,0 +1,44 @@
+## @file
+#  Shared boot splash BMP validation and ESP import helpers.
+#
+#  Copyright (c) 2026
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootSplashLib
+  FILE_GUID                      = 6C8E2F41-9A7B-4D2E-B1C5-8F3A0E6D94A2
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = BootSplashLib|DXE_DRIVER DXE_RUNTIME_DRIVER UEFI_DRIVER UEFI_APPLICATION
+
+[Sources]
+  BootSplashLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  BmpSupportLib
+  DebugLib
+  DevicePathLib
+  FileHandleLib
+  MemoryAllocationLib
+  PcdLib
+  UefiBootServicesTableLib
+  UefiLib
+
+[Guids]
+  gEfiPartTypeSystemPartGuid
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFollowBGRTSpecification

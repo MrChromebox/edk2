@@ -33,6 +33,19 @@
 
 #define BOOT_SPLASH_PATH_MAX_SIZE  512
 
+#ifndef VFRCOMPILE
+//
+// Custom logos are copied to a fixed ESP path. 4 MiB covers typical centered
+// logos and WXGA full-frame 24-bit BMPs while rejecting accidental huge dumps.
+//
+#define BOOT_SPLASH_MAX_FILE_SIZE   0x400000
+#define BOOT_SPLASH_ESP_DIR_EFI     L"EFI"
+#define BOOT_SPLASH_ESP_DIR_NAME    L"BootSplash"
+#define BOOT_SPLASH_ESP_FILE_NAME   L"logo.bmp"
+#define BOOT_SPLASH_ESP_FILE_PATH   L"\\EFI\\BootSplash\\logo.bmp"
+#define BOOT_SPLASH_ESP_DISPLAY     L"EFI System Partition:\\EFI\\BootSplash\\logo.bmp"
+#endif
+
 #pragma pack(1)
 
 typedef struct {
