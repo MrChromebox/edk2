@@ -26,6 +26,6 @@
 #string STR_BOOT_SPLASH_PATH_VALUE          #language en-US "<none selected>"
 
 #string STR_BOOT_SPLASH_BROWSE_PROMPT       #language en-US "Browse for BMP..."
-#string STR_BOOT_SPLASH_BROWSE_HELP         #language en-US "Select a BMP (max 4 MiB, must fit the display). It is copied to the EFI System Partition and used on every boot. Removable media can be removed afterward."
+#string STR_BOOT_SPLASH_BROWSE_HELP         #language en-US "Select a Windows 24-bit BMP (uncompressed, max 4 MiB, must fit the display). It is copied to the EFI System Partition and used on every boot. Removable media can be removed afterward.\n\nTo convert an image with ImageMagick:\nconvert -background None input.ext BMP3:logo.bmp\n\nAdd -resize WxH before the output file to scale it."
 
 #string STR_NULL_STRING                     #language en-US ""

@@ -96,24 +96,37 @@ BootSplashSeedDefaults (
 }
 
 /**
-  Show a simple popup with Message and wait for a key.
+  Show a simple popup with one or two message lines and wait for a key.
 **/
 STATIC
 VOID
 BootSplashPopup (
-  IN CONST CHAR16  *Message
+  IN CONST CHAR16  *Line1,
+  IN CONST CHAR16  *Line2 OPTIONAL
   )
 {
   EFI_INPUT_KEY  Key;
 
-  CreatePopUp (
-    EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
-    &Key,
-    Message,
-    L"",
-    L"Press any key to continue...",
-    NULL
-    );
+  if (Line2 == NULL) {
+    CreatePopUp (
+      EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+      &Key,
+      Line1,
+      L"",
+      L"Press any key to continue...",
+      NULL
+      );
+  } else {
+    CreatePopUp (
+      EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+      &Key,
+      Line1,
+      Line2,
+      L"",
+      L"Press any key to continue...",
+      NULL
+      );
+  }
 }
 
 /**
@@ -279,11 +292,14 @@ BootSplashCallback (
   FreePool (FileDevPath);
   if (EFI_ERROR (Status)) {
     if (Status == EFI_UNSUPPORTED) {
-      BootSplashPopup (L"Selected file is not a valid boot splash BMP (max 4 MiB, must fit the display).");
+      BootSplashPopup (
+        L"Selected file is not a valid boot splash image.",
+        L"Use a Windows 24-bit BMP (BMP3), max 4 MiB, that fits the display."
+        );
     } else if (Status == EFI_NOT_FOUND) {
-      BootSplashPopup (L"Could not find an EFI System Partition.");
+      BootSplashPopup (L"Could not find an EFI System Partition.", NULL);
     } else {
-      BootSplashPopup (L"Could not copy logo to EFI System Partition.");
+      BootSplashPopup (L"Could not copy logo to EFI System Partition.", NULL);
     }
 
     return EFI_SUCCESS;
@@ -292,7 +308,7 @@ BootSplashCallback (
   Status = BootSplashSavePath (EspPath);
   FreePool (EspPath);
   if (EFI_ERROR (Status)) {
-    BootSplashPopup (L"Logo was copied, but saving the path failed.");
+    BootSplashPopup (L"Logo was copied, but saving the path failed.", NULL);
     return EFI_SUCCESS;
   }
 
