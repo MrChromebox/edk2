@@ -731,15 +731,6 @@ SdMmcPciHcDriverBindingStart (
       continue;
     }
 
-    //
-    // Bayhub/O2 Micro eMMC controllers may report a removable slot type in the
-    // SDHCI capability register even when the attached device is soldered-down
-    // eMMC. Treat Bayhub as EmbeddedSlot so we don't skip eMMC probing.
-    //
-    if (BhtHostPciSupport (PciIo)) {
-      Private->Capability[Slot].SlotType = EmbeddedSlot;
-    }
-
     Private->Slot[Slot].SlotType = Private->Capability[Slot].SlotType;
     if ((Private->Slot[Slot].SlotType != RemovableSlot) && (Private->Slot[Slot].SlotType != EmbeddedSlot)) {
       DEBUG ((DEBUG_INFO, "SdMmcPciHcDxe doesn't support the slot type [%d]!!!\n", Private->Slot[Slot].SlotType));
