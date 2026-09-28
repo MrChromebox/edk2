@@ -113,9 +113,9 @@ UiSupportLibCallbackHandler (
 
       case FRONT_PAGE_KEY_RESET:
         //
-        // Reset
+        // Warm reset keeps in-memory requests (e.g. TPM PPI) across the reboot.
         //
-        gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+        gRT->ResetSystem (EfiResetWarm, EFI_SUCCESS, 0, NULL);
         *Status = EFI_UNSUPPORTED;
 
       default:
