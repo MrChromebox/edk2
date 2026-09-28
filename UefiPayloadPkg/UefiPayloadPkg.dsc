@@ -1381,12 +1381,6 @@
   !include NetworkPkg/NetworkLibs.dsc.inc
 
 [Components.X64, Components.AARCH64]
-  ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf {
-    <PcdsFixedAtBuild>
-      ## This flag is used to control initialization of the shell library
-      #  This should be FALSE for compiling the dynamic command.
-      gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
-  }
 !if $(PERFORMANCE_MEASUREMENT_ENABLE) == TRUE
   ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf {
     <PcdsFixedAtBuild>
@@ -1410,15 +1404,6 @@
       NULL|ShellPkg/Library/UefiShellLevel2CommandsLib/UefiShellLevel2CommandsLib.inf
       NULL|ShellPkg/Library/UefiShellLevel3CommandsLib/UefiShellLevel3CommandsLib.inf
       NULL|ShellPkg/Library/UefiShellDriver1CommandsLib/UefiShellDriver1CommandsLib.inf
-      NULL|ShellPkg/Library/UefiShellInstall1CommandsLib/UefiShellInstall1CommandsLib.inf
-      NULL|ShellPkg/Library/UefiShellDebug1CommandsLib/UefiShellDebug1CommandsLib.inf
-
-    #------------------------------
-    #  Networking commands
-    #------------------------------
-
-    <LibraryClasses>
-      NULL|ShellPkg/Library/UefiShellNetwork1CommandsLib/UefiShellNetwork1CommandsLib.inf
 
     #------------------------------
     #  Support libraries

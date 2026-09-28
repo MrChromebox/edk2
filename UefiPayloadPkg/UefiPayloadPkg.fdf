@@ -334,12 +334,10 @@ INF FatPkg/EnhancedFatDxe/Fat.inf
 !if $(ARCH) == IA32
 INF  RuleOverride=BINARY USE = IA32 FSDrivers/exfat.inf
 INF  RuleOverride=BINARY USE = IA32 FSDrivers/ext2.inf
-INF  RuleOverride=BINARY USE = IA32 FSDrivers/ntfs.inf
 INF  RuleOverride=BINARY USE = IA32 FSDrivers/ext4.inf
 !else
 INF  RuleOverride=BINARY USE = X64 FSDrivers/exfat.inf
 INF  RuleOverride=BINARY USE = X64 FSDrivers/ext2.inf
-INF  RuleOverride=BINARY USE = X64 FSDrivers/ntfs.inf
 INF  RuleOverride=BINARY USE = X64 FSDrivers/ext4.inf
 !endif
 
@@ -395,7 +393,6 @@ INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
 # Shell
 #
 !if $(SHELL_TYPE) == BUILD_SHELL
-INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
 !if $(PERFORMANCE_MEASUREMENT_ENABLE) == TRUE
 INF ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf
 !endif
