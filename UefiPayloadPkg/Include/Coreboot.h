@@ -266,6 +266,17 @@ struct cb_sdhci_nonpci {
   struct cb_sdhci_nonpci_control    ctrl[8];
 };
 
+#define CB_TAG_BOOT_MEDIA_PARAMS  0x0030
+struct cb_boot_media_params {
+  UINT32    tag;
+  UINT32    size;
+  /* offsets are relative to start of boot media */
+  UINT64    fmap_offset;
+  UINT64    cbfs_offset;
+  UINT64    cbfs_size;
+  UINT64    boot_media_size;
+} __attribute__ ((packed));
+
 #define CB_TAG_SMMSTOREV2  0x0039
 struct cb_smmstorev2 {
   UINT32    tag;
