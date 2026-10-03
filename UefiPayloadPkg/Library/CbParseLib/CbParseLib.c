@@ -1038,3 +1038,41 @@ ParseTPMPPIInfo (
 
   return RETURN_SUCCESS;
 }
+
+/**
+  Find the boot media (flash) layout passed in by bootloader
+
+  @param  BootMediaInfo      Pointer to the BOOT_MEDIA_INFO structure
+
+  @retval RETURN_SUCCESS            Successfully found the boot media information.
+  @retval RETURN_INVALID_PARAMETER  The parameter is NULL.
+  @retval RETURN_NOT_FOUND          Failed to find the boot media information.
+**/
+RETURN_STATUS
+EFIAPI
+ParseBootMediaInfo (
+  OUT BOOT_MEDIA_INFO  *BootMediaInfo
+  )
+{
+  struct cb_boot_media_params  *CbBmpRec;
+
+  if (BootMediaInfo == NULL) {
+    return RETURN_INVALID_PARAMETER;
+  }
+
+  CbBmpRec = FindCbTag (CB_TAG_BOOT_MEDIA_PARAMS);
+  if (CbBmpRec == NULL) {
+    return RETURN_NOT_FOUND;
+  }
+
+  BootMediaInfo->FmapOffset    = CbBmpRec->fmap_offset;
+  BootMediaInfo->CbfsOffset    = CbBmpRec->cbfs_offset;
+  BootMediaInfo->CbfsSize      = CbBmpRec->cbfs_size;
+  BootMediaInfo->BootMediaSize = CbBmpRec->boot_media_size;
+
+  DEBUG ((DEBUG_INFO, "Found boot media information\n"));
+  DEBUG ((DEBUG_INFO, "boot media size: 0x%lx\n", BootMediaInfo->BootMediaSize));
+  DEBUG ((DEBUG_INFO, "CBFS offset: 0x%lx, size: 0x%lx\n", BootMediaInfo->CbfsOffset, BootMediaInfo->CbfsSize));
+
+  return RETURN_SUCCESS;
+}

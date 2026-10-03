@@ -18,6 +18,7 @@
 #include <UniversalPayload/AcpiTable.h>
 #include <UniversalPayload/SmbiosTable.h>
 #include <Guid/TcgPhysicalPresenceGuid.h>
+#include <Guid/BootMediaInfoGuid.h>
 
 #define GET_BOOTLOADER_PARAMETER()  PcdGet64 (PcdBootloaderParameter)
 
@@ -197,4 +198,20 @@ RETURN_STATUS
 EFIAPI
 ParseTPMPPIInfo (
   OUT TCG_PHYSICAL_PRESENCE_INFO       *PPIInfo
+  );
+
+/**
+  Find the boot media (flash) layout passed in by bootloader
+
+  @param  BootMediaInfo      Pointer to the BOOT_MEDIA_INFO structure
+
+  @retval RETURN_SUCCESS            Successfully found the boot media information.
+  @retval RETURN_INVALID_PARAMETER  The parameter is NULL.
+  @retval RETURN_NOT_FOUND          Failed to find the boot media information.
+
+**/
+RETURN_STATUS
+EFIAPI
+ParseBootMediaInfo (
+  OUT BOOT_MEDIA_INFO  *BootMediaInfo
   );

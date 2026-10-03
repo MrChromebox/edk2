@@ -363,3 +363,19 @@ ParseTPMPPIInfo (
 {
   return RETURN_NOT_FOUND;
 }
+
+/**
+  Find the boot media (flash) layout passed in by bootloader
+
+  @param  BootMediaInfo      Pointer to the BOOT_MEDIA_INFO structure
+
+  @retval RETURN_NOT_FOUND   Not supported by Slim Bootloader.
+**/
+RETURN_STATUS
+EFIAPI
+ParseBootMediaInfo (
+  OUT BOOT_MEDIA_INFO  *BootMediaInfo
+  )
+{
+  return RETURN_NOT_FOUND;
+}

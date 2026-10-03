@@ -346,6 +346,8 @@ BuildHobFromBl (
   FIRMWARE_INFO                     *NewFirmwareInfo;
   TCG_PHYSICAL_PRESENCE_INFO        PhysicalPresenceInfo;
   TCG_PHYSICAL_PRESENCE_INFO        *NewPhysicalPresenceInfo;
+  BOOT_MEDIA_INFO                   BootMediaInfo;
+  BOOT_MEDIA_INFO                   *NewBootMediaInfo;
   EFI_PEI_GRAPHICS_INFO_HOB         GfxInfo;
   EFI_PEI_GRAPHICS_INFO_HOB         *NewGfxInfo;
   EFI_PEI_GRAPHICS_DEVICE_INFO_HOB  GfxDeviceInfo;
@@ -424,6 +426,17 @@ BuildHobFromBl (
     ASSERT (NewPhysicalPresenceInfo != NULL);
     CopyMem (NewPhysicalPresenceInfo, &PhysicalPresenceInfo, sizeof (TCG_PHYSICAL_PRESENCE_INFO));
     DEBUG ((DEBUG_INFO, "Created Tcg Physical Presence info hob\n"));
+  }
+
+  //
+  // Create guid hob for boot media (CBFS) information
+  //
+  Status = ParseBootMediaInfo (&BootMediaInfo);
+  if (!EFI_ERROR (Status)) {
+    NewBootMediaInfo = BuildGuidHob (&gEfiBootMediaInfoHobGuid, sizeof (BootMediaInfo));
+    ASSERT (NewBootMediaInfo != NULL);
+    CopyMem (NewBootMediaInfo, &BootMediaInfo, sizeof (BootMediaInfo));
+    DEBUG ((DEBUG_INFO, "Created boot media info hob\n"));
   }
 
   //
