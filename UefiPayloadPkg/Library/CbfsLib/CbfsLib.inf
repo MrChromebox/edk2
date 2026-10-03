@@ -1,0 +1,40 @@
+## @file
+#  Read-only access to files in coreboot's CBFS.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CbfsLib
+  FILE_GUID                      = 7C1E7F7A-3B6E-4D0B-9E43-2F6A8C5D1B94
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = CbfsLib|DXE_DRIVER DXE_RUNTIME_DRIVER UEFI_DRIVER UEFI_APPLICATION
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  CbfsLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  ExtractGuidedSectionLib
+  HobLib
+  MemoryAllocationLib
+
+[Guids]
+  gEfiBootMediaInfoHobGuid      ## CONSUMES ## HOB
+  gLzmaCustomDecompressGuid     ## CONSUMES ## GUID
