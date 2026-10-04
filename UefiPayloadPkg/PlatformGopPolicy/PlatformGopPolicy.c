@@ -15,13 +15,14 @@ Copyright (c)  1999  - 2014, Intel Corporation. All rights reserved
 
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
-#include <Protocol/FirmwareVolume2.h>
 #include "PlatformGopPolicy.h"
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 
 PLATFORM_GOP_POLICY_PROTOCOL  mPlatformGOPPolicy;
+VOID                          *mVbt;
+UINTN                         mVbtSize;
 
 //
 // Function implementations
@@ -66,65 +67,18 @@ GetVbtData (
    OUT UINT32 *VbtSize
 )
 {
-  EFI_STATUS                    Status;
-  UINTN                         FvProtocolCount;
-  EFI_HANDLE                    *FvHandles;
-  EFI_FIRMWARE_VOLUME2_PROTOCOL  *Fv;
-  UINTN                         Index;
-  UINT32                        AuthenticationStatus;
-
-  UINT8                         *Buffer;
-  UINTN                         VbtBufferSize;
-
-  Buffer = 0;
-  FvHandles       = NULL;
-
   if (VbtAddress == NULL || VbtSize == NULL){
     return EFI_INVALID_PARAMETER;
   }
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiFirmwareVolume2ProtocolGuid,
-                  NULL,
-                  &FvProtocolCount,
-                  &FvHandles
-                  );
 
-  if (!EFI_ERROR (Status)) {
-    for (Index = 0; Index < FvProtocolCount; Index++) {
-      Status = gBS->HandleProtocol (
-                      FvHandles[Index],
-                      &gEfiFirmwareVolume2ProtocolGuid,
-                      (VOID **) &Fv
-                      );
-      VbtBufferSize = 0;
-      Status = Fv->ReadSection (
-                     Fv,
-                     &gBmpImageGuid,
-                     EFI_SECTION_RAW,
-                     0,
-                    (void **)&Buffer,
-                     &VbtBufferSize,
-                     &AuthenticationStatus
-                     );
-
-      if (!EFI_ERROR (Status)) {
-        *VbtAddress = (EFI_PHYSICAL_ADDRESS)(UINTN)Buffer;
-        *VbtSize = (UINT32)VbtBufferSize;
-        Status = EFI_SUCCESS;
-        break;
-      }
-    }
-  } else {
-    Status = EFI_NOT_FOUND;
+  if (mVbt == NULL) {
+    return EFI_NOT_FOUND;
   }
 
-  if (FvHandles != NULL) {
-    gBS->FreePool (FvHandles);
-    FvHandles = NULL;
-  }
+  *VbtAddress = (EFI_PHYSICAL_ADDRESS)(UINTN)mVbt;
+  *VbtSize    = (UINT32)mVbtSize;
 
-  return Status;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -169,6 +123,11 @@ PlatformGOPPolicyEntryPoint (
                   &mPlatformGOPPolicy,
                   NULL
                   );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
-  return Status;
+  LoadGopFromCbfs (&mVbt, &mVbtSize);
+
+  return EFI_SUCCESS;
 }

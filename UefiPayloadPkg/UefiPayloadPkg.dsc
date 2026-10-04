@@ -1426,10 +1426,12 @@
 !endif
 
 !if $(USE_PLATFORM_GOP) == TRUE
-  UefiPayloadPkg/PlatformGopPolicy/PlatformGopPolicy.inf
-!else
-  UefiPayloadPkg/GraphicsOutputDxe/GraphicsOutputDxe.inf
+  UefiPayloadPkg/PlatformGopPolicy/PlatformGopPolicy.inf {
+    <LibraryClasses>
+      NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
+  }
 !endif
+  UefiPayloadPkg/GraphicsOutputDxe/GraphicsOutputDxe.inf
 
 !if $(PERFORMANCE_MEASUREMENT_ENABLE)
   MdeModulePkg/Universal/Acpi/FirmwarePerformanceDataTableDxe/FirmwarePerformanceDxe.inf

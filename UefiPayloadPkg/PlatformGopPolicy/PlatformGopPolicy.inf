@@ -22,6 +22,7 @@
 
 [Sources.common]
   PlatformGopPolicy.c
+  CbfsGopFv.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -29,15 +30,19 @@
 
 [LibraryClasses]
   BaseLib
+  BaseMemoryLib
+  CbfsLib
   DebugLib
+  DxeServicesTableLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiRuntimeServicesTableLib
 
 [Guids]
-  gBmpImageGuid
+  gEfiFirmwareFileSystem2Guid
 
 [Protocols]
-  gEfiFirmwareVolume2ProtocolGuid
   gPlatformGOPPolicyGuid
 
 [Depex]
