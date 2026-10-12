@@ -274,6 +274,32 @@ RuntimeAllocateMem (
 }
 
 /**
+  Checks whether a buffer starts on a page of the runtime memory data area.
+
+  @param[in]  Buffer  Pointer to the buffer to check.
+
+  @retval TRUE   Buffer may have been returned by RuntimeAllocateMem().
+  @retval FALSE  Buffer was not allocated from the runtime memory data area.
+
+**/
+STATIC
+BOOLEAN
+IsRuntimeMemBuffer (
+  IN  CONST VOID  *Buffer
+  )
+{
+  UINTN  Offset;
+
+  if ((UINTN)Buffer < (UINTN)mRTPageTable->DataAreaBase) {
+    return FALSE;
+  }
+
+  Offset = (UINTN)Buffer - (UINTN)mRTPageTable->DataAreaBase;
+  return (BOOLEAN)(((Offset & RT_PAGE_MASK) == 0) &&
+                   (Offset < RT_PAGES_TO_SIZE (mRTPageTable->PageCount)));
+}
+
+/**
   Frees a buffer that was previously allocated at runtime phase.
 
   @param[in]  Buffer  Pointer to the buffer to free.
@@ -286,6 +312,10 @@ RuntimeFreeMem (
 {
   UINTN  StartOffset;
   UINTN  StartPageIndex;
+
+  if (!IsRuntimeMemBuffer (Buffer)) {
+    return;
+  }
 
   StartOffset    = (UINTN)Buffer - (UINTN)mRTPageTable->DataAreaBase;
   StartPageIndex = RT_SIZE_TO_PAGES (mRTPageTable->Pages[RT_SIZE_TO_PAGES (StartOffset)].StartPageOffset);
@@ -408,6 +438,10 @@ realloc (
 
   if (ptr == NULL) {
     return malloc (size);
+  }
+
+  if (!IsRuntimeMemBuffer (ptr)) {
+    return NULL;
   }
 
   //
