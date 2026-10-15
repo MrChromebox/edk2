@@ -38,6 +38,7 @@
   gEfiSecureBootEnableDisableGuid
   gMicrosoftVendorGuid
   gMicrosoftDbxUpdateGuid
+  gMicrosoftDbxBaselineGuid
   gMicrosoftDbUefi2011Guid
   gMicrosoftDbWin2011Guid
   gMicrosoftDbUefi2023Guid
