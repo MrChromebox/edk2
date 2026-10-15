@@ -256,8 +256,14 @@ INF MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
     INF SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
     INF UefiPayloadPkg/EnrollDefaultKeys/EnrollDefaultKeys.inf
 
+    FILE FREEFORM = 3d844ea9-e7da-48c5-a031-fa22b10f8d7b {
+      SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/dbx_microsoft_baseline.bin
+      SECTION UI = "Microsoft Corporation DBX Baseline"
+    }
+
     FILE FREEFORM = 4e52dd60-d79e-42c5-8337-089232ea5c87 {
       SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/dbx_microsoft_update.bin
+      SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/dbx_microsoft_append.esl
       SECTION UI = "Microsoft Corporation DBX Update"
     }
 
@@ -539,8 +545,14 @@ READ_LOCK_STATUS   = TRUE
 INF SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
 INF UefiPayloadPkg/EnrollDefaultKeys/EnrollDefaultKeys.inf
 
+FILE FREEFORM = 3d844ea9-e7da-48c5-a031-fa22b10f8d7b {
+  SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/dbx_microsoft_baseline.bin
+  SECTION UI = "Microsoft Corporation DBX Baseline"
+}
+
 FILE FREEFORM = 4e52dd60-d79e-42c5-8337-089232ea5c87 {
   SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/dbx_microsoft_update.bin
+  SECTION RAW = UefiPayloadPkg/EnrollDefaultKeys/keys/dbx_microsoft_append.esl
   SECTION UI = "Microsoft Corporation DBX Update"
 }
 

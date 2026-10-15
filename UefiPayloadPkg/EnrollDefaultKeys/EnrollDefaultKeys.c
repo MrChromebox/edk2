@@ -321,26 +321,34 @@ ProvisionSigListDefault (
 
 /**
   Store the signature-list portion of a time-based authenticated payload (such
-  as the Microsoft dbx update) in the read-only "dbxDefault" variable.
+  as the Microsoft dbx baseline) in the read-only "dbxDefault" variable,
+  optionally followed by filtered append signature lists from a newer update.
 
   GetVariable() on the live "dbx" variable returns the payload with the
   authentication descriptor stripped, so this strips the same descriptor here to
-  keep the default comparable to the live variable.
+  keep the default comparable to the live variable. Newest entries are kept last
+  so fwupd can identify the database version.
 
-  @param[in] Blob      The authenticated payload (EFI_VARIABLE_AUTHENTICATION_2
-                       followed by the signature lists).
-  @param[in] BlobSize  Size of Blob in bytes.
+  @param[in] Blob       The authenticated payload (EFI_VARIABLE_AUTHENTICATION_2
+                        followed by the signature lists).
+  @param[in] BlobSize   Size of Blob in bytes.
+  @param[in] Append     Filtered signature lists to append to the baseline.
+  @param[in] AppendSize Size of Append in bytes.
 **/
 STATIC
 VOID
 EFIAPI
 ProvisionDbxDefaultFromAuthPayload (
   IN UINT8  *Blob,
-  IN UINTN  BlobSize
+  IN UINTN  BlobSize,
+  IN UINT8  *Append,
+  IN UINTN  AppendSize
   )
 {
   SINGLE_HEADER  *Header;
   UINTN          DescriptorSize;
+  UINTN          DataSize;
+  UINT8          *Data;
   EFI_STATUS     Status;
 
   if ((Blob == NULL) || (BlobSize <= sizeof (SINGLE_HEADER))) {
@@ -357,13 +365,30 @@ ProvisionDbxDefaultFromAuthPayload (
     return;
   }
 
+  DataSize = BlobSize - DescriptorSize;
+  if (AppendSize > MAX_UINTN - DataSize) {
+    return;
+  }
+
+  Data = AllocatePool (DataSize + AppendSize);
+  if (Data == NULL) {
+    return;
+  }
+
+  CopyMem (Data, Blob + DescriptorSize, DataSize);
+  if ((Append != NULL) && (AppendSize > 0)) {
+    CopyMem (Data + DataSize, Append, AppendSize);
+  }
+
+  // Publish the complete default so a failed append cannot expose a partial set.
   Status = gRT->SetVariable (
                   EFI_DBX_DEFAULT_VARIABLE_NAME,
                   &gEfiGlobalVariableGuid,
                   EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-                  BlobSize - DescriptorSize,
-                  Blob + DescriptorSize
+                  DataSize + AppendSize,
+                  Data
                   );
+  FreePool (Data);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: SetVariable(\"%s\"): %r\n", EFI_DBX_DEFAULT_VARIABLE_NAME, Status));
   }
@@ -395,8 +420,10 @@ ProvisionKeyDefaults (
   UINTN       DbMicrosoftWin2011Size;
   UINT8       *DbMicrosoftWinuefi2023   = NULL;
   UINTN       DbMicrosoftWinuefi2023Size;
-  UINT8       *DbxMicrosoftUpdate       = NULL;
-  UINTN       DbxMicrosoftUpdateSize;
+  UINT8       *DbxMicrosoftBaseline     = NULL;
+  UINTN       DbxMicrosoftBaselineSize;
+  UINT8       *DbxMicrosoftAppend       = NULL;
+  UINTN       DbxMicrosoftAppendSize;
   UINT8       *KekMicrosoft2011         = NULL;
   UINTN       KekMicrosoft2011Size;
   UINT8       *KekMicrosoft2023         = NULL;
@@ -475,10 +502,26 @@ ProvisionKeyDefaults (
     FreePool (DbMicrosoftOpRomUefi2023);
   }
 
-  Status = GetSectionFromAnyFv (&gMicrosoftDbxUpdateGuid, EFI_SECTION_RAW, 0, (void **)&DbxMicrosoftUpdate, &DbxMicrosoftUpdateSize);
+  Status = GetSectionFromAnyFv (&gMicrosoftDbxBaselineGuid, EFI_SECTION_RAW, 0, (VOID **)&DbxMicrosoftBaseline, &DbxMicrosoftBaselineSize);
   if (!EFI_ERROR (Status)) {
-    ProvisionDbxDefaultFromAuthPayload (DbxMicrosoftUpdate, DbxMicrosoftUpdateSize);
-    FreePool (DbxMicrosoftUpdate);
+    // Section 1 contains only signatures absent from the baseline, in update order.
+    Status = GetSectionFromAnyFv (&gMicrosoftDbxUpdateGuid, EFI_SECTION_RAW, 1, (VOID **)&DbxMicrosoftAppend, &DbxMicrosoftAppendSize);
+    if (!EFI_ERROR (Status)) {
+      ProvisionDbxDefaultFromAuthPayload (
+        DbxMicrosoftBaseline,
+        DbxMicrosoftBaselineSize,
+        DbxMicrosoftAppend,
+        DbxMicrosoftAppendSize
+        );
+    }
+  }
+
+  if (DbxMicrosoftBaseline != NULL) {
+    FreePool (DbxMicrosoftBaseline);
+  }
+
+  if (DbxMicrosoftAppend != NULL) {
+    FreePool (DbxMicrosoftAppend);
   }
 }
 
@@ -659,6 +702,7 @@ EnrollDefaultKeys (
   )
 {
   EFI_STATUS  Status;
+  EFI_STATUS  EnrollmentStatus;
   VOID        *Protocol;
   SETTINGS Settings;
   UINT8     DefaultState;
@@ -671,6 +715,8 @@ EnrollDefaultKeys (
   UINTN DbMicrosoftWin2011Size;
   UINT8 *DbMicrosoftWinuefi2023 = 0;
   UINTN DbMicrosoftWinuefi2023Size;
+  UINT8 *DbxMicrosoftBaseline = 0;
+  UINTN DbxMicrosoftBaselineSize;
   UINT8 *DbxMicrosoftUpdate = 0;
   UINTN DbxMicrosoftUpdateSize;
   UINT8 *KekMicrosoft2011 = 0;
@@ -743,6 +789,8 @@ EnrollDefaultKeys (
   ASSERT_EFI_ERROR(Status);
   Status = GetSectionFromAnyFv(&gMicrosoftDbWinUefi2023Guid, EFI_SECTION_RAW, 0, (void **)&DbMicrosoftWinuefi2023, &DbMicrosoftWinuefi2023Size);
   ASSERT_EFI_ERROR(Status);
+  Status = GetSectionFromAnyFv (&gMicrosoftDbxBaselineGuid, EFI_SECTION_RAW, 0, (VOID **)&DbxMicrosoftBaseline, &DbxMicrosoftBaselineSize);
+  ASSERT_EFI_ERROR (Status);
   Status = GetSectionFromAnyFv(&gMicrosoftDbxUpdateGuid, EFI_SECTION_RAW, 0, (void **)&DbxMicrosoftUpdate, &DbxMicrosoftUpdateSize);
   ASSERT_EFI_ERROR(Status);
   Status = GetSectionFromAnyFv(&gMicrosoftKek2011Guid, EFI_SECTION_RAW, 0, (void **)&KekMicrosoft2011, &KekMicrosoft2011Size);
@@ -759,8 +807,27 @@ EnrollDefaultKeys (
             EFI_VARIABLE_RUNTIME_ACCESS |
             EFI_VARIABLE_BOOTSERVICE_ACCESS |
             EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS),
-            DbxMicrosoftUpdateSize, DbxMicrosoftUpdate);
-  ASSERT_EFI_ERROR (Status);
+            DbxMicrosoftBaselineSize, DbxMicrosoftBaseline);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: DBX baseline enrollment failed: %r\n", Status));
+    goto FreeKeys;
+  }
+
+  // Preserve older revocations; authenticated append also removes duplicates.
+  Status = gRT->SetVariable (
+                  EFI_IMAGE_SECURITY_DATABASE1,
+                  &gEfiImageSecurityDatabaseGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS |
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                  EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS |
+                  EFI_VARIABLE_APPEND_WRITE,
+                  DbxMicrosoftUpdateSize,
+                  DbxMicrosoftUpdate
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: DBX append failed: %r\n", Status));
+    goto FreeKeys;
+  }
 
   Status = EnrollListOfCerts (
     EFI_IMAGE_SECURITY_DATABASE,
@@ -791,10 +858,13 @@ EnrollDefaultKeys (
     NULL);
   ASSERT_EFI_ERROR (Status);
 
+FreeKeys:
+  EnrollmentStatus = Status;
   FreePool(DbMicrosoftUefi2011);
   FreePool(DbMicrosoftUefi2023);
   FreePool(DbMicrosoftWin2011);
   FreePool(DbMicrosoftWinuefi2023);
+  FreePool(DbxMicrosoftBaseline);
   FreePool(DbxMicrosoftUpdate);
   FreePool(KekMicrosoft2011);
   FreePool(KekMicrosoft2023);
@@ -809,6 +879,10 @@ EnrollDefaultKeys (
     DEBUG ((DEBUG_ERROR, "EnrollDefaultKeys: SetVariable(\"%s\", %g): %r\n", EFI_CUSTOM_MODE_NAME,
       &gEfiCustomModeEnableGuid, Status));
     ASSERT_EFI_ERROR (Status);
+  }
+
+  if (EFI_ERROR (EnrollmentStatus)) {
+    return;
   }
 
   //
