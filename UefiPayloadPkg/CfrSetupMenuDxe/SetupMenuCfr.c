@@ -521,18 +521,19 @@ CfrProcessFormOption (
   CHAR16              *HiiFormNameString;
   EFI_STRING_ID       HiiFormNameStringId;
   UINT8               *TempHiiBuffer;
+  UINTN               FormProcessedLength;
 
   //
   // Extract variable-length fields that follow the header
   //
-  *ProcessedLength += sizeof (CFR_OPTION_FORM);
-  CfrFormName = CfrExtractVarBinary ((UINT8 *)Option, ProcessedLength, CB_TAG_CFR_VARCHAR_UI_NAME);
+  FormProcessedLength = sizeof (CFR_OPTION_FORM);
+  CfrFormName = CfrExtractVarBinary ((UINT8 *)Option, &FormProcessedLength, CB_TAG_CFR_VARCHAR_UI_NAME);
   ASSERT (CfrFormName != NULL);
 
   // Dependency values are optional
   DepValues = NULL;
   NumDepValues = 0;
-  CfrDepValues = CfrExtractVarBinary ((UINT8 *)Option, ProcessedLength, CB_TAG_CFR_DEP_VALUES);
+  CfrDepValues = CfrExtractVarBinary ((UINT8 *)Option, &FormProcessedLength, CB_TAG_CFR_DEP_VALUES);
   if (CfrDepValues != NULL) {
     ASSERT (CfrDepValues->tag == CB_TAG_CFR_DEP_VALUES);
     CfrConvertVarBinaryToUint32Array (CfrDepValues, &DepValues, &NumDepValues);
@@ -586,6 +587,8 @@ CfrProcessFormOption (
     TempHiiBuffer = HiiCreateEndOpCode (StartOpCodeHandle);
     ASSERT (TempHiiBuffer != NULL);
   }
+
+  *ProcessedLength += FormProcessedLength;
 }
 
 /**
