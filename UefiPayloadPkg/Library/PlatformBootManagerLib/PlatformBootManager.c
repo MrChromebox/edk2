@@ -589,8 +589,8 @@ PlatformBootManagerWaitCallback (
   )
 {
   if (TimeoutRemain == 0) {
-    BootLogoClearProgress ();
     PlatformUnregisterBootManagerEntryNotifyCallback ();
+    BootLogoClearProgress ();
   }
 
   return;
