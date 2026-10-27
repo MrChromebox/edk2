@@ -83,6 +83,11 @@ UiCustomizeBMMPage (
   // Create "Time Out" menu.
   //
   BmmCreateTimeOutMenu (HiiHandle, StartOpCodeHandle);
+
+  //
+  // Create "Auto Boot Fall-Through" menu next to the time-out.
+  //
+  BmmCreateAutoBootFallThroughMenu (HiiHandle, StartOpCodeHandle);
 }
 
 /**

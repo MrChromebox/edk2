@@ -409,9 +409,14 @@ BootBootOptions (
 
     //
     // All the driver options should have been processed since
-    // now boot will be performed.
+    // now boot will be performed. When AutoBootFallThrough is
+    // enabled, a failed automatic attempt continues to the next
+    // BootOrder entry without a key prompt.
     //
-    EfiBootManagerBoot (&BootOptions[Index]);
+    EfiBootManagerBootEx (
+      &BootOptions[Index],
+      (BOOLEAN)(!EfiBootManagerGetAutoBootFallThrough ())
+      );
 
     //
     // If infinite retries is enabled, do not break out of the loop.

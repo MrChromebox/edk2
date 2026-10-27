@@ -406,6 +406,30 @@ EfiBootManagerRefreshAllBootOption (
   fails the removable media boot algorithm is attempted (\EFI\BOOTIA32.EFI,
   \EFI\BOOTX64.EFI,... only one file type is tried per processor type)
 
+  @param  BootOption        Boot Option to try and boot.
+                            On return, BootOption->Status contains the boot status:
+                            EFI_SUCCESS     BootOption was booted
+                            EFI_UNSUPPORTED BootOption isn't supported.
+                            EFI_NOT_FOUND   The BootOption was not found on the system
+                            Others          BootOption failed with this error status
+  @param  PromptOnFailure   TRUE to display a load-failure message and wait for a
+                            key. FALSE to return immediately so the caller can try
+                            the next boot option. Status reporting is unchanged
+                            in either case.
+
+**/
+VOID
+EFIAPI
+EfiBootManagerBootEx (
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption,
+  IN  BOOLEAN                       PromptOnFailure
+  );
+
+/**
+  Attempt to boot the EFI boot option and prompt if the load fails.
+
+  Equivalent to EfiBootManagerBootEx() with PromptOnFailure set to TRUE.
+
   @param  BootOption    Boot Option to try and boot.
                         On return, BootOption->Status contains the boot status:
                         EFI_SUCCESS     BootOption was booted
@@ -418,6 +442,23 @@ VOID
 EFIAPI
 EfiBootManagerBoot (
   IN  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
+  );
+
+/**
+  Return whether automatic BootOrder processing should fall through on a load
+  failure without waiting for a key.
+
+  Reads the non-volatile AutoBootFallThrough variable from the Boot Maintenance
+  Manager namespace. Defaults to TRUE when the variable is unset.
+
+  @retval TRUE   Fall through to the next BootOrder entry on load failure.
+  @retval FALSE  Prompt and wait for a key on load failure.
+
+**/
+BOOLEAN
+EFIAPI
+EfiBootManagerGetAutoBootFallThrough (
+  VOID
   );
 
 /**
