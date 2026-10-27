@@ -94,12 +94,13 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 ///
 typedef struct {
   //
-  // Three questions displayed at the main page
+  // Questions displayed at the main page
   // for Timeout, BootNext, Variables respectively
   //
   UINT16     BootTimeOut;
   UINT32     BootNext;
   UINT8      BootDevicePriority;  // 0 = External, 1 = Internal
+  UINT8      AutoBootFallThrough; // 0 = Prompt on failure, 1 = Fall through
 
   //
   // This is the COM1 Attributes value storage

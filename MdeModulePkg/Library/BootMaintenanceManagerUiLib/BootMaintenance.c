@@ -897,6 +897,25 @@ BootMaintRouteConfig (
     Private->BmmOldFakeNVData.BootTimeOut = NewBmmData->BootTimeOut;
   }
 
+  if (CompareMem (&NewBmmData->AutoBootFallThrough, &OldBmmData->AutoBootFallThrough, sizeof (NewBmmData->AutoBootFallThrough)) != 0) {
+    UINT8  FallThroughValue;
+
+    FallThroughValue = (NewBmmData->AutoBootFallThrough != 0) ? 1 : 0;
+    Status           = gRT->SetVariable (
+                              L"AutoBootFallThrough",
+                              &mBootMaintGuid,
+                              EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                              sizeof (UINT8),
+                              &FallThroughValue
+                              );
+    if (EFI_ERROR (Status)) {
+      Offset = OFFSET_OF (BMM_FAKE_NV_DATA, AutoBootFallThrough);
+      goto Exit;
+    }
+
+    Private->BmmOldFakeNVData.AutoBootFallThrough = FallThroughValue;
+  }
+
   DEBUG ((DEBUG_VERBOSE, "BMM: BootDevicePriority - New: %d, Old: %d\n", NewBmmData->BootDevicePriority, OldBmmData->BootDevicePriority));
   if (CompareMem (&NewBmmData->BootDevicePriority, &OldBmmData->BootDevicePriority, sizeof (NewBmmData->BootDevicePriority)) != 0) {
     UINT8  PrioritizeInternalValue;
@@ -1414,7 +1433,8 @@ DiscardChangeHandler (
       break;
 
     case FORM_TIME_OUT_ID:
-      CurrentFakeNVMap->BootTimeOut = Private->BmmOldFakeNVData.BootTimeOut;
+      CurrentFakeNVMap->BootTimeOut           = Private->BmmOldFakeNVData.BootTimeOut;
+      CurrentFakeNVMap->AutoBootFallThrough = Private->BmmOldFakeNVData.AutoBootFallThrough;
       break;
 
     case FORM_DRV_ADD_HANDLE_DESC_ID:
@@ -1573,6 +1593,31 @@ InitializeBmmConfig (
 
       FreePool (TimeoutVar);
     }
+  }
+
+  //
+  // Initialize AutoBootFallThrough from runtime variable.
+  // 0 = Disabled (prompt), 1 = Enabled (fall through). Default enabled.
+  //
+  {
+    UINT8       FallThrough;
+    UINTN       FallThroughSize;
+    EFI_STATUS  Status;
+
+    CallbackData->BmmFakeNvData.AutoBootFallThrough = 1;
+    FallThroughSize = sizeof (FallThrough);
+    Status          = gRT->GetVariable (
+                             L"AutoBootFallThrough",
+                             &mBootMaintGuid,
+                             NULL,
+                             &FallThroughSize,
+                             &FallThrough
+                             );
+    if (!EFI_ERROR (Status) && (FallThroughSize == sizeof (FallThrough))) {
+      CallbackData->BmmFakeNvData.AutoBootFallThrough = (FallThrough != 0) ? 1 : 0;
+    }
+
+    CallbackData->BmmOldFakeNVData.AutoBootFallThrough = CallbackData->BmmFakeNvData.AutoBootFallThrough;
   }
 
   //

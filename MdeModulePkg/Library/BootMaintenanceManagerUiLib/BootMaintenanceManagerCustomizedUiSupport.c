@@ -215,6 +215,56 @@ BmmCreateTimeOutMenu (
 }
 
 /**
+  Create Auto Boot Fall-Through menu in the page.
+
+  @param[in]    HiiHandle           The hii handle for the Uiapp driver.
+  @param[in]    StartOpCodeHandle   The opcode handle to save the new opcode.
+
+**/
+VOID
+BmmCreateAutoBootFallThroughMenu (
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
+  )
+{
+  VOID  *OptionsOpCodeHandle;
+
+  OptionsOpCodeHandle = HiiAllocateOpCodeHandle ();
+  ASSERT (OptionsOpCodeHandle != NULL);
+
+  HiiCreateOneOfOptionOpCode (
+    OptionsOpCodeHandle,
+    STRING_TOKEN (STR_AUTO_BOOT_FALL_THROUGH_DISABLED),
+    0,
+    EFI_IFR_TYPE_NUM_SIZE_8,
+    0
+    );
+
+  HiiCreateOneOfOptionOpCode (
+    OptionsOpCodeHandle,
+    STRING_TOKEN (STR_AUTO_BOOT_FALL_THROUGH_ENABLED),
+    0,
+    EFI_IFR_TYPE_NUM_SIZE_8,
+    1
+    );
+
+  HiiCreateOneOfOpCode (
+    StartOpCodeHandle,
+    AUTO_BOOT_FALL_THROUGH_QUESTION_ID,
+    VARSTORE_ID_BOOT_MAINT,
+    AUTO_BOOT_FALL_THROUGH_VAR_OFFSET,
+    STRING_TOKEN (STR_AUTO_BOOT_FALL_THROUGH_PROMPT),
+    STRING_TOKEN (STR_AUTO_BOOT_FALL_THROUGH_HELP),
+    EFI_IFR_FLAG_CALLBACK,
+    EFI_IFR_NUMERIC_SIZE_1,
+    OptionsOpCodeHandle,
+    NULL
+    );
+
+  HiiFreeOpCodeHandle (OptionsOpCodeHandle);
+}
+
+/**
   Extract device path for given HII handle and class guid.
 
   @param Handle          The HII handle.
