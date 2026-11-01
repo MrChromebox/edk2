@@ -61,9 +61,22 @@ MemInfoCallbackMmio (
 
   if (MemoryMapEntry->Base == AcpiBoardInfo->PcieBaseAddress) {
     //
-    // MMCONF is always MMIO
+    // Note: there should be an
     //
-    Type = EFI_RESOURCE_MEMORY_MAPPED_IO;
+    //   Type = EFI_RESOURCE_MEMORY_MAPPED_IO;
+    //
+    // asignment below. However, Linux insists that the MMCONFIG area be
+    // marked in the E820 or UEFI memory map as "reserved memory" --
+    // Linux does not content itself with a simple gap
+    // in the memory map wherever the MCFG ACPI table points to.
+    //
+    // This appears to be a safety measure. The PCI Firmware Specification
+    // (rev 3.1) says in 4.1.2. "MCFG Table Description": "The resources can
+    // *optionally* be returned in [...] EFIGetMemoryMap as reserved memory
+    // [...]". (Emphasis added here.)
+    //
+    //
+    Type = EFI_RESOURCE_MEMORY_RESERVED;
   } else if (MemoryMapEntry->Base < mTopOfLowerUsableDram) {
     //
     // It's in DRAM and thus must be reserved
