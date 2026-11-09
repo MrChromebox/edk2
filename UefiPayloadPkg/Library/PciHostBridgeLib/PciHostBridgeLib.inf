@@ -37,7 +37,9 @@
   BaseMemoryLib
   DebugLib
   DevicePathLib
+  HobLib
   MemoryAllocationLib
+  PcdLib
   PciLib
   DxeServicesTableLib
 
@@ -46,3 +48,5 @@
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdPciDisableBusEnumeration
+  gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress
+  gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseSize
