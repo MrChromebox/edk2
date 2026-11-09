@@ -16,6 +16,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Library/PciLib.h>
+#include <Library/PcdLib.h>
 #include "PciHostBridge.h"
 
 /**
@@ -54,6 +55,63 @@ PcatPciRootBridgeBarExisted (
 }
 
 /**
+  Merge a memory range into the aperture on the matching side of the MMCONF window.
+
+  Ranges below the MMCONF window go to Mem (or MemAbove4G), ranges above it go
+  to PMem (or PMemAbove4G), so no aperture can ever cover the MMCONF window.
+
+  @param[in]  Base             Base address of the range.
+  @param[in]  Limit            Inclusive limit of the range.
+  @param[in]  Mem              MMIO aperture below 4G and below MMCONF.
+  @param[in]  MemAbove4G       MMIO aperture above 4G and below MMCONF.
+  @param[in]  PMem             MMIO aperture below 4G and above MMCONF.
+  @param[in]  PMemAbove4G      MMIO aperture above 4G and above MMCONF.
+
+  @retval EFI_SUCCESS          The range was merged into an aperture.
+  @retval EFI_ACCESS_DENIED    The range overlaps the MMCONF window and was dropped.
+**/
+STATIC
+EFI_STATUS
+PcatPciRootBridgeAddMemRange (
+  IN UINT64                    Base,
+  IN UINT64                    Limit,
+  IN PCI_ROOT_BRIDGE_APERTURE  *Mem,
+  IN PCI_ROOT_BRIDGE_APERTURE  *MemAbove4G,
+  IN PCI_ROOT_BRIDGE_APERTURE  *PMem,
+  IN PCI_ROOT_BRIDGE_APERTURE  *PMemAbove4G
+  )
+{
+  PCI_ROOT_BRIDGE_APERTURE  *Aperture;
+  UINT64                    MmconfBase;
+  UINT64                    MmconfSize;
+  BOOLEAN                   AboveMmconf;
+
+  MmconfBase = PcdGet64 (PcdPciExpressBaseAddress);
+  MmconfSize = PcdGet64 (PcdPciExpressBaseSize);
+
+  if ((MmconfSize != 0) && (Base < MmconfBase + MmconfSize) && (Limit >= MmconfBase)) {
+    return EFI_ACCESS_DENIED;
+  }
+
+  AboveMmconf = (BOOLEAN)((MmconfSize != 0) && (Base >= MmconfBase + MmconfSize));
+  if (Base < BASE_4GB) {
+    Aperture = AboveMmconf ? PMem : Mem;
+  } else {
+    Aperture = (AboveMmconf && (MmconfBase >= BASE_4GB)) ? PMemAbove4G : MemAbove4G;
+  }
+
+  if (Aperture->Base > Base) {
+    Aperture->Base = Base;
+  }
+
+  if (Aperture->Limit < Limit) {
+    Aperture->Limit = Limit;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Parse PCI bar and collect the assigned PCI resource information.
 
   @param[in]  Command          Supported attributes.
@@ -89,21 +147,22 @@ PcatPciRootBridgeParseBars (
   IN UINTN                     BarOffsetEnd,
   IN PCI_ROOT_BRIDGE_APERTURE  *Io,
   IN PCI_ROOT_BRIDGE_APERTURE  *Mem,
-  IN PCI_ROOT_BRIDGE_APERTURE  *MemAbove4G
-
+  IN PCI_ROOT_BRIDGE_APERTURE  *MemAbove4G,
+  IN PCI_ROOT_BRIDGE_APERTURE  *PMem,
+  IN PCI_ROOT_BRIDGE_APERTURE  *PMemAbove4G
   )
 {
-  UINT32                    OriginalValue;
-  UINT32                    Value;
-  UINT32                    OriginalUpperValue;
-  UINT32                    UpperValue;
-  UINT64                    Mask;
-  UINTN                     Offset;
-  UINTN                     LowBit;
-  UINT64                    Base;
-  UINT64                    Length;
-  UINT64                    Limit;
-  PCI_ROOT_BRIDGE_APERTURE  *MemAperture;
+  UINT32      OriginalValue;
+  UINT32      Value;
+  UINT32      OriginalUpperValue;
+  UINT32      UpperValue;
+  UINT64      Mask;
+  UINTN       Offset;
+  UINTN       LowBit;
+  UINT64      Base;
+  UINT64      Length;
+  UINT64      Limit;
+  EFI_STATUS  Status;
 
   for (Offset = BarOffsetBase; Offset < BarOffsetEnd; Offset += sizeof (UINT32)) {
     PcatPciRootBridgeBarExisted (
@@ -153,8 +212,6 @@ PcatPciRootBridgeParseBars (
           // 32bit
           //
           Length = ((~Length) + 1) & 0xffffffff;
-
-          MemAperture = Mem;
         } else {
           //
           // 64bit
@@ -172,30 +229,29 @@ PcatPciRootBridgeParseBars (
             LowBit = LowBitSet64 (Length);
             Length = LShiftU64 (1ULL, LowBit);
           }
-
-          if (Base < BASE_4GB) {
-            MemAperture = Mem;
-          } else {
-            MemAperture = MemAbove4G;
-          }
         }
 
         Limit = Base + Length - 1;
         if ((Base > 0) && (Base < Limit)) {
-          if (MemAperture->Base > Base) {
-            MemAperture->Base = Base;
-          }
-
-          if (MemAperture->Limit < Limit) {
-            MemAperture->Limit = Limit;
+          Status = PcatPciRootBridgeAddMemRange (Base, Limit, Mem, MemAbove4G, PMem, PMemAbove4G);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "%a: PCI %x:%x.%x BAR@0x%x 0x%lx-0x%lx overlaps MMCONF, not added to aperture\n",
+              __func__,
+              Bus,
+              Device,
+              Function,
+              Offset,
+              Base,
+              Limit
+              ));
           }
         }
       }
     }
   }
 }
-
-STATIC PCI_ROOT_BRIDGE_APERTURE  mNonExistAperture = { MAX_UINT64, 0 };
 
 /**
   Scan for all root bridges in platform.
@@ -223,9 +279,11 @@ ScanForRootBridges (
   PCI_ROOT_BRIDGE_APERTURE  Io;
   PCI_ROOT_BRIDGE_APERTURE  Mem;
   PCI_ROOT_BRIDGE_APERTURE  MemAbove4G;
-  PCI_ROOT_BRIDGE_APERTURE  *MemAperture;
+  PCI_ROOT_BRIDGE_APERTURE  PMem;
+  PCI_ROOT_BRIDGE_APERTURE  PMemAbove4G;
   PCI_ROOT_BRIDGE           *RootBridges;
   UINTN                     BarOffsetEnd;
+  EFI_STATUS                Status;
 
   *NumberOfRootBridges = 0;
   RootBridges          = NULL;
@@ -242,7 +300,9 @@ ScanForRootBridges (
     ZeroMem (&Io, sizeof (Io));
     ZeroMem (&Mem, sizeof (Mem));
     ZeroMem (&MemAbove4G, sizeof (MemAbove4G));
-    Io.Base = Mem.Base = MemAbove4G.Base = MAX_UINT64;
+    ZeroMem (&PMem, sizeof (PMem));
+    ZeroMem (&PMemAbove4G, sizeof (PMemAbove4G));
+    Io.Base = Mem.Base = MemAbove4G.Base = PMem.Base = PMemAbove4G.Base = MAX_UINT64;
     //
     // Scan all the PCI devices on the primary bus of the PCI root bridge
     //
@@ -276,7 +336,6 @@ ScanForRootBridges (
         // Read the entire PCI Configuration Header
         //
         PciReadBuffer (Address, sizeof (Pci), &Pci);
-
         //
         // Increment the number of PCI device found on the primary bus of the
         // PCI root bridge
@@ -337,18 +396,23 @@ ScanForRootBridges (
           Base  = ((UINT32)Pci.Bridge.MemoryBase & 0xfff0) << 16;
           Limit = (((UINT32)Pci.Bridge.MemoryLimit & 0xfff0) << 16) | 0xfffff;
           if ((Base > 0) && (Base < Limit)) {
-            if (Mem.Base > Base) {
-              Mem.Base = Base;
-            }
-
-            if (Mem.Limit < Limit) {
-              Mem.Limit = Limit;
+            Status = PcatPciRootBridgeAddMemRange (Base, Limit, &Mem, &MemAbove4G, &PMem, &PMemAbove4G);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((
+                DEBUG_ERROR,
+                "%a: PCI %x:%x.%x memory window 0x%lx-0x%lx overlaps MMCONF, not added to aperture\n",
+                __func__,
+                PrimaryBus,
+                Device,
+                Function,
+                Base,
+                Limit
+                ));
             }
           }
 
           //
           // Get the Prefetchable Memory range that the PPB is decoding
-          // and merge it into Memory range
           //
           Value = Pci.Bridge.PrefetchableMemoryBase & 0x0f;
           Base  = ((UINT32)Pci.Bridge.PrefetchableMemoryBase & 0xfff0) << 16;
@@ -361,18 +425,18 @@ ScanForRootBridges (
           }
 
           if ((Base > 0) && (Base < Limit)) {
-            if (Base < BASE_4GB) {
-              MemAperture = &Mem;
-            } else {
-              MemAperture = &MemAbove4G;
-            }
-
-            if (MemAperture->Base > Base) {
-              MemAperture->Base = Base;
-            }
-
-            if (MemAperture->Limit < Limit) {
-              MemAperture->Limit = Limit;
+            Status = PcatPciRootBridgeAddMemRange (Base, Limit, &Mem, &MemAbove4G, &PMem, &PMemAbove4G);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((
+                DEBUG_ERROR,
+                "%a: PCI %x:%x.%x prefetchable window 0x%lx-0x%lx overlaps MMCONF, not added to aperture\n",
+                __func__,
+                PrimaryBus,
+                Device,
+                Function,
+                Base,
+                Limit
+                ));
             }
           }
 
@@ -421,7 +485,9 @@ ScanForRootBridges (
           BarOffsetEnd,
           &Io,
           &Mem,
-          &MemAbove4G
+          &MemAbove4G,
+          &PMem,
+          &PMemAbove4G
           );
 
         //
@@ -508,8 +574,8 @@ ScanForRootBridges (
         &Io,
         &Mem,
         &MemAbove4G,
-        &mNonExistAperture,
-        &mNonExistAperture,
+        &PMem,
+        &PMemAbove4G,
         &RootBridges[*NumberOfRootBridges]
         );
       RootBridges[*NumberOfRootBridges].ResourceAssigned = TRUE;
