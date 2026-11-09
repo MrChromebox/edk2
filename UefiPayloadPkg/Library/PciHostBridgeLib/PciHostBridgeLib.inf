@@ -37,12 +37,15 @@
   BaseMemoryLib
   DebugLib
   DevicePathLib
+  HobLib
   MemoryAllocationLib
+  PcdLib
   PciLib
-  DxeServicesTableLib
 
 [Guids]
   gUniversalPayloadPciRootBridgeInfoGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdPciDisableBusEnumeration
+  gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress
+  gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseSize
