@@ -1049,6 +1049,7 @@
 
 !if $(SECURE_BOOT_ENABLE) == TRUE
   SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+  UefiPayloadPkg/EnrollDefaultKeys/EnrollDefaultKeys.inf
 !endif
 
   MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
