@@ -420,6 +420,7 @@ PlatformBootManagerBeforeConsole (
   //
   // Process update capsules that don't contain embedded drivers.
   //
+  ConsoleInitialized = FALSE;
   if (GetBootModeHob () == BOOT_ON_FLASH_UPDATE) {
     // TODO: when enabling capsule support for laptops, add a battery check here
     PlatformConsoleInit ();
@@ -449,7 +450,9 @@ PlatformBootManagerBeforeConsole (
   //
   EfiBootManagerDispatchDeferredImages ();
 
-  PlatformConsoleInit ();
+  if (!ConsoleInitialized) {
+    PlatformConsoleInit ();
+  }
 }
 
 /**
