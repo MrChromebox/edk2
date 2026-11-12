@@ -897,7 +897,6 @@ BootMaintRouteConfig (
     Private->BmmOldFakeNVData.BootTimeOut = NewBmmData->BootTimeOut;
   }
 
-
   DEBUG ((DEBUG_VERBOSE, "BMM: BootDevicePriority - New: %d, Old: %d\n", NewBmmData->BootDevicePriority, OldBmmData->BootDevicePriority));
   if (CompareMem (&NewBmmData->BootDevicePriority, &OldBmmData->BootDevicePriority, sizeof (NewBmmData->BootDevicePriority)) != 0) {
     UINT8  PrioritizeInternalValue;
@@ -1555,7 +1554,23 @@ InitializeBmmConfig (
     }
   }
 
-  CallbackData->BmmFakeNvData.BootTimeOut = PcdGet16 (PcdPlatformBootTimeOut);
+  //
+  // Initialize BootTimeOut from runtime variable, fallback to PCD
+  //
+  {
+    UINT16   *TimeoutVar;
+    UINTN    TimeoutVarSize;
+
+    CallbackData->BmmFakeNvData.BootTimeOut = PcdGet16 (PcdPlatformBootTimeOut);
+    TimeoutVarSize = sizeof (UINT16);
+    if (GetEfiGlobalVariable2 (L"Timeout", (VOID **)&TimeoutVar, &TimeoutVarSize) == EFI_SUCCESS) {
+      if (TimeoutVarSize == sizeof (UINT16)) {
+        CallbackData->BmmFakeNvData.BootTimeOut = *TimeoutVar;
+      }
+
+      FreePool (TimeoutVar);
+    }
+  }
 
   //
   // Initialize BootDevicePriority from runtime variable, fallback to PCD
@@ -1602,20 +1617,6 @@ InitializeBmmConfig (
   // Initialize data which located in Boot Options Menu
   //
   GetBootOrder (CallbackData);
-
-  //
-  // Initialize data which located in Driver Options Menu
-  //
-  GetDriverOrder (CallbackData);
-
-  //
-  // Initialize data which located in Console Options Menu
-  //
-  GetConsoleOutMode (CallbackData);
-  GetConsoleInCheck (CallbackData);
-  GetConsoleOutCheck (CallbackData);
-  GetConsoleErrCheck (CallbackData);
-  GetTerminalAttribute (CallbackData);
 
   CallbackData->BmmFakeNvData.ForceReconnect = TRUE;
 
