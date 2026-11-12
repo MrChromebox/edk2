@@ -44,7 +44,7 @@
   DEFINE PRIORITIZE_INTERNAL          = FALSE
   DEFINE SD_MMC_TIMEOUT               = 1000000
   DEFINE USE_CBMEM_FOR_CONSOLE        = FALSE
-  DEFINE BOOTSPLASH_IMAGE             = FALSE
+  DEFINE BOOTSPLASH_IMAGE             = TRUE
   DEFINE NVME_ENABLE                  = TRUE
   DEFINE LOCKBOX_SUPPORT              = FALSE
   DEFINE LOAD_OPTION_ROMS             = FALSE
@@ -606,7 +606,7 @@
 
 [PcdsFixedAtBuild]
   gEfiMdePkgTokenSpaceGuid.PcdHardwareErrorRecordLevel|1
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x10000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x8000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxHardwareErrorVariableSize|0x8000
   gEfiMdeModulePkgTokenSpaceGuid.PcdVariableStoreSize|0x10000
 
