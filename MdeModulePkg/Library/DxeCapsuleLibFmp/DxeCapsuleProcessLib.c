@@ -36,6 +36,14 @@
 extern EDKII_FIRMWARE_MANAGEMENT_PROGRESS_PROTOCOL  *mFmpProgress;
 
 /**
+  Initialize capsule update variables.
+**/
+VOID
+InitCapsuleUpdateVariable (
+  VOID
+  );
+
+/**
   Return if this FMP is a system FMP or a device FMP, based upon CapsuleHeader.
 
   @param[in] CapsuleHeader A pointer to EFI_CAPSULE_HEADER
@@ -678,6 +686,8 @@ ProcessCapsules (
   )
 {
   EFI_STATUS  Status;
+
+  InitCapsuleUpdateVariable ();
 
   if (!mDxeCapsuleLibEndOfDxe) {
     Status = ProcessTheseCapsules (TRUE);

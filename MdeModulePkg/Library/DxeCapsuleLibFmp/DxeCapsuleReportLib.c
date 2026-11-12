@@ -421,33 +421,105 @@ InitCapsuleLastVariable (
 /**
   Initialize capsule update variables.
 **/
+STATIC
+BOOLEAN
+IsCapsuleUpdateVariableName (
+  IN CONST CHAR16  *VariableName
+  )
+{
+  UINTN  Index;
+  UINTN  PrefixLength;
+
+  PrefixLength = StrLen (EFI_CAPSULE_VARIABLE_NAME);
+  if (StrnCmp (VariableName, EFI_CAPSULE_VARIABLE_NAME, PrefixLength) != 0) {
+    return FALSE;
+  }
+
+  if (VariableName[PrefixLength] == L'\0') {
+    return TRUE;
+  }
+
+  for (Index = PrefixLength; VariableName[Index] != L'\0'; Index++) {
+    if ((VariableName[Index] < L'0') || (VariableName[Index] > L'9')) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+STATIC
+EFI_STATUS
+FindCapsuleUpdateVariable (
+  OUT CHAR16  **VariableName
+  )
+{
+  EFI_STATUS  Status;
+  EFI_GUID    VendorGuid;
+  CHAR16      *Name;
+  CHAR16      *NewName;
+  UINTN       AllocatedSize;
+  UINTN       NameSize;
+
+  *VariableName = NULL;
+  AllocatedSize = sizeof (CHAR16);
+  Name          = AllocateZeroPool (AllocatedSize);
+  if (Name == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  ZeroMem (&VendorGuid, sizeof (VendorGuid));
+  while (TRUE) {
+    NameSize = AllocatedSize;
+    Status   = gRT->GetNextVariableName (&NameSize, Name, &VendorGuid);
+    if (Status == EFI_BUFFER_TOO_SMALL) {
+      NewName = ReallocatePool (AllocatedSize, NameSize, Name);
+      if (NewName == NULL) {
+        FreePool (Name);
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      Name          = NewName;
+      AllocatedSize = NameSize;
+      continue;
+    }
+
+    if (EFI_ERROR (Status)) {
+      FreePool (Name);
+      return Status;
+    }
+
+    if (CompareGuid (&VendorGuid, &gEfiCapsuleVendorGuid) &&
+        IsCapsuleUpdateVariableName (Name))
+    {
+      *VariableName = Name;
+      return EFI_SUCCESS;
+    }
+  }
+}
+
 VOID
 InitCapsuleUpdateVariable (
   VOID
   )
 {
   EFI_STATUS  Status;
-  UINTN       Index;
-  CHAR16      CapsuleVarName[30];
-  CHAR16      *TempVarName;
+  CHAR16      *CapsuleVarName;
 
   //
   // Clear all the capsule variables CapsuleUpdateData, CapsuleUpdateData1, CapsuleUpdateData2...
   // as early as possible which will avoid the next time boot after the capsule update
   // will still into the capsule loop
   //
-  StrCpyS (CapsuleVarName, sizeof (CapsuleVarName)/sizeof (CapsuleVarName[0]), EFI_CAPSULE_VARIABLE_NAME);
-  TempVarName = CapsuleVarName + StrLen (CapsuleVarName);
-  Index       = 0;
   while (TRUE) {
-    if (Index > 0) {
-      UnicodeValueToStringS (
-        TempVarName,
-        sizeof (CapsuleVarName) - ((UINTN)TempVarName - (UINTN)CapsuleVarName),
-        0,
-        Index,
-        0
-        );
+    Status = FindCapsuleUpdateVariable (&CapsuleVarName);
+    if (Status == EFI_NOT_FOUND) {
+      break;
+    }
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to enumerate capsule update variables: %r\n", __func__, Status));
+      break;
     }
 
     Status = gRT->SetVariable (
@@ -458,13 +530,13 @@ InitCapsuleUpdateVariable (
                     (VOID *)NULL
                     );
     if (EFI_ERROR (Status)) {
-      //
-      // There is no capsule variables, quit
-      //
+      DEBUG ((DEBUG_ERROR, "%a: Failed to delete %s: %r\n", __func__, CapsuleVarName, Status));
+      FreePool (CapsuleVarName);
       break;
     }
 
-    Index++;
+    DEBUG ((DEBUG_INFO, "%a: Deleted %s\n", __func__, CapsuleVarName));
+    FreePool (CapsuleVarName);
   }
 }
 
