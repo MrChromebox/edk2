@@ -860,6 +860,9 @@
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdConOutRow|31
   gEfiMdeModulePkgTokenSpaceGuid.PcdConOutColumn|100
+  ## Larger console geometry for text setup (formerly patched into MdeModulePkg.dec)
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSetupConOutColumn|128
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSetupConOutRow|40
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress|0
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseSize|0
   gEfiMdeModulePkgTokenSpaceGuid.PcdGhcbBase|0
