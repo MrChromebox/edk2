@@ -1,0 +1,25 @@
+## @file
+#  ChromeOS DeviceNameFromProductLib instance.
+#
+#  Copyright (c) 2020, Matt DeVillier. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DeviceNameFromProductLib
+  FILE_GUID                      = B4C9D2E3-5F60-789A-BCDE-F01234567890
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DeviceNameFromProductLib
+
+[Sources]
+  DeviceNameFromProductLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  BaseLib
