@@ -205,3 +205,4 @@ CHAR16 *
 ExtractDevicePathFromHiiHandle (
   IN      EFI_HII_HANDLE  Handle
   );
+

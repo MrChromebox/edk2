@@ -96,6 +96,9 @@
   ## @libraryclass   Provides core boot manager functions
   PlatformBootManagerLib|Include/Library/PlatformBootManagerLib.h
 
+  ## @libraryclass   Maps SMBIOS product names to friendly device names
+  DeviceNameFromProductLib|Include/Library/DeviceNameFromProductLib.h
+
   ## @libraryclass  Provides common interfaces about TPM measurement for other modules.
   #
   TpmMeasurementLib|Include/Library/TpmMeasurementLib.h

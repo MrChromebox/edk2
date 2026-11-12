@@ -30,9 +30,9 @@ UiCustomizeFrontPage (
   )
 {
   //
-  // Create "Select Language" menu with Oneof opcode.
+  // Create "Continue" menu.
   //
-  UiCreateLanguageMenu (HiiHandle, StartOpCodeHandle);
+  UiCreateContinueMenu(HiiHandle, StartOpCodeHandle);
 
   //
   // Create empty line.
@@ -48,11 +48,6 @@ UiCustomizeFrontPage (
   // Create empty line.
   //
   UiCreateEmptyLine (HiiHandle, StartOpCodeHandle);
-
-  //
-  // Create "Continue" menu.
-  //
-  UiCreateContinueMenu (HiiHandle, StartOpCodeHandle);
 
   //
   // Create reset menu.
@@ -95,47 +90,4 @@ UiFrontPageCallbackHandler (
   }
 
   return EFI_UNSUPPORTED;
-}
-
-/**
-  Update the banner string in the front page.
-
-  Current layout for the banner string like below:
-  PS: Totally only 5 lines of banner supported.
-
-  Line 1: Left BannerStr                           RightBannerStr
-  Line 2: Left BannerStr                           RightBannerStr
-  Line 3: Left BannerStr                           RightBannerStr
-  Line 4: Left BannerStr                           RightBannerStr
-  Line 5: Left BannerStr                           RightBannerStr
-  <EmptyLine>
-  First menu in front page.
-  ...
-
-  @param  LineIndex         The line index of the banner need to check.
-  @param  LeftOrRight       The left or right banner need to check.
-  @param  BannerStr         Banner string need to update.
-                            Input the current string and user can update
-                            it and return the new string.
-
-**/
-VOID
-UiCustomizeFrontPageBanner (
-  IN     UINTN       LineIndex,
-  IN     BOOLEAN     LeftOrRight,
-  IN OUT EFI_STRING  *BannerStr
-  )
-{
-  if ((LineIndex == 5) && LeftOrRight) {
-    // Update STR_CUSTOMIZE_BANNER_LINE5_LEFT
-    if (PcdGetBool (PcdTestKeyUsed)) {
-      if (BannerStr != NULL) {
-        FreePool (*BannerStr);
-      }
-
-      *BannerStr = HiiGetString (gFrontPagePrivate.HiiHandle, STRING_TOKEN (STR_TEST_KEY_USED), NULL);
-    }
-  }
-
-  return;
 }

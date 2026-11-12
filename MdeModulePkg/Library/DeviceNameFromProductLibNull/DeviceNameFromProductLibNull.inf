@@ -1,0 +1,22 @@
+## @file
+#  NULL DeviceNameFromProductLib instance.
+#
+#  Copyright (c) 2020, Matt DeVillier. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DeviceNameFromProductLibNull
+  FILE_GUID                      = A3B8C1D2-4E5F-6789-ABCD-EF0123456789
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DeviceNameFromProductLib
+
+[Sources]
+  DeviceNameFromProductLibNull.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
