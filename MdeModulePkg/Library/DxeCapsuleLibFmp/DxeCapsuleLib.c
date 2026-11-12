@@ -1008,7 +1008,7 @@ SetFmpImageData (
   ProgressCallback = UpdateImageProgress;
   Status           = UpdateImageProgress (0);
   if (EFI_ERROR (Status)) {
-    ProgressCallback = NULL;
+    DEBUG ((DEBUG_WARN, "UpdateImageProgress(0) failed with %r; continuing capsule update\n", Status));
   }
 
   Status = Fmp->SetImage (
