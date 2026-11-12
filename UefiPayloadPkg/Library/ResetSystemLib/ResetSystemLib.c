@@ -94,6 +94,11 @@ ResetCold (
   VOID
   )
 {
+  //
+  // Capsule updates may leave flash writes pending in cache-backed paths.
+  // Flush before asserting reset so the platform does not hang mid-reboot.
+  //
+  AsmWbinvd ();
   IoWrite8 ((UINTN)mAcpiBoardInfo.ResetRegAddress, mAcpiBoardInfo.ResetValue);
   CpuDeadLoop ();
 }
@@ -111,6 +116,10 @@ ResetWarm (
   VOID
   )
 {
+  //
+  // Keep the warm reset path consistent with cold reset for capsule updates.
+  //
+  AsmWbinvd ();
   IoWrite8 ((UINTN)mAcpiBoardInfo.ResetRegAddress, mAcpiBoardInfo.ResetValue);
   CpuDeadLoop ();
 }
