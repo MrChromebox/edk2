@@ -348,6 +348,7 @@
   BmpSupportLib|MdeModulePkg/Library/BaseBmpSupportLib/BaseBmpSupportLib.inf
   BootSplashLib|UefiPayloadPkg/Library/BootSplashLib/BootSplashLib.inf
   CbfsLib|UefiPayloadPkg/Library/CbfsLib/CbfsLib.inf
+  CbfsAssetLib|UefiPayloadPkg/Library/CbfsAssetLib/CbfsAssetLib.inf
   DxeHobListLib|UefiPayloadPkg/Library/DxeHobListLib/DxeHobListLib.inf
 !if $(CRYPTO_PROTOCOL_SUPPORT) == TRUE
   BaseCryptLib|CryptoPkg/Library/BaseCryptLibOnProtocolPpi/DxeCryptLib.inf

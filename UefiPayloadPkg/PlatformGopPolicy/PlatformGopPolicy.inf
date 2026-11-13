@@ -31,16 +31,12 @@
 [LibraryClasses]
   BaseLib
   BaseMemoryLib
-  CbfsLib
+  CbfsAssetLib
   DebugLib
-  DxeServicesTableLib
   MemoryAllocationLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiRuntimeServicesTableLib
-
-[Guids]
-  gEfiFirmwareFileSystem2Guid
 
 [Protocols]
   gPlatformGOPPolicyGuid
