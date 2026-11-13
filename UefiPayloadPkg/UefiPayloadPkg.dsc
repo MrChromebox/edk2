@@ -809,6 +809,10 @@
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdBootManagerMenuFile|{ 0x21, 0xaa, 0x2c, 0x46, 0x14, 0x76, 0x03, 0x45, 0x83, 0x6e, 0x8a, 0xb6, 0xf4, 0x66, 0x23, 0x31 }
   gUefiPayloadPkgTokenSpaceGuid.PcdPcdDriverFile|{ 0x57, 0x72, 0xcf, 0x80, 0xab, 0x87, 0xf9, 0x47, 0xa3, 0xfe, 0xD5, 0x0B, 0x76, 0xd8, 0x95, 0x41 }
+!if $(BOOTSPLASH_IMAGE)
+  ## Prefer CBFS logo.bmp/bootsplash.bmp; FV/HII remains fallback.
+  gEfiMdeModulePkgTokenSpaceGuid.PcdLogoFileGuid|{ 0x1f, 0xe9, 0xc4, 0xa7, 0x6d, 0x2b, 0x38, 0x4f, 0x9e, 0x15, 0x6c, 0x8a, 0x4d, 0x2e, 0x7b, 0x01 }
+!endif
 
 !if $(SOURCE_DEBUG_ENABLE)
   gEfiSourceLevelDebugPkgTokenSpaceGuid.PcdDebugLoadImageMethod|0x2
@@ -1309,6 +1313,10 @@
   UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
 !if $(BOOTSPLASH_IMAGE)
   UefiPayloadPkg/BootSplashConfigDxe/BootSplashConfigDxe.inf
+  UefiPayloadPkg/CbfsPayloadAssetsDxe/CbfsPayloadAssetsDxe.inf {
+    <LibraryClasses>
+      NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
+  }
 !endif
 !endif
   MdeModulePkg/Universal/TimeDateSettingsDxe/TimeDateSettingsDxe.inf

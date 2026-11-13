@@ -148,9 +148,11 @@ APRIORI DXE {
   INF  MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
   INF  MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
   INF  UefiPayloadPkg/BlSupportDxe/BlSupportDxe.inf
-!if $(CAPSULE_SUPPORT) == TRUE
-
-    # This is a verbatim copy from below, make sure to keep it in sync
+  #
+  # Early graphics for capsule progress and/or CBFS bootsplash (Assets before Logo).
+  #
+!if $(CAPSULE_SUPPORT) == TRUE || $(BOOTSPLASH_IMAGE) == TRUE
+    # Keep in sync with the non-APRIORI Platform GOP / GraphicsOutput wiring below.
     !if $(USE_PLATFORM_GOP) == TRUE
         !if "X64" in $(ARCH)
         INF UefiPayloadPkg/PlatformGopPolicy/PlatformGopPolicy.inf
@@ -168,14 +170,13 @@ APRIORI DXE {
     !else
         INF UefiPayloadPkg/GraphicsOutputDxe/GraphicsOutputDxe.inf
     !endif
-
-
-    !if $(BOOTSPLASH_IMAGE)
-      INF  MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
-      INF  MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
-      INF  MdeModulePkg/Logo/LogoDxe.inf
-    !endif
-  !endif
+!endif
+!if $(BOOTSPLASH_IMAGE)
+  INF  MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
+  INF  MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
+  INF  UefiPayloadPkg/CbfsPayloadAssetsDxe/CbfsPayloadAssetsDxe.inf
+  INF  MdeModulePkg/Logo/LogoDxe.inf
+!endif
 }
 
 #
@@ -337,6 +338,7 @@ INF MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
 INF UefiPayloadPkg/UserAuthPkg/UserAuthenticationDxe/UserAuthenticationDxe.inf
 !if $(BOOTSPLASH_IMAGE)
 INF UefiPayloadPkg/BootSplashConfigDxe/BootSplashConfigDxe.inf
+INF UefiPayloadPkg/CbfsPayloadAssetsDxe/CbfsPayloadAssetsDxe.inf
 !endif
 !endif
 !if $(LVGL_ENABLE) == TRUE
