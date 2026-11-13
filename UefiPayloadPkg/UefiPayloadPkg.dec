@@ -21,6 +21,7 @@
   PayloadEntryHelperLib|Include/Library/PayloadEntryHelperLib.h
   BootSplashLib|Include/Library/BootSplashLib.h
   CbfsLib|Include/Library/CbfsLib.h
+  CbfsAssetLib|Include/Library/CbfsAssetLib.h
 
 [Guids]
   # SMMSTORE for coreboot and EDK-2
