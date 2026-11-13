@@ -19,9 +19,6 @@ Copyright (c)  1999  - 2014, Intel Corporation. All rights reserved
 #define EFI_PLATFORM_GOP_POLICY_PROTOCOL_GUID \
   { 0xec2e931b, 0x3281, 0x48a5, 0x81, 0x7, 0xdf, 0x8a, 0x8b, 0xed, 0x3c, 0x5d }
 
-#define EFI_BMP_IMAGE_GUID \
-  { 0x878AC2CC, 0x5343, 0x46F2, 0xB5, 0x63, 0x51, 0xF8, 0x9D, 0xAF, 0x56, 0xBA }
-
 #define PLATFORM_GOP_POLICY_PROTOCOL_REVISION_01 0x01
 #define PLATFORM_GOP_POLICY_PROTOCOL_REVISION_02 x0222
 
@@ -65,6 +62,20 @@ typedef struct _PLATFORM_GOP_POLICY_PROTOCOL {
 //
 extern EFI_GUID  gPlatformGOPPolicyGuid;
 
-extern EFI_GUID  gBmpImageGuid;
+/**
+  Load the GOP driver and VBT from CBFS, and hand the GOP driver to the DXE
+  dispatcher.
+
+  @param[out] Vbt      On success, the VBT. The caller owns the buffer.
+  @param[out] VbtSize  On success, the size of Vbt in bytes.
+
+  @retval EFI_SUCCESS  The GOP driver was installed and the VBT returned.
+  @retval Others       The GOP driver or VBT could not be loaded.
+**/
+EFI_STATUS
+LoadGopFromCbfs (
+  OUT VOID   **Vbt,
+  OUT UINTN  *VbtSize
+  );
 
 #endif
