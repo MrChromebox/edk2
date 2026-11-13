@@ -594,6 +594,13 @@ PlatformBootManagerAfterConsole (
       );
   }
 
+  //
+  // No boot wait when timeout is zero, so skip setup/boot-menu hints.
+  //
+  if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
+    return;
+  }
+
   if (FixedPcdGetBool (PcdBootManagerEscape)) {
     if (FixedPcdGetBool (PcdSerialTerminalPrintEnabled)) {
       Print (
