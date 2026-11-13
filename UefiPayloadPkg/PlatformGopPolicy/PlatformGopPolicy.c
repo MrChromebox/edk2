@@ -21,6 +21,8 @@ Copyright (c)  1999  - 2014, Intel Corporation. All rights reserved
 #include <Library/UefiRuntimeServicesTableLib.h>
 
 PLATFORM_GOP_POLICY_PROTOCOL  mPlatformGOPPolicy;
+VOID                          *mVbt;
+UINTN                         mVbtSize;
 
 //
 // Function implementations
@@ -69,10 +71,14 @@ GetVbtData (
     return EFI_INVALID_PARAMETER;
   }
 
-  //
-  // VBT/GOP driver are loaded from CBFS in a later commit.
-  //
-  return EFI_NOT_FOUND;
+  if (mVbt == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
+  *VbtAddress = (EFI_PHYSICAL_ADDRESS)(UINTN)mVbt;
+  *VbtSize    = (UINT32)mVbtSize;
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -117,6 +123,11 @@ PlatformGOPPolicyEntryPoint (
                   &mPlatformGOPPolicy,
                   NULL
                   );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
-  return Status;
+  LoadGopFromCbfs (&mVbt, &mVbtSize);
+
+  return EFI_SUCCESS;
 }
