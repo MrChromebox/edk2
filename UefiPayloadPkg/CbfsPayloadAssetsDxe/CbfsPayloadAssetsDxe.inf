@@ -1,0 +1,48 @@
+## @file
+#  Load optional payload assets from CBFS with firmware-volume fallback.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CbfsPayloadAssetsDxe
+  FILE_GUID                      = 3B9E6D2A-8F14-4C70-9A5E-1D2C3B4A5E6F
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = CbfsPayloadAssetsDxeEntryPoint
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  CbfsPayloadAssetsDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiPayloadPkg/UefiPayloadPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CbfsAssetLib
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Guids]
+  gUefiPayloadCbfsLogoGuid
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdLogoFileGuid          ## SOMETIMES_CONSUMES
+  gUefiPayloadPkgTokenSpaceGuid.PcdiPXEFile               ## SOMETIMES_CONSUMES
+
+[Depex]
+  TRUE
