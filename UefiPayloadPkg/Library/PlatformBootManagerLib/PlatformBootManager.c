@@ -152,13 +152,44 @@ BdsGetFvFileDevicePath (
     return NULL;
   }
 
-  DevicePath = DevicePathFromHandle (FvHandleBuffer[Index]);
+  //
+  // DevicePathFromHandle returns the protocol path on the handle; duplicate
+  // so the caller owns the buffer and may FreePool it (e.g. after Append).
+  //
+  DevicePath = DuplicateDevicePath (DevicePathFromHandle (FvHandleBuffer[Index]));
 
   if (FvHandleCount) {
     FreePool (FvHandleBuffer);
   }
 
   return DevicePath;
+}
+
+/**
+  TRUE if Option's FilePath contains a FwVol file node for FileGuid.
+**/
+STATIC
+BOOLEAN
+BootOptionReferencesFvFileGuid (
+  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION  *Option,
+  IN CONST EFI_GUID                      *FileGuid
+  )
+{
+  EFI_DEVICE_PATH_PROTOCOL  *Node;
+  EFI_GUID                  *NameGuid;
+
+  if ((Option == NULL) || (Option->FilePath == NULL) || (FileGuid == NULL)) {
+    return FALSE;
+  }
+
+  for (Node = Option->FilePath; !IsDevicePathEnd (Node); Node = NextDevicePathNode (Node)) {
+    NameGuid = EfiGetNameGuidFromFwVolDevicePathNode ((MEDIA_FW_VOL_FILEPATH_DEVICE_PATH *)Node);
+    if ((NameGuid != NULL) && CompareGuid (NameGuid, FileGuid)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
 }
 
 /**
@@ -176,23 +207,26 @@ PlatformRegisterFvBootOption (
   )
 {
   EFI_STATUS                         Status;
-  UINTN                              OptionIndex;
+  UINTN                              Index;
+  BOOLEAN                            ExactMatch;
   EFI_BOOT_MANAGER_LOAD_OPTION       NewOption;
   EFI_BOOT_MANAGER_LOAD_OPTION       *BootOptions;
   UINTN                              BootOptionCount;
   MEDIA_FW_VOL_FILEPATH_DEVICE_PATH  FileNode;
   EFI_DEVICE_PATH_PROTOCOL           *DevicePath;
+  EFI_DEVICE_PATH_PROTOCOL           *FvDevicePath;
 
-  DevicePath = BdsGetFvFileDevicePath (FileGuid);
-  if (DevicePath == NULL) {
+  FvDevicePath = BdsGetFvFileDevicePath (FileGuid);
+  if (FvDevicePath == NULL) {
     return;
   }
 
   EfiInitializeFwVolDevicepathNode (&FileNode, FileGuid);
   DevicePath = AppendDevicePathNode (
-                 DevicePath,
+                 FvDevicePath,
                  (EFI_DEVICE_PATH_PROTOCOL *)&FileNode
                  );
+  FreePool (FvDevicePath);
   if (DevicePath == NULL) {
     return;
   }
@@ -207,22 +241,42 @@ PlatformRegisterFvBootOption (
              NULL,
              0
              );
-  if (DevicePath != NULL) {
-    FreePool (DevicePath);
+  FreePool (DevicePath);
+  if (EFI_ERROR (Status)) {
+    return;
   }
-  if (!EFI_ERROR (Status)) {
-    BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
 
-    OptionIndex = PlatformFindLoadOption (&NewOption, BootOptions, BootOptionCount);
+  BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
+  ExactMatch  = FALSE;
 
-    if (OptionIndex == -1) {
-      Status = EfiBootManagerAddLoadOptionVariable (&NewOption, (UINTN)-1);
-      ASSERT_EFI_ERROR (Status);
+  //
+  // CBFS-installed FVs are re-allocated each boot, so the MemMap prefix of the
+  // device path changes while the FwVol file GUID stays the same. Drop stale
+  // Boot#### entries that still point at the old mapping before adding.
+  //
+  for (Index = 0; Index < BootOptionCount; Index++) {
+    if (!BootOptionReferencesFvFileGuid (&BootOptions[Index], FileGuid)) {
+      continue;
     }
 
-    EfiBootManagerFreeLoadOption (&NewOption);
-    EfiBootManagerFreeLoadOptions (BootOptions, BootOptionCount);
+    if ((PlatformFindLoadOption (&NewOption, &BootOptions[Index], 1) != -1)) {
+      ExactMatch = TRUE;
+      continue;
+    }
+
+    EfiBootManagerDeleteLoadOptionVariable (
+      BootOptions[Index].OptionNumber,
+      LoadOptionTypeBoot
+      );
   }
+
+  if (!ExactMatch) {
+    Status = EfiBootManagerAddLoadOptionVariable (&NewOption, (UINTN)-1);
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  EfiBootManagerFreeLoadOption (&NewOption);
+  EfiBootManagerFreeLoadOptions (BootOptions, BootOptionCount);
 }
 
 EFI_HANDLE BootManagerEntryNotifyHandle1;
