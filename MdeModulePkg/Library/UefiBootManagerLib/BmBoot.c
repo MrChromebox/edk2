@@ -2852,16 +2852,29 @@ EfiBootManagerRefreshAllBootOption (
       IsRemovable = FALSE;
 
       //
-      // Check device path for USB nodes - USB devices are always external
-      // regardless of RemovableMedia flag (some USB SSDs report as non-removable)
+      // Check device path for USB or network nodes - both are external.
+      // USB SSDs may report RemovableMedia=FALSE; PXE/HTTP LoadFile paths have
+      // no BlockIo, so without this PrioritizeInternal would treat them as
+      // internal and insert them at the front of BootOrder.
       //
       EFI_DEVICE_PATH_PROTOCOL  *Node;
       for (Node = BootOptions[Index].FilePath; !IsDevicePathEnd (Node); Node = NextDevicePathNode (Node)) {
-        if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) &&
-            (DevicePathSubType (Node) == MSG_USB_DP))
-        {
-          IsRemovable = TRUE;
-          break;
+        if (DevicePathType (Node) == MESSAGING_DEVICE_PATH) {
+          switch (DevicePathSubType (Node)) {
+            case MSG_USB_DP:
+            case MSG_MAC_ADDR_DP:
+            case MSG_IPv4_DP:
+            case MSG_IPv6_DP:
+            case MSG_URI_DP:
+              IsRemovable = TRUE;
+              break;
+            default:
+              break;
+          }
+
+          if (IsRemovable) {
+            break;
+          }
         }
       }
 
