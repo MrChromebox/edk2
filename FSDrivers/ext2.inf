@@ -1,18 +1,18 @@
-# EXT2 filesystem driver. See */LICENSE.txt for details.
-# https://www.rodsbooks.com/refind/ v0.12
+# EXT2/3/4 filesystem driver (read-only).
+# From https://github.com/pbatard/EfiFs/releases/tag/v1.13
+# EfiFs ext2 driver covers ext2, ext3, and ext4.
 
 [Defines]
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = ext2
   FILE_GUID                      = 8EC49C43-D1C4-4E6C-98BF-232CA5D89A1B
   MODULE_TYPE                    = UEFI_DRIVER
-  VERSION_STRING                 = 1.0
-
+  VERSION_STRING                 = 1.13
 
 #
 # The following information is for reference only and not required by the build tools.
 #
-#  VALID_ARCHITECTURES           = IA32 X64 IPF EBC
+#  VALID_ARCHITECTURES           = IA32 X64
 #
 
 VALID_ARCHITECTURES           = X64 IA32
@@ -22,4 +22,3 @@ VALID_ARCHITECTURES           = X64 IA32
 
 [Binaries.IA32]
   PE32|IA32/ext2_ia32.efi|*
-

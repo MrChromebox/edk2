@@ -1,0 +1,12 @@
+Filesystem drivers
+==================
+
+ext2 (ext2/3/4) and exFAT
+  https://github.com/pbatard/EfiFs/releases/tag/v1.13
+  License: GPLv3+ (LICENSE_EfiFs.txt)
+
+NTFS
+  https://github.com/pbatard/ntfs-3g/releases/tag/1.9
+  License: GPLv2 (LICENSE_NTFS.txt)
+
+ISO9660 is intentionally not included; it breaks El Torito boot.

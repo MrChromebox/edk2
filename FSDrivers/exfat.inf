@@ -1,19 +1,17 @@
-# ReadOnly exFAT filesystem driver
-# From https://efi.akeo.ie/ v1.5
-##
+# exFAT filesystem driver (read-only).
+# From https://github.com/pbatard/EfiFs/releases/tag/v1.13
 
 [Defines]
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = exfat
   FILE_GUID                      = CB683001-379F-48C7-B7B6-707D29454BF5
   MODULE_TYPE                    = UEFI_DRIVER
-  VERSION_STRING                 = 1.0
-
+  VERSION_STRING                 = 1.13
 
 #
 # The following information is for reference only and not required by the build tools.
 #
-#  VALID_ARCHITECTURES           = IA32 X64 IPF EBC
+#  VALID_ARCHITECTURES           = IA32 X64
 #
 
 VALID_ARCHITECTURES           = X64 IA32
@@ -23,5 +21,3 @@ VALID_ARCHITECTURES           = X64 IA32
 
 [Binaries.IA32]
   PE32|IA32/exfat_ia32.efi|*
-
-
