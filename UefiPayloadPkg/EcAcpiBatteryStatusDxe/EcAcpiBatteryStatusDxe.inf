@@ -36,6 +36,7 @@
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
+  BaseLib
   DebugLib
   IoLib
   MemoryAllocationLib
@@ -44,7 +45,8 @@
 
 [Protocols]
   gEfiBatteryStatusProtocolGuid                 ## PRODUCES
+  gEfiSmbiosProtocolGuid                        ## CONSUMES
 
 [Depex]
-  TRUE
+  gEfiSmbiosProtocolGuid
 

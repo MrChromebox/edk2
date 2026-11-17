@@ -11,17 +11,27 @@
 **/
 
 #include "EcAcpiBatteryStatusDxe.h"
+#include <IndustryStandard/SmBios.h>
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiDriverEntryPoint.h>
 #include <Protocol/BatteryStatus.h>
+#include <Protocol/Smbios.h>
 
 //
 // Driver Private Data
 //
 EC_BATTERY_PRIVATE_DATA  *mEcBatteryPrivate = NULL;
+
+//
+// SMBIOS mainboard vendors per EC type (NULL-terminated)
+//
+STATIC CONST CHAR8  *mChromeOsEcVendors[] = { "Google", NULL };
+STATIC CONST CHAR8  *mMerlinEcVendors[]   = { "Star Labs", "StarLabs", NULL };
+STATIC CONST CHAR8  *mThinkPadEcVendors[] = { "LENOVO", NULL };
 
 //
 // EC Profiles
@@ -30,18 +40,21 @@ STATIC EC_PROFILE  mEcProfiles[] = {
   {
     EcTypeChromeOs,
     "ChromeEC",
+    mChromeOsEcVendors,
     CheckChromeOsEcPresent,
     GetChromeOsBatteryInfo
   },
   {
     EcTypeMerlin,
     "Merlin EC",
+    mMerlinEcVendors,
     CheckMerlinEcPresent,
     GetMerlinBatteryInfo
   },
   {
     EcTypeThinkPad,
     "ThinkPad EC",
+    mThinkPadEcVendors,
     CheckThinkPadEcPresent,
     GetThinkPadBatteryInfo
   }
@@ -109,9 +122,178 @@ WaitForEcReadyRecv (
   return EFI_TIMEOUT;
 }
 
+/*
+ * Drain the EC output buffer and test the interface for stuck 0xFF values.
+ *
+ * @retval EFI_SUCCESS         EC output buffer drained successfully.
+ * @retval EFI_TIMEOUT         EC output buffer not drained in time.
+ * @retval EFI_DEVICE_ERROR    EC interface stuck with 0xFF values. 
+ */
+EFI_STATUS
+DrainOBFAndTestInterface (
+  VOID
+)
+{
+  UINT8  Status;
+  UINT8  Data;
+  UINTN  SeenFFs;
+  UINTN  Loops;
+
+  Loops = 0;
+  SeenFFs = 0;
+  Status = IoRead8 (EC_SC);
+  while ((Status & EC_OBF) != 0 && Loops < 100) {
+    Loops++;
+    if (Status == 0xff) {
+      SeenFFs++;
+    }
+
+    Data = IoRead8 (EC_DATA);
+    if (Data == 0xFF) {
+      SeenFFs++;
+    }
+    Status = IoRead8 (EC_SC);
+  }
+
+  if (Loops == 100 && SeenFFs > 100) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  return (Status & EC_OBF) == 0 ? EFI_SUCCESS : EFI_TIMEOUT;
+}
+
 //
 // Unified Driver Functions
 //
+
+/**
+  Get a string from an SMBIOS record by its 1-based string number.
+
+  @param[in] Record        Pointer to the SMBIOS record.
+  @param[in] StringNumber  1-based index of the string.
+
+  @return Pointer to the string, or NULL if not present.
+**/
+STATIC
+CONST CHAR8 *
+GetSmbiosString (
+  IN EFI_SMBIOS_TABLE_HEADER  *Record,
+  IN SMBIOS_TABLE_STRING      StringNumber
+  )
+{
+  CHAR8  *String;
+
+  if (StringNumber == 0) {
+    return NULL;
+  }
+
+  String = (CHAR8 *)Record + Record->Length;
+  while (--StringNumber != 0) {
+    if (*String == '\0') {
+      return NULL;
+    }
+
+    String += AsciiStrSize (String);
+  }
+
+  return (*String != '\0') ? String : NULL;
+}
+
+/**
+  Get the mainboard vendor from SMBIOS.
+
+  @param[out] Vendor1  Pointer to the system vendor string, or NULL if not available.
+  @param[out] Vendor2  Pointer to the baseboard vendor string, or NULL if not available.
+**/
+STATIC
+EFI_STATUS
+GetMainboardVendor (
+  OUT CONST CHAR8 **Vendor1,
+  OUT CONST CHAR8 **Vendor2
+  )
+{
+  EFI_STATUS               Status;
+  EFI_SMBIOS_PROTOCOL      *Smbios;
+  EFI_SMBIOS_HANDLE        Handle;
+  EFI_SMBIOS_TABLE_HEADER  *Record;
+  EFI_SMBIOS_TYPE          Type;
+
+  if (Vendor1 == NULL || Vendor2 == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Vendor1 = NULL;
+  *Vendor2 = NULL;
+
+  Status = gBS->LocateProtocol (&gEfiSmbiosProtocolGuid, NULL, (VOID **)&Smbios);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
+  Handle = SMBIOS_HANDLE_PI_RESERVED;
+  while (*Vendor1 == NULL || *Vendor2 == NULL) {
+    Status = Smbios->GetNext (Smbios, &Handle, NULL, &Record, NULL);
+    if (EFI_ERROR (Status) || (Record == NULL)) {
+      break;
+    }
+
+    Type = Record->Type;
+    if (Type == SMBIOS_TYPE_END_OF_TABLE) {
+      break;
+    }
+
+    if ((Type == SMBIOS_TYPE_SYSTEM_INFORMATION) &&
+        (Record->Length > OFFSET_OF (SMBIOS_TABLE_TYPE1, Manufacturer)))
+    {
+      *Vendor1 = GetSmbiosString (Record, ((SMBIOS_TABLE_TYPE1 *)Record)->Manufacturer);
+    }
+
+    if ((Type == SMBIOS_TYPE_BASEBOARD_INFORMATION) &&
+        (Record->Length > OFFSET_OF (SMBIOS_TABLE_TYPE2, Manufacturer)))
+    {
+      *Vendor2 = GetSmbiosString (Record, ((SMBIOS_TABLE_TYPE2 *)Record)->Manufacturer);
+    }
+  }
+
+  return (*Vendor1 != NULL || *Vendor2 != NULL) ? EFI_SUCCESS : EFI_NOT_FOUND;
+}
+
+/**
+  Check whether an EC profile is known to be used by the given vendor.
+
+  @param[in] Profile  EC profile.
+  @param[in] Vendor1   Mainboard vendor string, or NULL if unknown.
+  @param[in] Vendor2   Baseboard vendor string, or NULL if unknown.
+
+  @retval TRUE   The profile should be probed.
+  @retval FALSE  The profile can be skipped.
+**/
+STATIC
+BOOLEAN
+IsVendorMatch (
+  IN CONST EC_PROFILE  *Profile,
+  IN CONST CHAR8       *Vendor1,
+  IN CONST CHAR8       *Vendor2
+  )
+{
+  UINTN  i;
+
+  //
+  // Probe everything if vendor or lookup table is unavailable
+  //
+  if ((Vendor1 == NULL && Vendor2 == NULL) || (Profile->Vendors == NULL)) {
+    return TRUE;
+  }
+
+  for (i = 0; Profile->Vendors[i] != NULL; i++) {
+    if ((Vendor1 != NULL && AsciiStriCmp (Vendor1, Profile->Vendors[i]) == 0) ||
+        (Vendor2 != NULL && AsciiStriCmp (Vendor2, Profile->Vendors[i]) == 0)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
 
 /**
   Detect EC type by trying each profile's detection method.
@@ -125,9 +307,24 @@ DetectEcType (
   VOID
   )
 {
-  UINTN  i;
+  UINTN        i;
+  CONST CHAR8  *Vendor1;
+  CONST CHAR8  *Vendor2;
+
+  Vendor1 = NULL;
+  Vendor2 = NULL;
+  GetMainboardVendor (&Vendor1, &Vendor2);
+
+  DEBUG ((DEBUG_INFO, "EcAcpiBattery: Mainboard vendor: %a/%a\n",
+          (Vendor1 != NULL) ? Vendor1 : "<unknown>",
+          (Vendor2 != NULL) ? Vendor2 : "<unknown>"));
 
   for (i = 0; i < (sizeof (mEcProfiles) / sizeof (mEcProfiles[0])); i++) {
+    if (!IsVendorMatch (&mEcProfiles[i], Vendor1, Vendor2)) {
+      DEBUG ((DEBUG_VERBOSE, "EcAcpiBattery: Skipping %a, vendor mismatch\n", mEcProfiles[i].Name));
+      continue;
+    }
+
     if (mEcProfiles[i].CheckEcPresent != NULL) {
       if (!EFI_ERROR (mEcProfiles[i].CheckEcPresent ())) {
         mEcBatteryPrivate->EcType   = mEcProfiles[i].Type;

@@ -179,6 +179,11 @@ CheckThinkPadEcPresent (
   UINT8       Data;
   EFI_STATUS  Status;
 
+  Status = DrainOBFAndTestInterface ();
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
   // Try to read EC RAM at offset 0x00
   // If we get 0xFF or timeout, EC is likely not present
   Status = ThinkPadEcReadByte (0x00, &Data);

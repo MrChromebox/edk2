@@ -212,6 +212,11 @@ CheckChromeOsEcPresent (
   UINT8       Id2;
   EFI_STATUS  Status;
 
+  Status = DrainOBFAndTestInterface ();
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
   // Read EC memmap ID (should be 'E' and 'C')
   Status = ChromeOsEcReadMemmapByte (CHROMEOS_EC_MEMMAP_ID, &Id1);
   if (EFI_ERROR (Status)) {
