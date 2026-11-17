@@ -53,6 +53,10 @@ typedef struct {
   EC_TYPE  Type;
   CHAR8    *Name;
   //
+  // NULL-terminated list of SMBIOS mainboard vendors known to use this EC
+  //
+  CONST CHAR8  **Vendors;
+  //
   // EC Detection
   //
   EFI_STATUS  (*CheckEcPresent)(VOID);
@@ -90,6 +94,10 @@ WaitForEcReadyRecv (
   VOID
   );
 
+EFI_STATUS
+DrainOBFAndTestInterface (
+  VOID
+);
 //
 // External references to private data
 //

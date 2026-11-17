@@ -116,6 +116,11 @@ CheckMerlinEcPresent (
   UINT8       Data;
   EFI_STATUS  Status;
 
+  Status = DrainOBFAndTestInterface ();
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
   // Try to read EC RAM version (offset 0x00 in ACPI region)
   Status = MerlinEcReadByte (0x00, &Data);
   if (EFI_ERROR (Status)) {
